@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import Login from './Login';
 import { Card, CardContent } from './components/ui/card';
@@ -66,20 +66,20 @@ export default function App() {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
     });
-  
+
     const docRef = doc(db, 'scores', 'tournament');
     const unsubscribeFirestore = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         setScores(docSnap.data().scores);
       }
+      setLoading(false);
     });
-  
+
     return () => {
       unsubscribeAuth();
       unsubscribeFirestore();
     };
   }, []);
-  
 
   useEffect(() => {
     if (user && !loading) {
