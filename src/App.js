@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from './components/ui/card';
 
 const teams = ["Blue", "White", "Red", "Black", "Yellow", "Green"];
 const totalSets = 2;
 const pointsToWin = 18;
 
-const generateMatches = () => {
-  const matches = [];
-  for (let i = 0; i < teams.length; i++) {
-    for (let j = i + 1; j < teams.length; j++) {
-      matches.push({ team1: teams[i], team2: teams[j] });
-    }
-  }
-  return matches;
-};
+const scheduledMatches = [
+  { game: 'G1', team1: 'White', team2: 'Black' },
+  { game: 'G2', team1: 'Red', team2: 'Yellow' },
+  { game: 'G3', team1: 'White', team2: 'Green' },
+  { game: 'G4', team1: 'Blue', team2: 'Yellow' },
+  { game: 'G5', team1: 'Black', team2: 'Green' },
+  { game: 'G6', team1: 'White', team2: 'Red' },
+  { game: 'G7', team1: 'Red', team2: 'Green' },
+  { game: 'G8', team1: 'Blue', team2: 'Black' },
+  { game: 'G9', team1: 'White', team2: 'Yellow' },
+  { game: 'G10', team1: 'Blue', team2: 'Green' },
+  { game: 'G11', team1: 'Black', team2: 'Yellow' },
+  { game: 'G12', team1: 'Blue', team2: 'Red' }
+];
 
 const calculateLeaderboard = (scores) => {
   const leaderboard = {};
@@ -42,14 +48,20 @@ const calculateLeaderboard = (scores) => {
   });
 };
 
-export default function VolleyballScoreTracker() {
-  const matches = generateMatches();
-  const [scores, setScores] = useState(
-    matches.map(match => ({
-      ...match,
-      sets: Array.from({ length: totalSets }, () => ({ team1: 0, team2: 0 }))
-    }))
-  );
+export default function App() {
+  const [scores, setScores] = useState(() => {
+    const stored = localStorage.getItem('volleyball-scores');
+    return stored
+      ? JSON.parse(stored)
+      : scheduledMatches.map(match => ({
+          ...match,
+          sets: Array.from({ length: totalSets }, () => ({ team1: 0, team2: 0 }))
+        }));
+  });
+
+  useEffect(() => {
+    localStorage.setItem('volleyball-scores', JSON.stringify(scores));
+  }, [scores]);
 
   const updateScoreInput = (matchIndex, setIndex, teamKey, value) => {
     const numericValue = Math.max(0, Math.min(pointsToWin, parseInt(value) || 0));
@@ -63,21 +75,21 @@ export default function VolleyballScoreTracker() {
   const leaderboard = calculateLeaderboard(scores);
 
   return (
-    <div className="grid gap-6 p-4">
+    <div className="grid gap-6 p-4 max-w-3xl mx-auto">
       <Card>
         <CardContent className="p-4">
-          <h2 className="text-2xl font-bold mb-4">Leaderboard</h2>
-          <table className="w-full text-left">
+          <h2 className="text-2xl font-bold mb-4 text-center">Leaderboard</h2>
+          <table className="w-full text-left text-sm md:text-base">
             <thead>
               <tr>
                 <th className="p-2">Team</th>
                 <th className="p-2">Sets Won</th>
-                <th className="p-2">Point Difference</th>
+                <th className="p-2">Point Diff</th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.map(([team, data], index) => (
-                <tr key={index}>
+                <tr key={index} className="even:bg-gray-100">
                   <td className="p-2 font-medium">{team}</td>
                   <td className="p-2">{data.setsWon}</td>
                   <td className="p-2">{data.pointDiff}</td>
@@ -91,21 +103,21 @@ export default function VolleyballScoreTracker() {
       {scores.map((match, matchIndex) => (
         <Card key={matchIndex}>
           <CardContent className="p-4">
-            <h2 className="text-xl font-bold mb-2">{match.team1} vs {match.team2}</h2>
+            <h2 className="text-lg font-bold mb-2">{match.game}: {match.team1} vs {match.team2}</h2>
             {match.sets.map((set, setIndex) => (
               <div key={setIndex} className="mb-4">
                 <h3 className="font-semibold">Set {setIndex + 1}</h3>
-                <div className="flex justify-between gap-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
                   {['team1', 'team2'].map(teamKey => (
                     <div key={teamKey} className="flex items-center gap-2">
-                      <label className="w-24 font-medium">{match[teamKey]}</label>
+                      <label className="w-24 font-medium text-sm">{match[teamKey]}</label>
                       <input
                         type="number"
                         min="0"
                         max={pointsToWin}
                         value={set[teamKey]}
                         onChange={(e) => updateScoreInput(matchIndex, setIndex, teamKey, e.target.value)}
-                        className="border p-1 rounded w-16 text-center"
+                        className="border p-1 rounded w-20 text-center text-sm"
                       />
                     </div>
                   ))}
