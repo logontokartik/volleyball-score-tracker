@@ -1,5 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import Login from './Login';
 import { Card, CardContent } from './components/ui/card';
 
 const teams = ["Blue", "White", "Red", "Black", "Yellow", "Green"];
@@ -48,20 +52,39 @@ const calculateLeaderboard = (scores) => {
   });
 };
 
+const defaultScores = scheduledMatches.map(match => ({
+  ...match,
+  sets: Array.from({ length: totalSets }, () => ({ team1: 0, team2: 0 }))
+}));
+
 export default function App() {
-  const [scores, setScores] = useState(() => {
-    const stored = localStorage.getItem('volleyball-scores');
-    return stored
-      ? JSON.parse(stored)
-      : scheduledMatches.map(match => ({
-          ...match,
-          sets: Array.from({ length: totalSets }, () => ({ team1: 0, team2: 0 }))
-        }));
-  });
+  const [user, setUser] = useState(null);
+  const [scores, setScores] = useState(defaultScores);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('volleyball-scores', JSON.stringify(scores));
-  }, [scores]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user) {
+        const docRef = doc(db, 'scores', 'tournament');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setScores(docSnap.data().scores);
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && !loading) {
+      const saveScores = async () => {
+        await setDoc(doc(db, 'scores', 'tournament'), { scores });
+      };
+      saveScores();
+    }
+  }, [scores, user, loading]);
 
   const updateScoreInput = (matchIndex, setIndex, teamKey, value) => {
     const numericValue = Math.max(0, Math.min(pointsToWin, parseInt(value) || 0));
@@ -74,8 +97,11 @@ export default function App() {
 
   const leaderboard = calculateLeaderboard(scores);
 
+  if (loading) return <div className="p-4">Loading...</div>;
+
   return (
     <div className="grid gap-6 p-4 max-w-3xl mx-auto">
+      <Login user={user} setUser={setUser} />
       <Card>
         <CardContent className="p-4">
           <h2 className="text-2xl font-bold mb-4 text-center">Leaderboard</h2>
@@ -117,6 +143,7 @@ export default function App() {
                         max={pointsToWin}
                         value={set[teamKey]}
                         onChange={(e) => updateScoreInput(matchIndex, setIndex, teamKey, e.target.value)}
+                        disabled={!user}
                         className="border p-1 rounded w-20 text-center text-sm"
                       />
                     </div>
