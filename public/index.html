@@ -1,0 +1,120 @@
+import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+
+const teams = ["Blue", "White", "Red", "Black", "Yellow", "Green"];
+const totalSets = 2;
+const pointsToWin = 18;
+
+const generateMatches = () => {
+  const matches = [];
+  for (let i = 0; i < teams.length; i++) {
+    for (let j = i + 1; j < teams.length; j++) {
+      matches.push({ team1: teams[i], team2: teams[j] });
+    }
+  }
+  return matches;
+};
+
+const calculateLeaderboard = (scores) => {
+  const leaderboard = {};
+  teams.forEach(team => {
+    leaderboard[team] = { setsWon: 0, pointDiff: 0 };
+  });
+
+  scores.forEach(match => {
+    match.sets.forEach(set => {
+      const { team1, team2 } = set;
+      if (team1 > team2) {
+        leaderboard[match.team1].setsWon += 1;
+      } else if (team2 > team1) {
+        leaderboard[match.team2].setsWon += 1;
+      }
+      leaderboard[match.team1].pointDiff += (team1 - team2);
+      leaderboard[match.team2].pointDiff += (team2 - team1);
+    });
+  });
+
+  return Object.entries(leaderboard).sort((a, b) => {
+    if (b[1].setsWon === a[1].setsWon) {
+      return b[1].pointDiff - a[1].pointDiff;
+    }
+    return b[1].setsWon - a[1].setsWon;
+  });
+};
+
+export default function VolleyballScoreTracker() {
+  const matches = generateMatches();
+  const [scores, setScores] = useState(
+    matches.map(match => ({
+      ...match,
+      sets: Array.from({ length: totalSets }, () => ({ team1: 0, team2: 0 }))
+    }))
+  );
+
+  const updateScoreInput = (matchIndex, setIndex, teamKey, value) => {
+    const numericValue = Math.max(0, Math.min(pointsToWin, parseInt(value) || 0));
+    setScores(prevScores => {
+      const updatedScores = [...prevScores];
+      updatedScores[matchIndex].sets[setIndex][teamKey] = numericValue;
+      return updatedScores;
+    });
+  };
+
+  const leaderboard = calculateLeaderboard(scores);
+
+  return (
+    <div className="grid gap-6 p-4">
+      <Card>
+        <CardContent className="p-4">
+          <h2 className="text-2xl font-bold mb-4">Leaderboard</h2>
+          <table className="w-full text-left">
+            <thead>
+              <tr>
+                <th className="p-2">Team</th>
+                <th className="p-2">Sets Won</th>
+                <th className="p-2">Point Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map(([team, data], index) => (
+                <tr key={index}>
+                  <td className="p-2 font-medium">{team}</td>
+                  <td className="p-2">{data.setsWon}</td>
+                  <td className="p-2">{data.pointDiff}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {scores.map((match, matchIndex) => (
+        <Card key={matchIndex}>
+          <CardContent className="p-4">
+            <h2 className="text-xl font-bold mb-2">{match.team1} vs {match.team2}</h2>
+            {match.sets.map((set, setIndex) => (
+              <div key={setIndex} className="mb-4">
+                <h3 className="font-semibold">Set {setIndex + 1}</h3>
+                <div className="flex justify-between gap-4">
+                  {['team1', 'team2'].map(teamKey => (
+                    <div key={teamKey} className="flex items-center gap-2">
+                      <label className="w-24 font-medium">{match[teamKey]}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={pointsToWin}
+                        value={set[teamKey]}
+                        onChange={(e) => updateScoreInput(matchIndex, setIndex, teamKey, e.target.value)}
+                        className="border p-1 rounded w-16 text-center"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
