@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from './components/ui/card';
+import { Card, CardContent } from "@/components/ui/card";
+
 
 const teams = ["Blue", "White", "Red", "Black", "Yellow", "Green"];
 const totalSets = 2;
