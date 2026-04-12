@@ -1,0 +1,17 @@
+rules_version = '2';
+// Deploy: firebase deploy --only firestore:rules
+// Or paste into Firebase Console → Firestore → Rules → Publish
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Active tournament pointer
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    // Tournament documents (teams, schedule, scores)
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
