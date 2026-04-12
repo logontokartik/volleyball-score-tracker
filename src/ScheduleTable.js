@@ -6,6 +6,27 @@ function matchByGame(scores, gameId) {
   return scores.find((m) => m.game === gameId) || null;
 }
 
+/** Check if a match has any non-zero scores entered. */
+function hasScoresEntered(match) {
+  if (!match?.sets) return false;
+  return match.sets.some((s) => (Number(s.team1) || 0) > 0 || (Number(s.team2) || 0) > 0);
+}
+
+/** Check if a match is currently in progress (scores entered but not completed). */
+function isInProgress(match) {
+  return match && !match.completed && hasScoresEntered(match);
+}
+
+/** Format a compact score line, e.g. "15-12, 8-3". */
+function formatScoreSummary(match) {
+  if (!match?.sets) return null;
+  const parts = match.sets
+    .filter((s) => (Number(s.team1) || 0) > 0 || (Number(s.team2) || 0) > 0)
+    .map((s) => `${Number(s.team1) || 0}-${Number(s.team2) || 0}`);
+  if (!parts.length) return null;
+  return parts.join(', ');
+}
+
 /**
  * Day-of schedule: two courts, optional shared umpire — responsive like GVBL-style sheet.
  */
@@ -88,16 +109,34 @@ export default function ScheduleTable({
           const m2 = matchByGame(scores, slot.gameCourt2);
           const ump = slot.umpire || '—';
           const clickable = typeof onMatchClick === 'function';
+          const m1Live = isInProgress(m1);
+          const m2Live = isInProgress(m2);
+          const m1Score = formatScoreSummary(m1);
+          const m2Score = formatScoreSummary(m2);
+          const rowLive = m1Live || m2Live;
 
           return (
             <div
               key={slot.id}
-              className="grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] border-t border-gray-300 text-sm"
+              className={`grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] border-t border-gray-300 text-sm ${
+                rowLive ? 'ring-2 ring-inset ring-green-400' : ''
+              }`}
             >
-              <div className="p-2 font-medium border-r border-gray-200 bg-gray-50 flex items-center">
-                {slot.timeLabel}
+              <div className={`p-2 font-medium border-r border-gray-200 flex items-center ${
+                rowLive ? 'bg-green-50' : 'bg-gray-50'
+              }`}>
+                <span>
+                  {slot.timeLabel}
+                  {rowLive && (
+                    <span className="block text-[10px] font-semibold text-green-700 uppercase tracking-wide mt-0.5">
+                      Live
+                    </span>
+                  )}
+                </span>
               </div>
-              <div className="grid grid-cols-2 border-r border-gray-200 bg-sky-50/80">
+              <div className={`grid grid-cols-2 border-r border-gray-200 ${
+                m1Live ? 'bg-green-50/80' : 'bg-sky-50/80'
+              }`}>
                 <button
                   type="button"
                   disabled={!clickable || !m1}
@@ -106,11 +145,20 @@ export default function ScheduleTable({
                     clickable && m1 ? 'hover:bg-sky-100 active:bg-sky-200 cursor-pointer' : ''
                   } disabled:cursor-default disabled:opacity-90`}
                 >
-                  {slot.noteCourt1 || formatMatchLabel(m1)}
+                  <span>{slot.noteCourt1 || formatMatchLabel(m1)}</span>
+                  {m1Score && (
+                    <span className={`block text-xs font-semibold mt-0.5 ${
+                      m1?.completed ? 'text-gray-500' : 'text-green-700'
+                    }`}>
+                      {m1Score}{m1?.completed ? ' (Final)' : ''}
+                    </span>
+                  )}
                 </button>
                 <div className="p-2 text-center text-xs sm:text-sm">{ump}</div>
               </div>
-              <div className="grid grid-cols-2 bg-orange-50/80">
+              <div className={`grid grid-cols-2 ${
+                m2Live ? 'bg-green-50/80' : 'bg-orange-50/80'
+              }`}>
                 <button
                   type="button"
                   disabled={!clickable || !m2}
@@ -119,7 +167,14 @@ export default function ScheduleTable({
                     clickable && m2 ? 'hover:bg-orange-100 active:bg-orange-200 cursor-pointer' : ''
                   } disabled:cursor-default disabled:opacity-90`}
                 >
-                  {slot.noteCourt2 || formatMatchLabel(m2)}
+                  <span>{slot.noteCourt2 || formatMatchLabel(m2)}</span>
+                  {m2Score && (
+                    <span className={`block text-xs font-semibold mt-0.5 ${
+                      m2?.completed ? 'text-gray-500' : 'text-green-700'
+                    }`}>
+                      {m2Score}{m2?.completed ? ' (Final)' : ''}
+                    </span>
+                  )}
                 </button>
                 <div className="p-2 text-center text-xs sm:text-sm">{ump}</div>
               </div>
@@ -168,16 +223,34 @@ export default function ScheduleTable({
           const m2 = matchByGame(scores, slot.gameCourt2);
           const ump = slot.umpire || '—';
           const clickable = typeof onMatchClick === 'function';
+          const m1Live = isInProgress(m1);
+          const m2Live = isInProgress(m2);
+          const m1Score = formatScoreSummary(m1);
+          const m2Score = formatScoreSummary(m2);
+          const cardLive = m1Live || m2Live;
 
           return (
             <div
               key={slot.id}
-              className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white"
+              className={`rounded-xl border overflow-hidden shadow-sm bg-white ${
+                cardLive ? 'border-green-400 ring-2 ring-green-400' : 'border-gray-200'
+              }`}
             >
-              <div className="bg-gray-100 px-3 py-2 font-semibold text-sm">{slot.timeLabel}</div>
+              <div className={`px-3 py-2 font-semibold text-sm flex items-center justify-between ${
+                cardLive ? 'bg-green-50' : 'bg-gray-100'
+              }`}>
+                <span>{slot.timeLabel}</span>
+                {cardLive && (
+                  <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide bg-green-100 px-2 py-0.5 rounded-full">
+                    Live
+                  </span>
+                )}
+              </div>
               <div className="divide-y divide-gray-100">
-                <div className="bg-sky-50/90 p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-sky-800 font-semibold mb-1">
+                <div className={`p-3 ${m1Live ? 'bg-green-50/90' : 'bg-sky-50/90'}`}>
+                  <div className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
+                    m1Live ? 'text-green-800' : 'text-sky-800'
+                  }`}>
                     Court 1
                   </div>
                   <button
@@ -190,10 +263,19 @@ export default function ScheduleTable({
                   >
                     {slot.noteCourt1 || formatMatchLabel(m1)}
                   </button>
+                  {m1Score && (
+                    <div className={`text-sm font-semibold mt-1 ${
+                      m1?.completed ? 'text-gray-500' : 'text-green-700'
+                    }`}>
+                      {m1Score}{m1?.completed ? ' (Final)' : ''}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-600 mt-1">Umpire: {ump}</div>
                 </div>
-                <div className="bg-orange-50/90 p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-orange-900 font-semibold mb-1">
+                <div className={`p-3 ${m2Live ? 'bg-green-50/90' : 'bg-orange-50/90'}`}>
+                  <div className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
+                    m2Live ? 'text-green-800' : 'text-orange-900'
+                  }`}>
                     Court 2
                   </div>
                   <button
@@ -206,6 +288,13 @@ export default function ScheduleTable({
                   >
                     {slot.noteCourt2 || formatMatchLabel(m2)}
                   </button>
+                  {m2Score && (
+                    <div className={`text-sm font-semibold mt-1 ${
+                      m2?.completed ? 'text-gray-500' : 'text-green-700'
+                    }`}>
+                      {m2Score}{m2?.completed ? ' (Final)' : ''}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-600 mt-1">Umpire: {ump}</div>
                 </div>
               </div>
