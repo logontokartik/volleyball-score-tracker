@@ -1,0 +1,4650 @@
+{
+  "generatedAt": "2026-04-12T11:13:39.480Z",
+  "sourceFile": "Volleyball Tournament Signups All years (1).xlsx",
+  "masterList": [
+    {
+      "name": "Sandeep Akare",
+      "tournamentsPlayed": 14,
+      "tournamentsWon": 5,
+      "runnersUp": 1,
+      "firstName": "Sandeep",
+      "lastName": "Akare",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Kartik",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 5,
+      "runnersUp": 3,
+      "firstName": "Kartik",
+      "lastName": "Viswanadha",
+      "speciality": "MB: Middle Blocker",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prajeesh",
+      "tournamentsPlayed": 17,
+      "tournamentsWon": 4,
+      "runnersUp": 1,
+      "firstName": "Prajeesh",
+      "lastName": "",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sirisha",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 4,
+      "runnersUp": 1,
+      "firstName": "Sirisha",
+      "lastName": "",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Aditya Anand",
+      "tournamentsPlayed": 11,
+      "tournamentsWon": 4,
+      "runnersUp": 0,
+      "firstName": "Aditya",
+      "lastName": "Anand",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ratheesh Nair",
+      "tournamentsPlayed": 9,
+      "tournamentsWon": 4,
+      "runnersUp": 0,
+      "firstName": "Ratheesh",
+      "lastName": "Nair",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prashanth Surampudi",
+      "tournamentsPlayed": 16,
+      "tournamentsWon": 3,
+      "runnersUp": 1,
+      "firstName": "Prashanth",
+      "lastName": "Surampudi",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Soumya Dharmateja",
+      "tournamentsPlayed": 13,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Soumya",
+      "lastName": "Dharmateja",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Suresh Voruganti",
+      "tournamentsPlayed": 12,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Suresh",
+      "lastName": "Voruganti",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Abhisar Anand",
+      "tournamentsPlayed": 9,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Abhisar",
+      "lastName": "Anand",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Madhusudan Yedida",
+      "tournamentsPlayed": 11,
+      "tournamentsWon": 3,
+      "runnersUp": 1,
+      "firstName": "Madhusudan",
+      "lastName": "Yedida",
+      "speciality": "L: Libero",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Vivek Goyal",
+      "tournamentsPlayed": 11,
+      "tournamentsWon": 3,
+      "runnersUp": 3,
+      "firstName": "Vivek",
+      "lastName": "Goyal",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Veera",
+      "tournamentsPlayed": 10,
+      "tournamentsWon": 3,
+      "runnersUp": 1,
+      "firstName": "Veera",
+      "lastName": "",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Pradeep Polisetty",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Pradeep",
+      "lastName": "Polisetty",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Viral Dalia",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Viral",
+      "lastName": "Dalia",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ramakrishna",
+      "tournamentsPlayed": 14,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Ramakrishna",
+      "lastName": "",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Mahati Rapol",
+      "tournamentsPlayed": 16,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Mahati",
+      "lastName": "Rapol",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Narsing Ravula",
+      "tournamentsPlayed": 14,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Narsing",
+      "lastName": "Ravula",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sathis",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Sathis",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Srikanth Suravajhala",
+      "tournamentsPlayed": 13,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Srikanth",
+      "lastName": "Suravajhala",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Dinesh Ramakrishnan",
+      "tournamentsPlayed": 10,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Dinesh",
+      "lastName": "Ramakrishnan",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prasanna Jha",
+      "tournamentsPlayed": 10,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Prasanna",
+      "lastName": "Jha",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Gopi Maguluri",
+      "tournamentsPlayed": 11,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Gopi",
+      "lastName": "Maguluri",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Kiranlal",
+      "tournamentsPlayed": 12,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Kiranlal",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Suganya",
+      "tournamentsPlayed": 10,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Suganya",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Gireesh",
+      "tournamentsPlayed": 8,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Gireesh",
+      "lastName": "",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Kavya Cherukuri",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 3,
+      "runnersUp": 0,
+      "firstName": "Kavya",
+      "lastName": "Cherukuri",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Aadya Surampudi",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Aadya",
+      "lastName": "Surampudi",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Aaditya Akare",
+      "tournamentsPlayed": 6,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Aaditya",
+      "lastName": "Akare",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prasad Bathula",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Prasad",
+      "lastName": "Bathula",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Amar Joshi",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Amar",
+      "lastName": "Joshi",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ezra R",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Ezra",
+      "lastName": "R",
+      "speciality": "MB: Middle Blocker",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Dev Patel",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 2,
+      "runnersUp": 0,
+      "firstName": "Dev",
+      "lastName": "Patel",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Amar Katragadda",
+      "tournamentsPlayed": 16,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Amar",
+      "lastName": "Katragadda",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prasanna Edpuganti",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 1,
+      "runnersUp": 2,
+      "firstName": "Prasanna",
+      "lastName": "Edpuganti",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ketan Dave",
+      "tournamentsPlayed": 14,
+      "tournamentsWon": 1,
+      "runnersUp": 2,
+      "firstName": "Ketan",
+      "lastName": "Dave",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Siddharth Kundalkar",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 1,
+      "runnersUp": 1,
+      "firstName": "Siddharth",
+      "lastName": "Kundalkar",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shan",
+      "tournamentsPlayed": 15,
+      "tournamentsWon": 2,
+      "runnersUp": 1,
+      "firstName": "Shan",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ashish Soni",
+      "tournamentsPlayed": 14,
+      "tournamentsWon": 2,
+      "runnersUp": 2,
+      "firstName": "Ashish",
+      "lastName": "Soni",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sriprasad k",
+      "tournamentsPlayed": 14,
+      "tournamentsWon": 1,
+      "runnersUp": 2,
+      "firstName": "Sriprasad",
+      "lastName": "k",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shashi",
+      "tournamentsPlayed": 9,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Shashi",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Srinivas Sunkara",
+      "tournamentsPlayed": 11,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Srinivas",
+      "lastName": "Sunkara",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Moorthy",
+      "tournamentsPlayed": 9,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Moorthy",
+      "lastName": "",
+      "speciality": "RH: Right Side Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Senthil",
+      "tournamentsPlayed": 8,
+      "tournamentsWon": 1,
+      "runnersUp": 1,
+      "firstName": "Senthil",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Rajesh Singh",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Rajesh",
+      "lastName": "Singh",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shravan Kodam",
+      "tournamentsPlayed": 6,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Shravan",
+      "lastName": "Kodam",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Vignesh Natesan",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Vignesh",
+      "lastName": "Natesan",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Preetham",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Preetham",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Jyoe",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Jyoe",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Bharath",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 1,
+      "runnersUp": 1,
+      "firstName": "Bharath",
+      "lastName": "",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Nagesh",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Nagesh",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shriya Dave",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Shriya",
+      "lastName": "Dave",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sandilya",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Sandilya",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sanjeev",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Sanjeev",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Chirayu",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Chirayu",
+      "lastName": "",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Preetesh Bansal",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Preetesh",
+      "lastName": "Bansal",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Rithvik",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 1,
+      "runnersUp": 1,
+      "firstName": "Rithvik",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Haasini",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 1,
+      "runnersUp": 1,
+      "firstName": "Haasini",
+      "lastName": "Behara",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ponniah",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Ponniah",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prashant Karmarkar",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Prashant",
+      "lastName": "Karmarkar",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Venkat Kanikaram",
+      "tournamentsPlayed": 13,
+      "tournamentsWon": 0,
+      "runnersUp": 1,
+      "firstName": "Venkat",
+      "lastName": "Kanikaram",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Jawahar",
+      "tournamentsPlayed": 11,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Jawahar",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Saravanan Ramalingam",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 1,
+      "runnersUp": 0,
+      "firstName": "Saravanan",
+      "lastName": "Ramalingam",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Robin",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Robin",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Amit Jhawar",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Amit",
+      "lastName": "Jhawar",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Subhas Suvvari",
+      "tournamentsPlayed": 7,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Subhas",
+      "lastName": "Suvvari",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sasha",
+      "tournamentsPlayed": 6,
+      "tournamentsWon": 0,
+      "runnersUp": 2,
+      "firstName": "Sasha",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Nithish",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Nithish",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Raj Dasari",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Raj",
+      "lastName": "Dasari",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Saanvi Jha",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Saanvi",
+      "lastName": "Jha",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ashwin Mudike",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Ashwin",
+      "lastName": "Mudike",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Rohit",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Rohit",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Aanya Surampudi",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Aanya",
+      "lastName": "Surampudi",
+      "speciality": "L: Libero",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ashish Chhabra",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 1,
+      "firstName": "Ashish",
+      "lastName": "Chhabra",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Kishan",
+      "tournamentsPlayed": 5,
+      "tournamentsWon": 0,
+      "runnersUp": 1,
+      "firstName": "Kishan",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Riddhi",
+      "tournamentsPlayed": 6,
+      "tournamentsWon": 0,
+      "runnersUp": 1,
+      "firstName": "Riddhi",
+      "lastName": "",
+      "speciality": "S: Setter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Somu",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Somu",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sonia",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Sonia",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Babu Annam",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Babu",
+      "lastName": "Annam",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Pranav",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Pranav",
+      "lastName": "",
+      "speciality": "L: Libero",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Durai",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Durai",
+      "lastName": "",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Joshua",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Joshua",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prabby",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Prabby",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Ravi Natla",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Ravi",
+      "lastName": "Natla",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shiva",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Shiva",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shaunak",
+      "tournamentsPlayed": 4,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Shaunak",
+      "lastName": "K",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Brijesh",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Brijesh",
+      "lastName": "",
+      "speciality": "DS: Defensive Specialist",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Chetan Mudike",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Chetan",
+      "lastName": "Mudike",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Gopal",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Gopal",
+      "lastName": "",
+      "speciality": "OPP: Opposite Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Parag",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Parag",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Prakash",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Prakash",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Shravan D",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Shravan",
+      "lastName": "D",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Sudhakar Uncle",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Sudhakar",
+      "lastName": "Uncle",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Umang",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Umang",
+      "lastName": "",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Dinesh M",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Dinesh",
+      "lastName": "M",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Vikas",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Vikas",
+      "lastName": "Thukral",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": "None specified"
+    },
+    {
+      "name": "Preet",
+      "tournamentsPlayed": 3,
+      "tournamentsWon": 0,
+      "runnersUp": 1,
+      "firstName": "Preet",
+      "lastName": "Mood",
+      "speciality": "OH: Outside Hitter",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": ""
+    },
+    {
+      "name": "Shreya Karmarkar",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Shreya",
+      "lastName": "Karmarkar",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": ""
+    },
+    {
+      "name": "Aaryan",
+      "tournamentsPlayed": 1,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Aaryan",
+      "lastName": "Jawahar",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": ""
+    },
+    {
+      "name": "Advik",
+      "tournamentsPlayed": 2,
+      "tournamentsWon": 0,
+      "runnersUp": 0,
+      "firstName": "Advik",
+      "lastName": "Suravajhala",
+      "speciality": "",
+      "position": "",
+      "yankeeRating": "",
+      "gvwRating": "",
+      "height": ""
+    }
+  ],
+  "tournamentSignups": [
+    {
+      "name": "Summer 2017",
+      "signups": [
+        "Ratheesh",
+        "Ketan",
+        "Sandilya",
+        "Saravanan",
+        "Shiva",
+        "Gopi M",
+        "Vivek",
+        "Venkat K",
+        "Dinesh",
+        "Sathis",
+        "Amar K",
+        "Prasad B",
+        "Ashwin",
+        "Nagesh",
+        "Prashanth S",
+        "Siddharth",
+        "Senthil",
+        "Viral D",
+        "Ashish S",
+        "Prasanna E",
+        "Ramakrishna",
+        "Prajeesh",
+        "Jawahar",
+        "Sriprasad k",
+        "Umang",
+        "Brijesh",
+        "Parag",
+        "Amit",
+        "Sravan K",
+        "Shravan D",
+        "Moorthy",
+        "Amar J",
+        "Preetesh",
+        "Narsing",
+        "Prasanna J",
+        "Kartik",
+        "Sanjeev",
+        "Gopal"
+      ]
+    },
+    {
+      "name": "Winter 2018",
+      "signups": [
+        "Dinesh M",
+        "Amar K",
+        "Dinesh R",
+        "Sanjeev",
+        "Prasad B",
+        "Mahati",
+        "Ashish S",
+        "Ketan",
+        "Shaan",
+        "PE",
+        "Narsing",
+        "Babu Prasad",
+        "Moorthy",
+        "Shiva",
+        "Prasanna Jha",
+        "Sashi",
+        "Jawaugh",
+        "Prajeesh",
+        "Shravan K",
+        "Prashanth S",
+        "Senthil",
+        "Jyoe",
+        "Robin",
+        "Srini S",
+        "Ramakrishna",
+        "Viral",
+        "Sidd",
+        "Sri Prasad",
+        "Vignesh",
+        "Ratheesh",
+        "Sandilya"
+      ]
+    },
+    {
+      "name": "Summer 2018",
+      "signups": [
+        "Kartik",
+        "Pradeep Polisetty",
+        "Sandeep Akare",
+        "Vignesh Natesan",
+        "Amar Joshi",
+        "Prasanna E",
+        "Narsing Ravula",
+        "Robin",
+        "Siddharth Kundalkar",
+        "Moorthy",
+        "Sandilya",
+        "Sanjeev",
+        "Sudhakar Uncle",
+        "Amit",
+        "Prabby",
+        "Sriprasad k",
+        "Prasad Bathula",
+        "Abhisar Anand",
+        "Amar Kattragadda",
+        "Ashish Soni",
+        "Chetan Mudike",
+        "Dinesh Ramakrishnan",
+        "Ketan Dave",
+        "Madhusudan Yedida",
+        "Prajeesh",
+        "Prasanna Jha",
+        "Prashanth Surampudi",
+        "Ratheesh Nair",
+        "Saravanan Ramalingam",
+        "Senthil",
+        "Shan",
+        "Shravan Kodam",
+        "Srinivas Sunkara",
+        "Venkat Kanikaram",
+        "Viral Dhalia"
+      ]
+    },
+    {
+      "name": "Winter 2019",
+      "signups": [
+        "Dinesh",
+        "Jawa",
+        "Jyoe",
+        "Narsingh",
+        "Viral",
+        "Senthil",
+        "Shashi",
+        "Gopi M",
+        "PE",
+        "Prajeesh",
+        "Prasanna Jha",
+        "Shaan",
+        "Ratheesh",
+        "Sirisha",
+        "Amar Joshi",
+        "Prashanth",
+        "Sid",
+        "Srini",
+        "Vignesh",
+        "Suganya",
+        "Suresh",
+        "Amar K",
+        "Bharat",
+        "Moorthy",
+        "Pradeep",
+        "Soumya",
+        "Robin",
+        "Sandeep",
+        "Amit",
+        "Ashish",
+        "Mahati",
+        "Venkat",
+        "Ramakrishna",
+        "Sriprasad",
+        "Sathis"
+      ]
+    },
+    {
+      "name": "Summer 2019",
+      "signups": [
+        "Abhisar",
+        "Amar K",
+        "Ashish Soni",
+        "Dev Patel",
+        "Dinesh",
+        "Gopi M",
+        "Jyoe",
+        "Karthik",
+        "Ketan",
+        "Mahati",
+        "Narsing",
+        "Nithish",
+        "PE",
+        "Prakash",
+        "Prajeesh",
+        "Prasanna Jha",
+        "Prashanth",
+        "Ramakrishna",
+        "Rohit",
+        "Sandeep",
+        "Sathis",
+        "Shaan",
+        "Shashi",
+        "Shravan",
+        "Sid",
+        "Sirisha",
+        "Sonia",
+        "Soumya",
+        "Srini",
+        "Sriprasad",
+        "Suganya",
+        "Suresh",
+        "Venkat",
+        "Viral",
+        "Girish"
+      ]
+    },
+    {
+      "name": "Winter 2020",
+      "signups": [
+        "Abhisar",
+        "Amar K",
+        "Ashish Soni",
+        "Bharath",
+        "Dev Patel",
+        "Dinesh",
+        "Girish",
+        "Gopi M",
+        "Jawa",
+        "Jyoe",
+        "Karthik",
+        "Ketan",
+        "Madhu",
+        "Mahati",
+        "Moorthy",
+        "Narsing",
+        "Nithish",
+        "PE",
+        "Prajeesh",
+        "Prasanna Jha",
+        "Prashanth",
+        "Ramakrishna",
+        "Rohit",
+        "Sandeep",
+        "Sathis",
+        "Senthil",
+        "Shaan",
+        "Shashi",
+        "Shravan",
+        "Sid",
+        "Srikanth",
+        "Sirisha",
+        "Sonia",
+        "Soumya",
+        "Sriprasad",
+        "Suganya",
+        "Suresh",
+        "Pradeep",
+        "Venkat",
+        "Viral",
+        "Prabby",
+        "Chirayu",
+        "Amit",
+        "Ratheesh",
+        "Babu Prasad",
+        "Prasad B"
+      ]
+    },
+    {
+      "name": "Summer 2020",
+      "signups": [
+        "Kartik",
+        "Ratheesh",
+        "Moorthy",
+        "Sandeep",
+        "RK",
+        "Shashi",
+        "Amar",
+        "Srikanth",
+        "Dinesh",
+        "Ketan",
+        "Mahati",
+        "Sirisha",
+        "Soumya",
+        "Sonia",
+        "Abhisar",
+        "Aditya",
+        "Rajesh Singh",
+        "Somu",
+        "Prajeesh",
+        "Gireesh",
+        "Joshua",
+        "Madhu",
+        "Saravanan",
+        "Siddharth",
+        "Saanvi",
+        "Shreya",
+        "Nitish",
+        "Prashanth",
+        "Ashish Soni",
+        "Raj Dasari",
+        "Suresh Voruganti",
+        "Nagesh",
+        "Narsing Ravula",
+        "Kiranlal",
+        "Vivek Goyal",
+        "Dev Patel"
+      ]
+    },
+    {
+      "name": "Winter 2021",
+      "signups": [
+        "Srikanth Suravajhala",
+        "Preetham",
+        "Somu",
+        "Sandeep Akare",
+        "Kartik",
+        "Prajeesh",
+        "Ketan",
+        "Siddharth",
+        "Veera",
+        "Ashish Soni",
+        "Ramakrishna",
+        "Suganya",
+        "Sirisha",
+        "Saravanan",
+        "Dinesh",
+        "Kiranlal",
+        "Ratheesh",
+        "Soumya",
+        "Moorthy",
+        "Senthil",
+        "Jawahar",
+        "Srini",
+        "Mahati",
+        "Nagesh",
+        "Sathis",
+        "Amar",
+        "Shashi",
+        "Prasanna Edpuganti",
+        "Abhisar Anand",
+        "Aditya Anand",
+        "Rajesh Singh",
+        "Vignesh",
+        "Narsing Ravula",
+        "Prashanth Surampudi",
+        "Rohit",
+        "Viral D",
+        "Raj Dasari",
+        "Suresh Voruganti",
+        "Gopi Maguluri",
+        "Babu Annam",
+        "Prashant Karmarkar",
+        "Venkat K",
+        "Ravi Natla"
+      ]
+    },
+    {
+      "name": "Summer 2021",
+      "signups": [
+        "Srikanth Suravajhala",
+        "Sandeep Akare",
+        "Robin",
+        "Mahati Rapol",
+        "Shravan Kodam",
+        "Suresh Voruganti",
+        "Vivek Goyal",
+        "Ketan Dave",
+        "Venkat Kanikaram",
+        "Soumya Dharmateja",
+        "Ramakrishna",
+        "Gopi Maguluri",
+        "Viral Dalia",
+        "Somu",
+        "Ashish Soni",
+        "Siddharth Kundalkar",
+        "Pritam",
+        "Dinesh",
+        "Subash Suvvari",
+        "Amar K",
+        "Prashanth",
+        "Kartik",
+        "Shashi",
+        "Veera",
+        "Ravi N",
+        "Kiran",
+        "Madhu",
+        "Jyotsna",
+        "Durai",
+        "Sriprasad",
+        "Prajeesh",
+        "Bharath",
+        "Abhisar",
+        "Aditya",
+        "Dev Patel",
+        "Joshua",
+        "Pradeep Polisetty",
+        "Gireesh",
+        "Saanvi Jha",
+        "Prasanna Jha",
+        "Senthil",
+        "Shan",
+        "Narsing Ravula",
+        "Sathis",
+        "Vignesh",
+        "Sirisha",
+        "Preetesh Bansal",
+        "Rajesh Singh",
+        "Ezra"
+      ]
+    },
+    {
+      "name": "Winter 2022",
+      "signups": [
+        "Gireesh",
+        "Kiran",
+        "Mahati",
+        "Sathis",
+        "Shan",
+        "Sriprasad",
+        "Abhi",
+        "Gopi M",
+        "Moorthy",
+        "Nagesh",
+        "Sirisha",
+        "Suresh",
+        "Nitish",
+        "Prashanth",
+        "RK",
+        "Soumya",
+        "Srini",
+        "Viral",
+        "Adi",
+        "Ezra",
+        "Rajesh S",
+        "Ratheesh",
+        "Sandeep",
+        "Shashi",
+        "Amar K",
+        "PE",
+        "Raj D",
+        "Srikanth",
+        "Subash",
+        "Venkat",
+        "Dinesh",
+        "Ketan",
+        "Pradheep",
+        "Prajeesh",
+        "Veera",
+        "Vivek Goyal",
+        "Ashish Soni",
+        "Preetham",
+        "Ram",
+        "Senthil",
+        "Sid",
+        "Vignesh"
+      ]
+    },
+    {
+      "name": "Summer 2022",
+      "signups": [
+        "Srikanth",
+        "Sandeep Akare",
+        "Ashwin Mudike",
+        "Ramakrishna",
+        "Amar",
+        "Kiran",
+        "Suresh Voruganti",
+        "Sidd Kundalkar",
+        "Kavya Cherukuri",
+        "Ashish Soni",
+        "Prasanna Edpuganti",
+        "Madhu",
+        "Soumya",
+        "Sirisha",
+        "Mahati",
+        "Sathis",
+        "Abhisar Anand",
+        "Aditya Anand",
+        "Subhas Suvvari",
+        "Prajeesh",
+        "Preetham",
+        "Sriprasad",
+        "Ezra R",
+        "Srini",
+        "Saanvi Jha",
+        "Prasanna Jha",
+        "Jawa",
+        "Veera",
+        "Amit Jhawar",
+        "Narsing",
+        "Kartik",
+        "Prashanth",
+        "Durai",
+        "Aadya Surampudi",
+        "Suganya",
+        "Robin",
+        "Ram",
+        "Aanya Surampudi",
+        "Viral D",
+        "Shashi",
+        "Shan",
+        "Ketan"
+      ]
+    },
+    {
+      "name": "Winter 2023",
+      "signups": [
+        "Sandeep Akare",
+        "Raj Dasari",
+        "Kiran",
+        "Ashish Soni",
+        "Viral Dalia",
+        "Kartik",
+        "Abhisar Anand",
+        "Aditya Anand",
+        "Rajesh Singh",
+        "Soumya",
+        "Srikanth",
+        "Mahati",
+        "Vivek Goyal",
+        "Aaditya Akare",
+        "Madhu",
+        "Sirisha",
+        "Prasanna Edpuganti",
+        "Prajeesh",
+        "Gireesh",
+        "Ketan",
+        "Sriprasad",
+        "Ratheesh",
+        "Sathis",
+        "Ramakrishna",
+        "Chirayu",
+        "Pradeep",
+        "Veera",
+        "Preetham",
+        "Kavya",
+        "Venkat Kanikaram",
+        "Narsing",
+        "Prashanth Surampudi",
+        "Ashwin M",
+        "Jawa",
+        "Suganya",
+        "Sasha",
+        "Amar K",
+        "Shan",
+        "Srini",
+        "Shriya Dave",
+        "Prasanna Jha",
+        "Suresh"
+      ]
+    },
+    {
+      "name": "Summer 2023",
+      "signups": [
+        "Kartik",
+        "Kishan",
+        "Sasha",
+        "Shan",
+        "Sirisha",
+        "Sriprasad",
+        "Vivek",
+        "Aaditya Akare",
+        "Aanya",
+        "Jawahar",
+        "PE",
+        "Prasanna Jha",
+        "Soumya",
+        "Srini",
+        "Aadya",
+        "Bharath",
+        "Kiran",
+        "Mahati",
+        "Riddhi",
+        "Viral D",
+        "Amar K",
+        "Ashish Chhabra",
+        "Ashish Soni",
+        "Prashanth",
+        "Rajesh",
+        "Saanvi",
+        "Shriya",
+        "Pranav",
+        "Ramakrishna",
+        "Sandeep",
+        "Satish",
+        "Suganya",
+        "Suresh",
+        "Aditya Anand",
+        "Gopi",
+        "Kavya",
+        "Narsing",
+        "Prajeesh",
+        "Srikanth"
+      ]
+    },
+    {
+      "name": "Winter/Spring 2024",
+      "signups": [
+        "Aditya Anand",
+        "Nagesh",
+        "RK",
+        "Sasha",
+        "Shriya",
+        "Viral",
+        "Aanya",
+        "Ashish C",
+        "Rohit",
+        "Sandeep",
+        "Shan",
+        "Subash",
+        "Amar",
+        "Kiran",
+        "Kishan",
+        "Pranav",
+        "Riddhi",
+        "Suresh",
+        "Adi Akare",
+        "Gireesh",
+        "Kartik",
+        "Ketan",
+        "Mahati",
+        "PE",
+        "Aadya",
+        "Madhu",
+        "Prajeesh",
+        "Sathis",
+        "Suganya",
+        "Vivek",
+        "Ashwin",
+        "Kavya",
+        "Narsing",
+        "Sirisha",
+        "Srikanth",
+        "Veera"
+      ]
+    },
+    {
+      "name": "Summer/Fall 2024",
+      "signups": [
+        "Madhu",
+        "Ponniah",
+        "Prajeesh",
+        "Pranav",
+        "PE",
+        "Shan",
+        "Subhas",
+        "Ashish Soni",
+        "Bharath",
+        "Ketan",
+        "Kiran",
+        "Riddhi",
+        "Sandeep",
+        "Sriprasad",
+        "Adi Anand",
+        "Amar",
+        "Haasini",
+        "Kavya",
+        "RK",
+        "Sasha",
+        "Vikas",
+        "Aanya",
+        "Kishan",
+        "Prashanth",
+        "Rajesh",
+        "Sidd",
+        "Soumya",
+        "Vivek",
+        "Aadya",
+        "Kartik",
+        "Rithvik",
+        "Shriya",
+        "Sirisha",
+        "Srikanth",
+        "Viral",
+        "Aadi Akare",
+        "Gopi",
+        "Mahati",
+        "Sathis",
+        "Shaunak",
+        "Veera",
+        "Venkat"
+      ]
+    },
+    {
+      "name": "Winter/Spring 2025",
+      "signups": [
+        "Srikanth",
+        "Suganya",
+        "Prashanth",
+        "Soumya",
+        "Kartik",
+        "Jawa",
+        "Sandeep Akare",
+        "Vivek Goyal",
+        "Suresh Voruganti",
+        "Aaditya Akare",
+        "Madhu",
+        "Sirisha",
+        "Siddharth Kundalkar",
+        "Shaunak Kundalkar",
+        "Ashish Soni",
+        "Prajeesh",
+        "Kishan",
+        "Riddhi Viswanadha",
+        "Aadya Surampudi",
+        "Sasha Jawahar",
+        "Aditya Anand",
+        "Shan",
+        "Kiran",
+        "Mahati",
+        "Veera",
+        "Rithvik",
+        "Ponniah",
+        "Venkat Kanikaram",
+        "Gopi",
+        "Ashish Chhabra",
+        "PE",
+        "Pradeep Polisetty",
+        "Sathis",
+        "Viral",
+        "Haasini Behara",
+        "Preet"
+      ]
+    },
+    {
+      "name": "Summer 2025",
+      "signups": [
+        "Suganya",
+        "Soumya",
+        "Jawahar",
+        "Prashanth",
+        "Srikanth",
+        "Kartik",
+        "Moorthy",
+        "Veera",
+        "Shan",
+        "Prajeesh",
+        "Shaunak",
+        "Siddharth",
+        "Riddhi",
+        "Vivek Goyal",
+        "Rithvik",
+        "Madhu",
+        "Ashish Soni",
+        "Haasini",
+        "Mahati",
+        "Venkat K",
+        "Sasha",
+        "Srini",
+        "Ram",
+        "Sathis",
+        "Vignesh",
+        "Jyotin",
+        "Sirisha",
+        "Gopi",
+        "Aadya",
+        "Kavya",
+        "Kiran",
+        "Preet",
+        "Aanya",
+        "Advik",
+        "Aaryan",
+        "Sriprasad",
+        "PE",
+        "Amar K",
+        "Shreya K",
+        "Narsing",
+        "Subash",
+        "Pranav"
+      ]
+    },
+    {
+      "name": "Spring 2026",
+      "signups": [
+        "Jawa",
+        "Aadi Akare",
+        "Jyotin Kodam",
+        "Sathis",
+        "Sirisha",
+        "Venkat Kanikaram",
+        "Vikas Thukral",
+        "Shaunak",
+        "Anish Saravanan",
+        "Kiran",
+        "Mahati Rapol",
+        "Ponniah",
+        "Veera",
+        "Vivek Goyal",
+        "Kishan",
+        "Aadya",
+        "Haasini",
+        "Ketan Dave",
+        "Nikhil",
+        "Preet",
+        "Subash",
+        "Aditya Anand",
+        "Gireesh",
+        "Madhu",
+        "Rithvik",
+        "Shan",
+        "Srikanth",
+        "Sriprasad",
+        "Kartik",
+        "Advik",
+        "Durai",
+        "Kavya Cherukuri",
+        "Riddhi",
+        "Siddharth",
+        "Srini"
+      ]
+    }
+  ],
+  "directory": [
+    {
+      "rawName": "Aaditya Akare",
+      "canonicalName": "Aaditya Akare",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Ratheesh Nair",
+        "Winter 2018": "Dinesh M",
+        "Summer 2018": "Kartik",
+        "Winter 2019": "Dinesh Ramakrishnan",
+        "Summer 2019": "Abhisar Anand",
+        "Winter 2020": "Abhisar Anand",
+        "Summer 2020": "Kartik",
+        "Winter 2021": "Srikanth Suravajhala",
+        "Summer 2021": "Srikanth Suravajhala",
+        "Winter 2022": "Gireesh",
+        "Summer 2022": "Srikanth Suravajhala",
+        "Winter 2023": "Sandeep Akare",
+        "Summer 2023": "Kartik",
+        "Winter/Spring 2024": "Aditya Anand",
+        "Summer/Fall 2024": "Madhusudan Yedida",
+        "Winter/Spring 2025": "Srikanth Suravajhala",
+        "Summer 2025": "Suganya",
+        "Spring 2026": "Jawahar"
+      }
+    },
+    {
+      "rawName": "Aadya",
+      "canonicalName": "Aadya Surampudi",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Ketan Dave",
+        "Winter 2018": "Amar Katragadda",
+        "Summer 2018": "Pradeep Polisetty",
+        "Winter 2019": "Jawahar",
+        "Summer 2019": "Amar Katragadda",
+        "Winter 2020": "Amar Katragadda",
+        "Summer 2020": "Ratheesh Nair",
+        "Winter 2021": "Preetham",
+        "Summer 2021": "Sandeep Akare",
+        "Winter 2022": "Kiranlal",
+        "Summer 2022": "Sandeep Akare",
+        "Winter 2023": "Raj Dasari",
+        "Summer 2023": "Kishan",
+        "Winter/Spring 2024": "Nagesh",
+        "Summer/Fall 2024": "Ponniah",
+        "Winter/Spring 2025": "Suganya",
+        "Summer 2025": "Soumya Dharmateja",
+        "Spring 2026": "Aaditya Akare"
+      }
+    },
+    {
+      "rawName": "Aadya Surampudi",
+      "canonicalName": "Aadya Surampudi",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Sandilya",
+        "Winter 2018": "Dinesh Ramakrishnan",
+        "Summer 2018": "Sandeep Akare",
+        "Winter 2019": "Jyoe",
+        "Summer 2019": "Ashish Soni",
+        "Winter 2020": "Ashish Soni",
+        "Summer 2020": "Moorthy",
+        "Winter 2021": "Somu",
+        "Summer 2021": "Robin",
+        "Winter 2022": "Mahati Rapol",
+        "Summer 2022": "Ashwin Mudike",
+        "Winter 2023": "Kiranlal",
+        "Summer 2023": "Sasha",
+        "Winter/Spring 2024": "Ramakrishna",
+        "Summer/Fall 2024": "Prajeesh",
+        "Winter/Spring 2025": "Prashanth Surampudi",
+        "Summer 2025": "Jawahar",
+        "Spring 2026": "Jyotin Kodam"
+      }
+    },
+    {
+      "rawName": "Aanya",
+      "canonicalName": "Aanya Surampudi",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Saravanan Ramalingam",
+        "Winter 2018": "Sanjeev",
+        "Summer 2018": "Vignesh Natesan",
+        "Winter 2019": "Narsing Ravula",
+        "Summer 2019": "Dev Patel",
+        "Winter 2020": "Bharath",
+        "Summer 2020": "Sandeep Akare",
+        "Winter 2021": "Sandeep Akare",
+        "Summer 2021": "Mahati Rapol",
+        "Winter 2022": "Sathis",
+        "Summer 2022": "Ramakrishna",
+        "Winter 2023": "Ashish Soni",
+        "Summer 2023": "Shan",
+        "Winter/Spring 2024": "Sasha",
+        "Summer/Fall 2024": "Pranav",
+        "Winter/Spring 2025": "Soumya Dharmateja",
+        "Summer 2025": "Prashanth Surampudi",
+        "Spring 2026": "Sathis"
+      }
+    },
+    {
+      "rawName": "Aanya Surampudi",
+      "canonicalName": "Aanya Surampudi",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Shiva",
+        "Winter 2018": "Prasad Bathula",
+        "Summer 2018": "Amar Joshi",
+        "Winter 2019": "Viral Dalia",
+        "Summer 2019": "Dinesh Ramakrishnan",
+        "Winter 2020": "Dev Patel",
+        "Summer 2020": "Ramakrishna",
+        "Winter 2021": "Kartik",
+        "Summer 2021": "Shravan Kodam",
+        "Winter 2022": "Shan",
+        "Summer 2022": "Amar Katragadda",
+        "Winter 2023": "Viral Dalia",
+        "Summer 2023": "Sirisha",
+        "Winter/Spring 2024": "Shriya Dave",
+        "Summer/Fall 2024": "Prasanna Edpuganti",
+        "Winter/Spring 2025": "Kartik",
+        "Summer 2025": "Srikanth Suravajhala",
+        "Spring 2026": "Sirisha"
+      }
+    },
+    {
+      "rawName": "Abhi",
+      "canonicalName": "Abhisar Anand",
+      "tournamentsPlayed": 9,
+      "appearances": {
+        "Summer 2017": "Gopi Maguluri",
+        "Winter 2018": "Mahati Rapol",
+        "Summer 2018": "Prasanna Edpuganti",
+        "Winter 2019": "Senthil",
+        "Summer 2019": "Gopi Maguluri",
+        "Winter 2020": "Dinesh Ramakrishnan",
+        "Summer 2020": "Shashi",
+        "Winter 2021": "Prajeesh",
+        "Summer 2021": "Suresh Voruganti",
+        "Winter 2022": "Sriprasad k",
+        "Summer 2022": "Kiranlal",
+        "Winter 2023": "Kartik",
+        "Summer 2023": "Sriprasad k",
+        "Winter/Spring 2024": "Viral Dalia",
+        "Summer/Fall 2024": "Shan",
+        "Winter/Spring 2025": "Jawahar",
+        "Summer 2025": "Kartik",
+        "Spring 2026": "Venkat Kanikaram"
+      }
+    },
+    {
+      "rawName": "Abhisar",
+      "canonicalName": "Abhisar Anand",
+      "tournamentsPlayed": 9,
+      "appearances": {
+        "Summer 2017": "Vivek Goyal",
+        "Winter 2018": "Ashish Soni",
+        "Summer 2018": "Narsing Ravula",
+        "Winter 2019": "Shashi",
+        "Summer 2019": "Jyoe",
+        "Winter 2020": "Gireesh",
+        "Summer 2020": "Amar Katragadda",
+        "Winter 2021": "Ketan Dave",
+        "Summer 2021": "Vivek Goyal",
+        "Winter 2022": "Abhisar Anand",
+        "Summer 2022": "Suresh Voruganti",
+        "Winter 2023": "Abhisar Anand",
+        "Summer 2023": "Vivek Goyal",
+        "Winter/Spring 2024": "Aanya Surampudi",
+        "Summer/Fall 2024": "Subhas Suvvari",
+        "Winter/Spring 2025": "Sandeep Akare",
+        "Summer 2025": "Moorthy",
+        "Spring 2026": "Vikas"
+      }
+    },
+    {
+      "rawName": "Abhisar Anand",
+      "canonicalName": "Abhisar Anand",
+      "tournamentsPlayed": 9,
+      "appearances": {
+        "Summer 2017": "Venkat Kanikaram",
+        "Winter 2018": "Ketan Dave",
+        "Summer 2018": "Robin",
+        "Winter 2019": "Gopi Maguluri",
+        "Summer 2019": "Kartik",
+        "Winter 2020": "Gopi Maguluri",
+        "Summer 2020": "Srikanth Suravajhala",
+        "Winter 2021": "Siddharth Kundalkar",
+        "Summer 2021": "Ketan Dave",
+        "Winter 2022": "Gopi Maguluri",
+        "Summer 2022": "Siddharth Kundalkar",
+        "Winter 2023": "Aditya Anand",
+        "Summer 2023": "Aaditya Akare",
+        "Winter/Spring 2024": "Ashish Chhabra",
+        "Summer/Fall 2024": "Ashish Soni",
+        "Winter/Spring 2025": "Vivek Goyal",
+        "Summer 2025": "Veera",
+        "Spring 2026": "Shaunak"
+      }
+    },
+    {
+      "rawName": "Adi",
+      "canonicalName": "Aditya Anand",
+      "tournamentsPlayed": 7,
+      "appearances": {
+        "Summer 2017": "Dinesh Ramakrishnan",
+        "Winter 2018": "Shan",
+        "Summer 2018": "Siddharth Kundalkar",
+        "Winter 2019": "Prasanna Edpuganti",
+        "Summer 2019": "Ketan Dave",
+        "Winter 2020": "Jawahar",
+        "Summer 2020": "Dinesh Ramakrishnan",
+        "Winter 2021": "Veera",
+        "Summer 2021": "Venkat Kanikaram",
+        "Winter 2022": "Moorthy",
+        "Summer 2022": "Kavya Cherukuri",
+        "Winter 2023": "Rajesh Singh",
+        "Summer 2023": "Aanya Surampudi",
+        "Winter/Spring 2024": "Rohit",
+        "Summer/Fall 2024": "Bharath",
+        "Winter/Spring 2025": "Suresh Voruganti",
+        "Summer 2025": "Shan",
+        "Spring 2026": "Anish Saravanan"
+      }
+    },
+    {
+      "rawName": "Aditya",
+      "canonicalName": "Aditya Anand",
+      "tournamentsPlayed": 7,
+      "appearances": {
+        "Summer 2017": "Sathis",
+        "Winter 2018": "Prasanna Edpuganti",
+        "Summer 2018": "Moorthy",
+        "Winter 2019": "Prajeesh",
+        "Summer 2019": "Mahati Rapol",
+        "Winter 2020": "Jyoe",
+        "Summer 2020": "Ketan Dave",
+        "Winter 2021": "Ashish Soni",
+        "Summer 2021": "Soumya Dharmateja",
+        "Winter 2022": "Nagesh",
+        "Summer 2022": "Ashish Soni",
+        "Winter 2023": "Soumya Dharmateja",
+        "Summer 2023": "Jawahar",
+        "Winter/Spring 2024": "Sandeep Akare",
+        "Summer/Fall 2024": "Ketan Dave",
+        "Winter/Spring 2025": "Aaditya Akare",
+        "Summer 2025": "Prajeesh",
+        "Spring 2026": "Kiranlal"
+      }
+    },
+    {
+      "rawName": "Aditya Anand",
+      "canonicalName": "Aditya Anand",
+      "tournamentsPlayed": 7,
+      "appearances": {
+        "Summer 2017": "Amar Katragadda",
+        "Winter 2018": "Narsing Ravula",
+        "Summer 2018": "Sandilya",
+        "Winter 2019": "Prasanna Jha",
+        "Summer 2019": "Narsing Ravula",
+        "Winter 2020": "Kartik",
+        "Summer 2020": "Mahati Rapol",
+        "Winter 2021": "Ramakrishna",
+        "Summer 2021": "Ramakrishna",
+        "Winter 2022": "Sirisha",
+        "Summer 2022": "Prasanna Edpuganti",
+        "Winter 2023": "Srikanth Suravajhala",
+        "Summer 2023": "Prasanna Edpuganti",
+        "Winter/Spring 2024": "Shan",
+        "Summer/Fall 2024": "Kiranlal",
+        "Winter/Spring 2025": "Madhusudan Yedida",
+        "Summer 2025": "Shaunak",
+        "Spring 2026": "Mahati Rapol"
+      }
+    },
+    {
+      "rawName": "Aditya Anand",
+      "canonicalName": "Aditya Anand",
+      "tournamentsPlayed": 7,
+      "appearances": {
+        "Summer 2017": "Prasad Bathula",
+        "Winter 2018": "Babu Annam",
+        "Summer 2018": "Sanjeev",
+        "Winter 2019": "Shan",
+        "Summer 2019": "Nithish",
+        "Winter 2020": "Ketan Dave",
+        "Summer 2020": "Sirisha",
+        "Winter 2021": "Suganya",
+        "Summer 2021": "Gopi Maguluri",
+        "Winter 2022": "Suresh Voruganti",
+        "Summer 2022": "Madhusudan Yedida",
+        "Winter 2023": "Mahati Rapol",
+        "Summer 2023": "Prasanna Jha",
+        "Winter/Spring 2024": "Subhas Suvvari",
+        "Summer/Fall 2024": "Riddhi",
+        "Winter/Spring 2025": "Sirisha",
+        "Summer 2025": "Siddharth Kundalkar",
+        "Spring 2026": "Ponniah"
+      }
+    },
+    {
+      "rawName": "Amar",
+      "canonicalName": "Amar Katragadda",
+      "tournamentsPlayed": 13,
+      "appearances": {
+        "Summer 2017": "Ashwin Mudike",
+        "Winter 2018": "Moorthy",
+        "Summer 2018": "Sudhakar Uncle",
+        "Winter 2019": "Ratheesh Nair",
+        "Summer 2019": "Prasanna Edpuganti",
+        "Winter 2020": "Madhusudan Yedida",
+        "Summer 2020": "Soumya Dharmateja",
+        "Winter 2021": "Sirisha",
+        "Summer 2021": "Viral Dalia",
+        "Winter 2022": "Nithish",
+        "Summer 2022": "Soumya Dharmateja",
+        "Winter 2023": "Vivek Goyal",
+        "Summer 2023": "Soumya Dharmateja",
+        "Winter/Spring 2024": "Amar Katragadda",
+        "Summer/Fall 2024": "Sandeep Akare",
+        "Winter/Spring 2025": "Siddharth Kundalkar",
+        "Summer 2025": "Riddhi",
+        "Spring 2026": "Veera"
+      }
+    },
+    {
+      "rawName": "Amar J",
+      "canonicalName": "Amar Joshi",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Nagesh",
+        "Winter 2018": "Shiva",
+        "Summer 2018": "Amit Jhawar",
+        "Winter 2019": "Sirisha",
+        "Summer 2019": "Prakash",
+        "Winter 2020": "Mahati Rapol",
+        "Summer 2020": "Sonia",
+        "Winter 2021": "Saravanan Ramalingam",
+        "Summer 2021": "Somu",
+        "Winter 2022": "Prashanth Surampudi",
+        "Summer 2022": "Sirisha",
+        "Winter 2023": "Aaditya Akare",
+        "Summer 2023": "Srinivas Sunkara",
+        "Winter/Spring 2024": "Kiranlal",
+        "Summer/Fall 2024": "Sriprasad k",
+        "Winter/Spring 2025": "Shaunak",
+        "Summer 2025": "Vivek Goyal",
+        "Spring 2026": "Vivek Goyal"
+      }
+    },
+    {
+      "rawName": "Amar Joshi",
+      "canonicalName": "Amar Joshi",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Prashanth Surampudi",
+        "Winter 2018": "Prasanna Jha",
+        "Summer 2018": "Prabby",
+        "Winter 2019": "Amar Joshi",
+        "Summer 2019": "Prajeesh",
+        "Winter 2020": "Moorthy",
+        "Summer 2020": "Abhisar Anand",
+        "Winter 2021": "Dinesh Ramakrishnan",
+        "Summer 2021": "Ashish Soni",
+        "Winter 2022": "Ramakrishna",
+        "Summer 2022": "Mahati Rapol",
+        "Winter 2023": "Madhusudan Yedida",
+        "Summer 2023": "Aadya Surampudi",
+        "Winter/Spring 2024": "Kishan",
+        "Summer/Fall 2024": "Aditya Anand",
+        "Winter/Spring 2025": "Ashish Soni",
+        "Summer 2025": "Rithvik",
+        "Spring 2026": "Kishan"
+      }
+    },
+    {
+      "rawName": "Amar K",
+      "canonicalName": "Amar Katragadda",
+      "tournamentsPlayed": 13,
+      "appearances": {
+        "Summer 2017": "Siddharth Kundalkar",
+        "Winter 2018": "Shashi",
+        "Summer 2018": "Sriprasad k",
+        "Winter 2019": "Prashanth Surampudi",
+        "Summer 2019": "Prasanna Jha",
+        "Winter 2020": "Narsing Ravula",
+        "Summer 2020": "Aditya Anand",
+        "Winter 2021": "Kiranlal",
+        "Summer 2021": "Siddharth Kundalkar",
+        "Winter 2022": "Soumya Dharmateja",
+        "Summer 2022": "Sathis",
+        "Winter 2023": "Sirisha",
+        "Summer 2023": "Bharath",
+        "Winter/Spring 2024": "Pranav",
+        "Summer/Fall 2024": "Amar Katragadda",
+        "Winter/Spring 2025": "Prajeesh",
+        "Summer 2025": "Madhusudan Yedida",
+        "Spring 2026": "Aadya Surampudi"
+      }
+    },
+    {
+      "rawName": "Amar Kattragadda",
+      "canonicalName": "Amar Katragadda",
+      "tournamentsPlayed": 13,
+      "appearances": {
+        "Summer 2017": "Senthil",
+        "Winter 2018": "Jawahar",
+        "Summer 2018": "Prasad Bathula",
+        "Winter 2019": "Siddharth Kundalkar",
+        "Summer 2019": "Prashanth Surampudi",
+        "Winter 2020": "Nithish",
+        "Summer 2020": "Rajesh Singh",
+        "Winter 2021": "Ratheesh Nair",
+        "Summer 2021": "Preetham",
+        "Winter 2022": "Srinivas Sunkara",
+        "Summer 2022": "Abhisar Anand",
+        "Winter 2023": "Prasanna Edpuganti",
+        "Summer 2023": "Kiranlal",
+        "Winter/Spring 2024": "Riddhi",
+        "Summer/Fall 2024": "Haasini",
+        "Winter/Spring 2025": "Kishan",
+        "Summer 2025": "Ashish Soni",
+        "Spring 2026": "Haasini"
+      }
+    },
+    {
+      "rawName": "Amit",
+      "canonicalName": "Amit Jhawar",
+      "tournamentsPlayed": 5,
+      "appearances": {
+        "Summer 2017": "Viral Dalia",
+        "Winter 2018": "Prajeesh",
+        "Summer 2018": "Abhisar Anand",
+        "Winter 2019": "Srinivas Sunkara",
+        "Summer 2019": "Ramakrishna",
+        "Winter 2020": "Prasanna Edpuganti",
+        "Summer 2020": "Somu",
+        "Winter 2021": "Soumya Dharmateja",
+        "Summer 2021": "Dinesh Ramakrishnan",
+        "Winter 2022": "Viral Dalia",
+        "Summer 2022": "Aditya Anand",
+        "Winter 2023": "Prajeesh",
+        "Summer 2023": "Mahati Rapol",
+        "Winter/Spring 2024": "Suresh Voruganti",
+        "Summer/Fall 2024": "Kavya Cherukuri",
+        "Winter/Spring 2025": "Riddhi",
+        "Summer 2025": "Haasini",
+        "Spring 2026": "Ketan Dave"
+      }
+    },
+    {
+      "rawName": "Amit Jhawar",
+      "canonicalName": "Amit Jhawar",
+      "tournamentsPlayed": 5,
+      "appearances": {
+        "Summer 2017": "Ashish Soni",
+        "Winter 2018": "Shravan Kodam",
+        "Summer 2018": "Amar Katragadda",
+        "Winter 2019": "Vignesh Natesan",
+        "Summer 2019": "Rohit",
+        "Winter 2020": "Prajeesh",
+        "Summer 2020": "Prajeesh",
+        "Winter 2021": "Moorthy",
+        "Summer 2021": "Subhas Suvvari",
+        "Winter 2022": "Aditya Anand",
+        "Summer 2022": "Subhas Suvvari",
+        "Winter 2023": "Gireesh",
+        "Summer 2023": "Riddhi",
+        "Winter/Spring 2024": "Aaditya Akare",
+        "Summer/Fall 2024": "Ramakrishna",
+        "Winter/Spring 2025": "Aadya Surampudi",
+        "Summer 2025": "Mahati Rapol",
+        "Spring 2026": "Nikhil"
+      }
+    },
+    {
+      "rawName": "Ashish",
+      "canonicalName": "Ashish Chhabra",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Prasanna Edpuganti",
+        "Winter 2018": "Prashanth Surampudi",
+        "Summer 2018": "Ashish Soni",
+        "Winter 2019": "Suganya",
+        "Summer 2019": "Sandeep Akare",
+        "Winter 2020": "Prasanna Jha",
+        "Summer 2020": "Gireesh",
+        "Winter 2021": "Senthil",
+        "Summer 2021": "Amar Katragadda",
+        "Winter 2022": "Ezra R",
+        "Summer 2022": "Prajeesh",
+        "Winter 2023": "Ketan Dave",
+        "Summer 2023": "Viral Dalia",
+        "Winter/Spring 2024": "Gireesh",
+        "Summer/Fall 2024": "Sasha",
+        "Winter/Spring 2025": "Sasha",
+        "Summer 2025": "Venkat Kanikaram",
+        "Spring 2026": "Preet"
+      }
+    },
+    {
+      "rawName": "Ashish Chhabra",
+      "canonicalName": "Ashish Chhabra",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Ramakrishna",
+        "Winter 2018": "Senthil",
+        "Summer 2018": "Chetan Mudike",
+        "Winter 2019": "Suresh Voruganti",
+        "Summer 2019": "Sathis",
+        "Winter 2020": "Prashanth Surampudi",
+        "Summer 2020": "Joshua",
+        "Winter 2021": "Jawahar",
+        "Summer 2021": "Prashanth Surampudi",
+        "Winter 2022": "Rajesh Singh",
+        "Summer 2022": "Preetham",
+        "Winter 2023": "Sriprasad k",
+        "Summer 2023": "Amar Katragadda",
+        "Winter/Spring 2024": "Kartik",
+        "Summer/Fall 2024": "Vikas",
+        "Winter/Spring 2025": "Aditya Anand",
+        "Summer 2025": "Sasha",
+        "Spring 2026": "Subhas Suvvari"
+      }
+    },
+    {
+      "rawName": "Ashish S",
+      "canonicalName": "Ashish Soni",
+      "tournamentsPlayed": 11,
+      "appearances": {
+        "Summer 2017": "Prajeesh",
+        "Winter 2018": "Jyoe",
+        "Summer 2018": "Dinesh Ramakrishnan",
+        "Winter 2019": "Amar Katragadda",
+        "Summer 2019": "Shan",
+        "Winter 2020": "Ramakrishna",
+        "Summer 2020": "Madhusudan Yedida",
+        "Winter 2021": "Srinivas Sunkara",
+        "Summer 2021": "Kartik",
+        "Winter 2022": "Ratheesh Nair",
+        "Summer 2022": "Sriprasad k",
+        "Winter 2023": "Ratheesh Nair",
+        "Summer 2023": "Ashish Chhabra",
+        "Winter/Spring 2024": "Ketan Dave",
+        "Summer/Fall 2024": "Aanya Surampudi",
+        "Winter/Spring 2025": "Shan",
+        "Summer 2025": "Srinivas Sunkara",
+        "Spring 2026": "Aditya Anand"
+      }
+    },
+    {
+      "rawName": "Ashish Soni",
+      "canonicalName": "Ashish Soni",
+      "tournamentsPlayed": 11,
+      "appearances": {
+        "Summer 2017": "Jawahar",
+        "Winter 2018": "Robin",
+        "Summer 2018": "Ketan Dave",
+        "Winter 2019": "Bharath",
+        "Summer 2019": "Shashi",
+        "Winter 2020": "Rohit",
+        "Summer 2020": "Saravanan Ramalingam",
+        "Winter 2021": "Mahati Rapol",
+        "Summer 2021": "Shashi",
+        "Winter 2022": "Sandeep Akare",
+        "Summer 2022": "Ezra R",
+        "Winter 2023": "Sathis",
+        "Summer 2023": "Ashish Soni",
+        "Winter/Spring 2024": "Mahati Rapol",
+        "Summer/Fall 2024": "Kishan",
+        "Winter/Spring 2025": "Kiranlal",
+        "Summer 2025": "Saravanan Ramalingam",
+        "Spring 2026": "Gireesh"
+      }
+    },
+    {
+      "rawName": "Ashwin",
+      "canonicalName": "Ashwin Mudike",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Sriprasad k",
+        "Winter 2018": "Srinivas Sunkara",
+        "Summer 2018": "Madhusudan Yedida",
+        "Winter 2019": "Moorthy",
+        "Summer 2019": "Shravan Kodam",
+        "Winter 2020": "Sandeep Akare",
+        "Summer 2020": "Siddharth Kundalkar",
+        "Winter 2021": "Nagesh",
+        "Summer 2021": "Veera",
+        "Winter 2022": "Shashi",
+        "Summer 2022": "Srinivas Sunkara",
+        "Winter 2023": "Ramakrishna",
+        "Summer 2023": "Prashanth Surampudi",
+        "Winter/Spring 2024": "Prasanna Edpuganti",
+        "Summer/Fall 2024": "Prashanth Surampudi",
+        "Winter/Spring 2025": "Mahati Rapol",
+        "Summer 2025": "Sathis",
+        "Spring 2026": "Madhusudan Yedida"
+      }
+    },
+    {
+      "rawName": "Ashwin M",
+      "canonicalName": "Ashwin Mudike",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Umang",
+        "Winter 2018": "Ramakrishna",
+        "Summer 2018": "Prajeesh",
+        "Winter 2019": "Pradeep Polisetty",
+        "Summer 2019": "Siddharth Kundalkar",
+        "Winter 2020": "Sathis",
+        "Summer 2020": "Saanvi Jha",
+        "Winter 2021": "Sathis",
+        "Summer 2021": "Ravi Natla",
+        "Winter 2022": "Amar Katragadda",
+        "Summer 2022": "Saanvi Jha",
+        "Winter 2023": "Chirayu",
+        "Summer 2023": "Rajesh Singh",
+        "Winter/Spring 2024": "Aadya Surampudi",
+        "Summer/Fall 2024": "Rajesh Singh",
+        "Winter/Spring 2025": "Veera",
+        "Summer 2025": "Vignesh Natesan",
+        "Spring 2026": "Rithvik"
+      }
+    },
+    {
+      "rawName": "Ashwin Mudike",
+      "canonicalName": "Ashwin Mudike",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Brijesh",
+        "Winter 2018": "Viral Dalia",
+        "Summer 2018": "Prasanna Jha",
+        "Winter 2019": "Soumya Dharmateja",
+        "Summer 2019": "Sirisha",
+        "Winter 2020": "Senthil",
+        "Summer 2020": "Shriya Dave",
+        "Winter 2021": "Amar Katragadda",
+        "Summer 2021": "Kiranlal",
+        "Winter 2022": "Prasanna Edpuganti",
+        "Summer 2022": "Prasanna Jha",
+        "Winter 2023": "Pradeep Polisetty",
+        "Summer 2023": "Saanvi Jha",
+        "Winter/Spring 2024": "Madhusudan Yedida",
+        "Summer/Fall 2024": "Siddharth Kundalkar",
+        "Winter/Spring 2025": "Rithvik",
+        "Summer 2025": "Jyotin Kodam",
+        "Spring 2026": "Shan"
+      }
+    },
+    {
+      "rawName": "Babu Annam",
+      "canonicalName": "Babu Annam",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Parag",
+        "Winter 2018": "Siddharth Kundalkar",
+        "Summer 2018": "Prashanth Surampudi",
+        "Winter 2019": "Robin",
+        "Summer 2019": "Sonia",
+        "Winter 2020": "Shan",
+        "Summer 2020": "Nithish",
+        "Winter 2021": "Shashi",
+        "Summer 2021": "Madhusudan Yedida",
+        "Winter 2022": "Raj Dasari",
+        "Summer 2022": "Jawahar",
+        "Winter 2023": "Veera",
+        "Summer 2023": "Shriya Dave",
+        "Winter/Spring 2024": "Prajeesh",
+        "Summer/Fall 2024": "Soumya Dharmateja",
+        "Winter/Spring 2025": "Ponniah",
+        "Summer 2025": "Sirisha",
+        "Spring 2026": "Srikanth Suravajhala"
+      }
+    },
+    {
+      "rawName": "Babu Prasad",
+      "canonicalName": "Babu Annam",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Amit Jhawar",
+        "Winter 2018": "Sriprasad k",
+        "Summer 2018": "Ratheesh Nair",
+        "Winter 2019": "Sandeep Akare",
+        "Summer 2019": "Soumya Dharmateja",
+        "Winter 2020": "Shashi",
+        "Summer 2020": "Prashanth Surampudi",
+        "Winter 2021": "Prasanna Edpuganti",
+        "Summer 2021": "Jyoe",
+        "Winter 2022": "Srikanth Suravajhala",
+        "Summer 2022": "Veera",
+        "Winter 2023": "Preetham",
+        "Summer 2023": "Pranav",
+        "Winter/Spring 2024": "Sathis",
+        "Summer/Fall 2024": "Vivek Goyal",
+        "Winter/Spring 2025": "Venkat Kanikaram",
+        "Summer 2025": "Gopi Maguluri",
+        "Spring 2026": "Sriprasad k"
+      }
+    },
+    {
+      "rawName": "Bharat",
+      "canonicalName": "Bharath",
+      "tournamentsPlayed": 4,
+      "appearances": {
+        "Summer 2017": "Shravan Kodam",
+        "Winter 2018": "Vignesh Natesan",
+        "Summer 2018": "Saravanan Ramalingam",
+        "Winter 2019": "Amit Jhawar",
+        "Summer 2019": "Srinivas Sunkara",
+        "Winter 2020": "Shravan Kodam",
+        "Winter 2021": "Abhisar Anand",
+        "Summer 2021": "Durai",
+        "Winter 2022": "Subhas Suvvari",
+        "Summer 2022": "Amit Jhawar",
+        "Winter 2023": "Kavya Cherukuri",
+        "Summer 2023": "Ramakrishna",
+        "Winter/Spring 2024": "Suganya",
+        "Summer/Fall 2024": "Aadya Surampudi",
+        "Winter/Spring 2025": "Gopi Maguluri",
+        "Summer 2025": "Aadya Surampudi",
+        "Spring 2026": "Kartik"
+      }
+    },
+    {
+      "rawName": "Bharath",
+      "canonicalName": "Bharath",
+      "tournamentsPlayed": 4,
+      "appearances": {
+        "Summer 2017": "Shravan D",
+        "Winter 2018": "Ratheesh Nair",
+        "Summer 2018": "Senthil",
+        "Winter 2019": "Ashish Chhabra",
+        "Summer 2019": "Sriprasad k",
+        "Winter 2020": "Siddharth Kundalkar",
+        "Summer 2020": "Raj Dasari",
+        "Winter 2021": "Aditya Anand",
+        "Summer 2021": "Sriprasad k",
+        "Winter 2022": "Venkat Kanikaram",
+        "Summer 2022": "Narsing Ravula",
+        "Winter 2023": "Venkat Kanikaram",
+        "Summer 2023": "Sandeep Akare",
+        "Winter/Spring 2024": "Vivek Goyal",
+        "Summer/Fall 2024": "Kartik",
+        "Winter/Spring 2025": "Ashish Chhabra",
+        "Summer 2025": "Kavya Cherukuri",
+        "Spring 2026": "Advik"
+      }
+    },
+    {
+      "rawName": "Brijesh",
+      "canonicalName": "Brijesh",
+      "tournamentsPlayed": 1,
+      "appearances": {
+        "Summer 2017": "Moorthy",
+        "Winter 2018": "Sandilya",
+        "Summer 2018": "Shan",
+        "Winter 2019": "Mahati Rapol",
+        "Summer 2019": "Suganya",
+        "Winter 2020": "Srikanth Suravajhala",
+        "Summer 2020": "Suresh Voruganti",
+        "Winter 2021": "Rajesh Singh",
+        "Summer 2021": "Prajeesh",
+        "Winter 2022": "Dinesh Ramakrishnan",
+        "Summer 2022": "Kartik",
+        "Winter 2023": "Narsing Ravula",
+        "Summer 2023": "Sathis",
+        "Winter/Spring 2024": "Ashwin Mudike",
+        "Summer/Fall 2024": "Rithvik",
+        "Winter/Spring 2025": "Prasanna Edpuganti",
+        "Summer 2025": "Kiranlal",
+        "Spring 2026": "Durai"
+      }
+    },
+    {
+      "rawName": "Chetan Mudike",
+      "canonicalName": "Chetan Mudike",
+      "tournamentsPlayed": 1,
+      "appearances": {
+        "Summer 2017": "Amar Joshi",
+        "Summer 2018": "Shravan Kodam",
+        "Winter 2019": "Venkat Kanikaram",
+        "Summer 2019": "Suresh Voruganti",
+        "Winter 2020": "Sirisha",
+        "Summer 2020": "Nagesh",
+        "Winter 2021": "Vignesh Natesan",
+        "Summer 2021": "Bharath",
+        "Winter 2022": "Ketan Dave",
+        "Summer 2022": "Prashanth Surampudi",
+        "Winter 2023": "Prashanth Surampudi",
+        "Summer 2023": "Suganya",
+        "Winter/Spring 2024": "Kavya Cherukuri",
+        "Summer/Fall 2024": "Shriya Dave",
+        "Winter/Spring 2025": "Pradeep Polisetty",
+        "Summer 2025": "Preet",
+        "Spring 2026": "Kavya Cherukuri"
+      }
+    },
+    {
+      "rawName": "Chirayu",
+      "canonicalName": "Chirayu",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Preetesh Bansal",
+        "Summer 2018": "Srinivas Sunkara",
+        "Winter 2019": "Ramakrishna",
+        "Summer 2019": "Venkat Kanikaram",
+        "Winter 2020": "Sonia",
+        "Summer 2020": "Narsing Ravula",
+        "Winter 2021": "Narsing Ravula",
+        "Summer 2021": "Abhisar Anand",
+        "Winter 2022": "Pradeep Polisetty",
+        "Summer 2022": "Durai",
+        "Winter 2023": "Ashwin Mudike",
+        "Summer 2023": "Suresh Voruganti",
+        "Winter/Spring 2024": "Narsing Ravula",
+        "Summer/Fall 2024": "Sirisha",
+        "Winter/Spring 2025": "Sathis",
+        "Summer 2025": "Aanya Surampudi",
+        "Spring 2026": "Riddhi"
+      }
+    },
+    {
+      "rawName": "Chirayu",
+      "canonicalName": "Chirayu",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Narsing Ravula",
+        "Summer 2018": "Venkat Kanikaram",
+        "Winter 2019": "Sriprasad k",
+        "Summer 2019": "Viral Dalia",
+        "Winter 2020": "Soumya Dharmateja",
+        "Summer 2020": "Kiranlal",
+        "Winter 2021": "Prashanth Surampudi",
+        "Summer 2021": "Aditya Anand",
+        "Winter 2022": "Prajeesh",
+        "Summer 2022": "Aadya Surampudi",
+        "Winter 2023": "Jawahar",
+        "Summer 2023": "Aditya Anand",
+        "Winter/Spring 2024": "Sirisha",
+        "Summer/Fall 2024": "Srikanth Suravajhala",
+        "Winter/Spring 2025": "Viral Dalia",
+        "Summer 2025": "Advik",
+        "Spring 2026": "Siddharth Kundalkar"
+      }
+    },
+    {
+      "rawName": "Dev Patel",
+      "canonicalName": "Dev Patel",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Summer 2017": "Prasanna Jha",
+        "Summer 2018": "Viral Dalia",
+        "Winter 2019": "Sathis",
+        "Summer 2019": "Gireesh",
+        "Winter 2020": "Sriprasad k",
+        "Summer 2020": "Vivek Goyal",
+        "Winter 2021": "Rohit",
+        "Summer 2021": "Dev Patel",
+        "Winter 2022": "Veera",
+        "Summer 2022": "Suganya",
+        "Winter 2023": "Suganya",
+        "Summer 2023": "Gopi Maguluri",
+        "Winter/Spring 2024": "Srikanth Suravajhala",
+        "Summer/Fall 2024": "Viral Dalia",
+        "Winter/Spring 2025": "Haasini",
+        "Summer 2025": "Aaryan",
+        "Spring 2026": "Srinivas Sunkara"
+      }
+    },
+    {
+      "rawName": "Dinesh",
+      "canonicalName": "Dinesh Ramakrishnan",
+      "tournamentsPlayed": 10,
+      "appearances": {
+        "Summer 2017": "Kartik",
+        "Winter 2020": "Suganya",
+        "Winter 2021": "Viral Dalia",
+        "Summer 2021": "Joshua",
+        "Winter 2022": "Vivek Goyal",
+        "Summer 2022": "Robin",
+        "Winter 2023": "Sasha",
+        "Summer 2023": "Kavya Cherukuri",
+        "Winter/Spring 2024": "Veera",
+        "Summer/Fall 2024": "Aaditya Akare",
+        "Winter/Spring 2025": "Preet",
+        "Summer 2025": "Sriprasad k"
+      }
+    },
+    {
+      "rawName": "Dinesh Ramakrishnan",
+      "canonicalName": "Dinesh Ramakrishnan",
+      "tournamentsPlayed": 10,
+      "appearances": {
+        "Summer 2017": "Sanjeev",
+        "Winter 2020": "Suresh Voruganti",
+        "Winter 2021": "Raj Dasari",
+        "Summer 2021": "Pradeep Polisetty",
+        "Winter 2022": "Ashish Soni",
+        "Summer 2022": "Saravanan Ramalingam",
+        "Winter 2023": "Amar Katragadda",
+        "Summer 2023": "Narsing Ravula",
+        "Summer/Fall 2024": "Gopi Maguluri",
+        "Summer 2025": "Prasanna Edpuganti"
+      }
+    },
+    {
+      "rawName": "Durai",
+      "canonicalName": "Durai",
+      "tournamentsPlayed": 2,
+      "appearances": {
+        "Summer 2017": "Gopal",
+        "Winter 2020": "Pradeep Polisetty",
+        "Winter 2021": "Suresh Voruganti",
+        "Summer 2021": "Gireesh",
+        "Winter 2022": "Preetham",
+        "Summer 2022": "Aanya Surampudi",
+        "Winter 2023": "Shan",
+        "Summer 2023": "Prajeesh",
+        "Summer/Fall 2024": "Mahati Rapol",
+        "Summer 2025": "Amar Katragadda"
+      }
+    },
+    {
+      "rawName": "Ezra",
+      "canonicalName": "Ezra R",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Winter 2020": "Venkat Kanikaram",
+        "Winter 2021": "Gopi Maguluri",
+        "Summer 2021": "Saanvi Jha",
+        "Winter 2022": "Saravanan Ramalingam",
+        "Summer 2022": "Viral Dalia",
+        "Winter 2023": "Srinivas Sunkara",
+        "Summer 2023": "Srikanth Suravajhala",
+        "Summer/Fall 2024": "Sathis",
+        "Summer 2025": "Shreya Karmarkar"
+      }
+    },
+    {
+      "rawName": "Ezra",
+      "canonicalName": "Ezra R",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Winter 2020": "Viral Dalia",
+        "Winter 2021": "Babu Annam",
+        "Summer 2021": "Prasanna Jha",
+        "Winter 2022": "Senthil",
+        "Summer 2022": "Shashi",
+        "Winter 2023": "Shriya Dave",
+        "Summer/Fall 2024": "Shaunak",
+        "Summer 2025": "Narsing Ravula"
+      }
+    },
+    {
+      "rawName": "Ezra R",
+      "canonicalName": "Ezra R",
+      "tournamentsPlayed": 3,
+      "appearances": {
+        "Winter 2020": "Prabby",
+        "Winter 2021": "Prashant Karmarkar",
+        "Summer 2021": "Senthil",
+        "Winter 2022": "Siddharth Kundalkar",
+        "Summer 2022": "Shan",
+        "Winter 2023": "Prasanna Jha",
+        "Summer/Fall 2024": "Veera",
+        "Summer 2025": "Subhas Suvvari"
+      }
+    },
+    {
+      "rawName": "Gireesh",
+      "canonicalName": "Gireesh",
+      "tournamentsPlayed": 6,
+      "appearances": {
+        "Winter 2020": "Chirayu",
+        "Winter 2021": "Venkat Kanikaram",
+        "Summer 2021": "Shan",
+        "Winter 2022": "Vignesh Natesan",
+        "Summer 2022": "Ketan Dave",
+        "Winter 2023": "Suresh Voruganti",
+        "Summer/Fall 2024": "Venkat Kanikaram",
+        "Summer 2025": "Pranav"
+      }
+    },
+    {
+      "rawName": "Girish",
+      "canonicalName": "Gireesh",
+      "tournamentsPlayed": 6,
+      "appearances": {
+        "Winter 2020": "Amit Jhawar",
+        "Winter 2021": "Ravi Natla",
+        "Summer 2021": "Narsing Ravula"
+      }
+    },
+    {
+      "rawName": "Gopal",
+      "canonicalName": "Gopal",
+      "tournamentsPlayed": 1,
+      "appearances": {
+        "Winter 2020": "Ratheesh Nair",
+        "Summer 2021": "Sathis"
+      }
+    },
+    {
+      "rawName": "Gopi",
+      "canonicalName": "Gopi Maguluri",
+      "tournamentsPlayed": 8,
+      "appearances": {
+        "Winter 2020": "Babu Annam",
+        "Summer 2021": "Vignesh Natesan"
+      }
+    },
+    {
+      "rawName": "Gopi M",
+      "canonicalName": "Gopi Maguluri",
+      "tournamentsPlayed": 8,
+      "appearances": {
+        "Winter 2020": "Prasad Bathula",
+        "Summer 2021": "Sirisha"
+      }
+    },
+    {
+      "rawName": "Gopi Maguluri",
+      "canonicalName": "Gopi Maguluri",
+      "tournamentsPlayed": 8,
+      "appearances": {
+        "Summer 2021": "Preetesh Bansal"
+      }
+    },
+    {
+      "rawName": "Jawa",
+      "canonicalName": "Jawahar",
+      "tournamentsPlayed": 8,
+      "appearances": {
+        "Summer 2021": "Rajesh Singh"
+      }
+    },
+    {
+      "rawName": "Jawahar",
+      "canonicalName": "Jawahar",
+      "tournamentsPlayed": 8,
+      "appearances": {
+        "Summer 2021": "Ezra R"
+      }
+    },
+    {
+      "rawName": "Jawahar",
+      "canonicalName": "Jawahar",
+      "tournamentsPlayed": 8,
+      "appearances": {}
+    },
+    {
+      "rawName": "Joshua",
+      "canonicalName": "Joshua",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Jyoe",
+      "canonicalName": "Jyoe",
+      "tournamentsPlayed": 5,
+      "appearances": {}
+    },
+    {
+      "rawName": "Jyotsna",
+      "canonicalName": "Jyoe",
+      "tournamentsPlayed": 5,
+      "appearances": {}
+    },
+    {
+      "rawName": "Karthik",
+      "canonicalName": "Kartik",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kartik",
+      "canonicalName": "Kartik",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kartik",
+      "canonicalName": "Kartik",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kavya",
+      "canonicalName": "Kavya Cherukuri",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kavya Cherukuri",
+      "canonicalName": "Kavya Cherukuri",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ketan",
+      "canonicalName": "Ketan Dave",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ketan Dave",
+      "canonicalName": "Ketan Dave",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kiran",
+      "canonicalName": "Kiranlal",
+      "tournamentsPlayed": 7,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kiran",
+      "canonicalName": "Kiranlal",
+      "tournamentsPlayed": 7,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kiranlal",
+      "canonicalName": "Kiranlal",
+      "tournamentsPlayed": 7,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kishan",
+      "canonicalName": "Kishan",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Madhu",
+      "canonicalName": "Madhusudan Yedida",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Madhusudan Yedida",
+      "canonicalName": "Madhusudan Yedida",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Mahati",
+      "canonicalName": "Mahati Rapol",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Mahati",
+      "canonicalName": "Mahati Rapol",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Mahati Rapol",
+      "canonicalName": "Mahati Rapol",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Moorthy",
+      "canonicalName": "Moorthy",
+      "tournamentsPlayed": 8,
+      "appearances": {}
+    },
+    {
+      "rawName": "Nagesh",
+      "canonicalName": "Nagesh",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Narsing",
+      "canonicalName": "Narsing Ravula",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Narsing Ravula",
+      "canonicalName": "Narsing Ravula",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Narsing Ravula",
+      "canonicalName": "Narsing Ravula",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Narsingh",
+      "canonicalName": "Narsing Ravula",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Nithish",
+      "canonicalName": "Nithish",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Nitish",
+      "canonicalName": "Nithish",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Parag",
+      "canonicalName": "Parag",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "PE",
+      "canonicalName": "Prasanna Edpuganti",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prabby",
+      "canonicalName": "Prabby",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Pradeep",
+      "canonicalName": "Pradeep Polisetty",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Pradeep Polisetty",
+      "canonicalName": "Pradeep Polisetty",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Pradheep",
+      "canonicalName": "Pradeep Polisetty",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prajeesh",
+      "canonicalName": "Prajeesh",
+      "tournamentsPlayed": 13,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prakash",
+      "canonicalName": "Prakash",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Pranav",
+      "canonicalName": "Pranav",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prasad B",
+      "canonicalName": "Prasad Bathula",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prasad Bathula",
+      "canonicalName": "Prasad Bathula",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prasanna E",
+      "canonicalName": "Prasanna Edpuganti",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prasanna Edpuganti",
+      "canonicalName": "Prasanna Edpuganti",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prasanna J",
+      "canonicalName": "Prasanna Jha",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prasanna Jha",
+      "canonicalName": "Prasanna Jha",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prashant Karmarkar",
+      "canonicalName": "Prashant Karmarkar",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prashanth",
+      "canonicalName": "Prashanth Surampudi",
+      "tournamentsPlayed": 13,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prashanth",
+      "canonicalName": "Prashanth Surampudi",
+      "tournamentsPlayed": 13,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prashanth S",
+      "canonicalName": "Prashanth Surampudi",
+      "tournamentsPlayed": 13,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prashanth Surampudi",
+      "canonicalName": "Prashanth Surampudi",
+      "tournamentsPlayed": 13,
+      "appearances": {}
+    },
+    {
+      "rawName": "Prashanth Surampudi",
+      "canonicalName": "Prashanth Surampudi",
+      "tournamentsPlayed": 13,
+      "appearances": {}
+    },
+    {
+      "rawName": "Preetesh",
+      "canonicalName": "Preetesh Bansal",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Preetesh Bansal",
+      "canonicalName": "Preetesh Bansal",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Preetham",
+      "canonicalName": "Preetham",
+      "tournamentsPlayed": 5,
+      "appearances": {}
+    },
+    {
+      "rawName": "Pritam",
+      "canonicalName": "Preetham",
+      "tournamentsPlayed": 5,
+      "appearances": {}
+    },
+    {
+      "rawName": "Raj D",
+      "canonicalName": "Raj Dasari",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Raj Dasari",
+      "canonicalName": "Raj Dasari",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Raj Dasari",
+      "canonicalName": "Raj Dasari",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Rajesh",
+      "canonicalName": "Rajesh Singh",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Rajesh S",
+      "canonicalName": "Rajesh Singh",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Rajesh Singh",
+      "canonicalName": "Rajesh Singh",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ram",
+      "canonicalName": "Saravanan Ramalingam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ram",
+      "canonicalName": "Saravanan Ramalingam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ramakrishna",
+      "canonicalName": "Ramakrishna",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ramakrishna",
+      "canonicalName": "Ramakrishna",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ratheesh",
+      "canonicalName": "Ratheesh Nair",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ratheesh",
+      "canonicalName": "Ratheesh Nair",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ratheesh Nair",
+      "canonicalName": "Ratheesh Nair",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ravi N",
+      "canonicalName": "Ravi Natla",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ravi Natla",
+      "canonicalName": "Ravi Natla",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Riddhi",
+      "canonicalName": "Riddhi",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "RK",
+      "canonicalName": "Ramakrishna",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Robin",
+      "canonicalName": "Robin",
+      "tournamentsPlayed": 5,
+      "appearances": {}
+    },
+    {
+      "rawName": "Rohit",
+      "canonicalName": "Rohit",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Saanvi",
+      "canonicalName": "Saanvi Jha",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Saanvi Jha",
+      "canonicalName": "Saanvi Jha",
+      "tournamentsPlayed": 4,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sandeep",
+      "canonicalName": "Sandeep Akare",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sandeep Akare",
+      "canonicalName": "Sandeep Akare",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sandilya",
+      "canonicalName": "Sandilya",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sanjeev",
+      "canonicalName": "Sanjeev",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Saravanan",
+      "canonicalName": "Saravanan Ramalingam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Saravanan",
+      "canonicalName": "Saravanan Ramalingam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Saravanan Ramalingam",
+      "canonicalName": "Saravanan Ramalingam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sasha",
+      "canonicalName": "Sasha",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sathis",
+      "canonicalName": "Sathis",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sathis",
+      "canonicalName": "Sathis",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Satish",
+      "canonicalName": "Sathis",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Senthil",
+      "canonicalName": "Senthil",
+      "tournamentsPlayed": 8,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shaan",
+      "canonicalName": "Shan",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shan",
+      "canonicalName": "Shan",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shashi",
+      "canonicalName": "Shashi",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shiva",
+      "canonicalName": "Shiva",
+      "tournamentsPlayed": 2,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shravan",
+      "canonicalName": "Shravan Kodam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shravan D",
+      "canonicalName": "Shravan D",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shravan Kodam",
+      "canonicalName": "Shravan Kodam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shreya",
+      "canonicalName": "Shriya Dave",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shriya",
+      "canonicalName": "Shriya Dave",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shriya Dave",
+      "canonicalName": "Shriya Dave",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sid",
+      "canonicalName": "Siddharth Kundalkar",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sidd Kundalkar",
+      "canonicalName": "Siddharth Kundalkar",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Siddharth",
+      "canonicalName": "Siddharth Kundalkar",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Siddharth",
+      "canonicalName": "Siddharth Kundalkar",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Siddharth Kundalkar",
+      "canonicalName": "Siddharth Kundalkar",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sirisha",
+      "canonicalName": "Sirisha",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sirisha",
+      "canonicalName": "Sirisha",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Somu",
+      "canonicalName": "Somu",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sonia",
+      "canonicalName": "Sonia",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Soumya",
+      "canonicalName": "Soumya Dharmateja",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Soumya",
+      "canonicalName": "Soumya Dharmateja",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Soumya Dharmateja",
+      "canonicalName": "Soumya Dharmateja",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sravan K",
+      "canonicalName": "Shravan Kodam",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Srikanth",
+      "canonicalName": "Srikanth Suravajhala",
+      "tournamentsPlayed": 8,
+      "appearances": {}
+    },
+    {
+      "rawName": "Srikanth",
+      "canonicalName": "Srikanth Suravajhala",
+      "tournamentsPlayed": 8,
+      "appearances": {}
+    },
+    {
+      "rawName": "Srikanth Suravajhala",
+      "canonicalName": "Srikanth Suravajhala",
+      "tournamentsPlayed": 8,
+      "appearances": {}
+    },
+    {
+      "rawName": "Srini",
+      "canonicalName": "Srinivas Sunkara",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Srinivas Sunkara",
+      "canonicalName": "Srinivas Sunkara",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sriprasad",
+      "canonicalName": "Sriprasad k",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sriprasad",
+      "canonicalName": "Sriprasad k",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sriprasad k",
+      "canonicalName": "Sriprasad k",
+      "tournamentsPlayed": 11,
+      "appearances": {}
+    },
+    {
+      "rawName": "Subash",
+      "canonicalName": "Subhas Suvvari",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Subash Suvvari",
+      "canonicalName": "Subhas Suvvari",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Subhas Suvvari",
+      "canonicalName": "Subhas Suvvari",
+      "tournamentsPlayed": 3,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sudhakar Uncle",
+      "canonicalName": "Sudhakar Uncle",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Suganya",
+      "canonicalName": "Suganya",
+      "tournamentsPlayed": 7,
+      "appearances": {}
+    },
+    {
+      "rawName": "Suresh",
+      "canonicalName": "Suresh Voruganti",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Suresh Voruganti",
+      "canonicalName": "Suresh Voruganti",
+      "tournamentsPlayed": 10,
+      "appearances": {}
+    },
+    {
+      "rawName": "Umang",
+      "canonicalName": "Umang",
+      "tournamentsPlayed": 1,
+      "appearances": {}
+    },
+    {
+      "rawName": "Veera",
+      "canonicalName": "Veera",
+      "tournamentsPlayed": 5,
+      "appearances": {}
+    },
+    {
+      "rawName": "Venkat",
+      "canonicalName": "Venkat Kanikaram",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Venkat K",
+      "canonicalName": "Venkat Kanikaram",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Venkat Kanikaram",
+      "canonicalName": "Venkat Kanikaram",
+      "tournamentsPlayed": 9,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vignesh",
+      "canonicalName": "Vignesh Natesan",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vignesh Natesan",
+      "canonicalName": "Vignesh Natesan",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Viral",
+      "canonicalName": "Viral Dalia",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Viral D",
+      "canonicalName": "Viral Dalia",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Viral Dalia",
+      "canonicalName": "Viral Dalia",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Viral Dhalia",
+      "canonicalName": "Viral Dalia",
+      "tournamentsPlayed": 12,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vivek",
+      "canonicalName": "Vivek Goyal",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vivek",
+      "canonicalName": "Vivek Goyal",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vivek Goyal",
+      "canonicalName": "Vivek Goyal",
+      "tournamentsPlayed": 6,
+      "appearances": {}
+    },
+    {
+      "rawName": "Dinesh M",
+      "canonicalName": "Dinesh M",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Dinesh R",
+      "canonicalName": "Dinesh Ramakrishnan",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Babu Prasad",
+      "canonicalName": "Babu Annam",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sashi",
+      "canonicalName": "Shashi",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Jawaugh",
+      "canonicalName": "Jawahar",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shravan K",
+      "canonicalName": "Shravan Kodam",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Srini S",
+      "canonicalName": "Srinivas Sunkara",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sidd",
+      "canonicalName": "Siddharth Kundalkar",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sri Prasad",
+      "canonicalName": "Sriprasad k",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ashish C",
+      "canonicalName": "Ashish Chhabra",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Adi Akare",
+      "canonicalName": "Aaditya Akare",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Ponniah",
+      "canonicalName": "Ponniah",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Rithvik",
+      "canonicalName": "Rithvik",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Subhas",
+      "canonicalName": "Subhas Suvvari",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Adi Anand",
+      "canonicalName": "Aditya Anand",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Haasini",
+      "canonicalName": "Haasini",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vikas",
+      "canonicalName": "Vikas",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Aadi Akare",
+      "canonicalName": "Aaditya Akare",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shaunak",
+      "canonicalName": "Shaunak",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shaunak Kundalkar",
+      "canonicalName": "Shaunak",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Riddhi Viswanadha",
+      "canonicalName": "Riddhi",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Sasha Jawahar",
+      "canonicalName": "Sasha",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Haasini Behara",
+      "canonicalName": "Haasini",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Preet",
+      "canonicalName": "Preet",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Shreya K",
+      "canonicalName": "Shreya Karmarkar",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Jyotin",
+      "canonicalName": "Jyotin Kodam",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Advik",
+      "canonicalName": "Advik",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Aaryan",
+      "canonicalName": "Aaryan",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Jyotin Kodam",
+      "canonicalName": "Jyotin Kodam",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Vikas Thukral",
+      "canonicalName": "Vikas",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Nikhil",
+      "canonicalName": "Nikhil",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Anish Saravanan",
+      "canonicalName": "Anish Saravanan",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Anish",
+      "canonicalName": "Anish Saravanan",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    },
+    {
+      "rawName": "Kavya Cherukuri",
+      "canonicalName": "Kavya Cherukuri",
+      "tournamentsPlayed": 0,
+      "appearances": {}
+    }
+  ],
+  "tournamentNames": [
+    "Summer 2017",
+    "Winter 2018",
+    "Summer 2018",
+    "Winter 2019",
+    "Summer 2019",
+    "Winter 2020",
+    "Summer 2020",
+    "Winter 2021",
+    "Summer 2021",
+    "Winter 2022",
+    "Summer 2022",
+    "Winter 2023",
+    "Summer 2023",
+    "Winter/Spring 2024",
+    "Summer/Fall 2024",
+    "Winter/Spring 2025",
+    "Summer 2025",
+    "Spring 2026"
+  ],
+  "champions": {
+    "winners": {
+      "Summer 2017": [
+        "Moorthy",
+        "Amar Joshi",
+        "Preetesh Bansal",
+        "Narsing Ravula",
+        "Prasanna Jha",
+        "Kartik",
+        "Sanjeev"
+      ],
+      "Winter 2018": [
+        "Prasad Bathula",
+        "Prasanna Edpuganti",
+        "Prasanna Jha",
+        "Prashanth Surampudi",
+        "Ramakrishna",
+        "Ratheesh Nair",
+        "Sandilya"
+      ],
+      "Summer 2018": [
+        "Kartik",
+        "Pradeep Polisetty",
+        "Sandeep Akare",
+        "Siddharth Kundalkar",
+        "Sriprasad k",
+        "Senthil",
+        "Shan"
+      ],
+      "Winter 2019": [
+        "Amar Joshi",
+        "Prashanth Surampudi",
+        "Srinivas Sunkara",
+        "Vignesh Natesan",
+        "Suganya",
+        "Suresh Voruganti",
+        "Sathis"
+      ],
+      "Summer 2019": [
+        "Abhisar Anand",
+        "Dinesh Ramakrishnan",
+        "Ramakrishna",
+        "Sandeep Akare",
+        "Shravan Kodam",
+        "Soumya Dharmateja",
+        "Gireesh"
+      ],
+      "Winter 2020": [
+        "Dev Patel",
+        "Jyoe",
+        "Kartik",
+        "Sandeep Akare",
+        "Suresh Voruganti",
+        "Pradeep Polisetty",
+        "Prasad Bathula"
+      ],
+      "Summer 2020": [
+        "Kartik",
+        "Sirisha",
+        "Aditya Anand",
+        "Prajeesh",
+        "Madhusudan Yedida",
+        "Vivek Goyal",
+        "Dev Patel"
+      ],
+      "Winter 2021": [
+        "Prajeesh",
+        "Sirisha",
+        "Dinesh Ramakrishnan",
+        "Ratheesh Nair",
+        "Nagesh",
+        "Amar Katragadda",
+        "Prashant Karmarkar"
+      ],
+      "Summer 2021": [
+        "Ketan Dave",
+        "Gopi Maguluri",
+        "Viral Dalia",
+        "Prashanth Surampudi",
+        "Veera",
+        "Bharath",
+        "Pradeep Polisetty"
+      ],
+      "Winter 2022": [
+        "Aditya Anand",
+        "Ezra R",
+        "Rajesh Singh",
+        "Ratheesh Nair",
+        "Sandeep Akare",
+        "Shashi"
+      ],
+      "Summer 2022": [
+        "Suresh Voruganti",
+        "Soumya Dharmateja",
+        "Mahati Rapol",
+        "Abhisar Anand",
+        "Aditya Anand",
+        "Preetham",
+        "Ezra R"
+      ],
+      "Winter 2023": [
+        "Sandeep Akare",
+        "Kiranlal",
+        "Abhisar Anand",
+        "Soumya Dharmateja",
+        "Mahati Rapol",
+        "Vivek Goyal",
+        "Aaditya Akare",
+        "Madhusudan Yedida",
+        "Sirisha",
+        "Gireesh",
+        "Ratheesh Nair",
+        "Chirayu",
+        "Veera",
+        "Kavya Cherukuri"
+      ],
+      "Summer 2023": [
+        "Aditya Anand",
+        "Gopi Maguluri",
+        "Kavya Cherukuri",
+        "Narsing Ravula",
+        "Prajeesh",
+        "Srikanth Suravajhala"
+      ],
+      "Winter/Spring 2024": [
+        "Aadya Surampudi",
+        "Madhusudan Yedida",
+        "Prajeesh",
+        "Sathis",
+        "Suganya",
+        "Vivek Goyal"
+      ],
+      "Summer/Fall 2024": [
+        "Aadya Surampudi",
+        "Kartik",
+        "Rithvik",
+        "Shriya Dave",
+        "Sirisha",
+        "Srikanth Suravajhala",
+        "Viral Dalia"
+      ],
+      "Winter/Spring 2025": [
+        "Aaditya Akare",
+        "Ashish Soni",
+        "Kiranlal",
+        "Veera",
+        "Ponniah",
+        "Haasini"
+      ],
+      "Summer 2025": [
+        "Jawahar",
+        "Srikanth Suravajhala",
+        "Shan",
+        "Ashish Soni",
+        "Saravanan Ramalingam",
+        "Sathis",
+        "Kavya Cherukuri"
+      ],
+      "Spring 2026": []
+    },
+    "runnersUp": {
+      "Summer 2017": [
+        "Prashanth Surampudi",
+        "Siddharth Kundalkar",
+        "Senthil",
+        "Viral Dalia",
+        "Ashish Soni",
+        "Prasanna Edpuganti",
+        "Ramakrishna"
+      ],
+      "Winter 2018": [],
+      "Summer 2018": [],
+      "Winter 2019": [],
+      "Summer 2019": [],
+      "Winter 2020": [],
+      "Summer 2020": [],
+      "Winter 2021": [],
+      "Summer 2021": [],
+      "Winter 2022": [],
+      "Summer 2022": [],
+      "Winter 2023": [],
+      "Summer 2023": [
+        "Kartik",
+        "Kishan",
+        "Sasha",
+        "Shan",
+        "Sirisha",
+        "Sriprasad k",
+        "Vivek Goyal"
+      ],
+      "Winter/Spring 2024": [
+        "Aaditya Akare",
+        "Gireesh",
+        "Kartik",
+        "Ketan Dave",
+        "Mahati Rapol",
+        "Prasanna Edpuganti"
+      ],
+      "Summer/Fall 2024": [
+        "Ashish Soni",
+        "Bharath",
+        "Ketan Dave",
+        "Kiranlal",
+        "Riddhi",
+        "Sandeep Akare",
+        "Sriprasad k"
+      ],
+      "Winter/Spring 2025": [
+        "Suganya",
+        "Kartik",
+        "Vivek Goyal",
+        "Madhusudan Yedida",
+        "Sasha",
+        "Ashish Chhabra"
+      ],
+      "Summer 2025": [
+        "Veera",
+        "Prajeesh",
+        "Vivek Goyal",
+        "Rithvik",
+        "Haasini",
+        "Preet",
+        "Venkat Kanikaram"
+      ],
+      "Spring 2026": []
+    }
+  },
+  "rules": [
+    {
+      "ref": "",
+      "text": "Games & Scoring"
+    },
+    {
+      "ref": "1.1",
+      "text": "In league matches, every team will play with all except one team. Each team gets to play a total for 3 matches"
+    },
+    {
+      "ref": "1.2",
+      "text": "Each league match will have 3 sets, with first 2 sets of 21 points and 3rd set of 15 points"
+    },
+    {
+      "ref": "1.3",
+      "text": "3rd set in league match is played for 15 points only if first two sets are split between the 2 teams"
+    },
+    {
+      "ref": "1.4",
+      "text": "The tie breaker for 21 points will go till 23 points and 15 points will go till 18 points. i.e. whoever reaches 23/18 points first will win"
+    },
+    {
+      "ref": "1.5",
+      "text": "The top 4 seeds will play in the semi-finals. Seed 1 v. Seed 4 and Seed 2 v. Seed 3"
+    },
+    {
+      "ref": "1.6",
+      "text": "All sets in Semis and Finals are played for 25 points (cap at 28) - IF we can start Semis on time and 3rd set of 15 points"
+    },
+    {
+      "ref": "1.7",
+      "text": "3rd set in semis and finals match is played for 15 points only if first two sets are split between the 2 teams"
+    },
+    {
+      "ref": "1.8",
+      "text": "There will be 1 timeout allowed per set per team for 1 minute"
+    },
+    {
+      "ref": "",
+      "text": "Points Calculation"
+    },
+    {
+      "ref": "2.1",
+      "text": "Winning team will get 3 points for a match"
+    },
+    {
+      "ref": "2.2",
+      "text": "3 Bonus points are awared if a team wins in 2 straight sets"
+    },
+    {
+      "ref": "2.3",
+      "text": "2 Bonus points are awarded if team wins in 3 sets"
+    },
+    {
+      "ref": "2.4",
+      "text": "1 point is awarded to losing team if the team wins a set"
+    },
+    {
+      "ref": "2.5",
+      "text": "Ex: A team can win max of 6 points per match and 5 points min per match won"
+    },
+    {
+      "ref": "",
+      "text": "Determining Seeds"
+    },
+    {
+      "ref": "3",
+      "text": "The seeds (semi-finalists) are determined based on:"
+    },
+    {
+      "ref": "3.1",
+      "text": "Number of points won"
+    },
+    {
+      "ref": "3.2",
+      "text": "In case of a equal number of matches won, the team with larger difference of points for sets which they won the matches will be higher seed"
+    },
+    {
+      "ref": "3.3",
+      "text": "In case of equal difference of points the head-to-head will be seen and team that won the head-to-head will be higher seed"
+    },
+    {
+      "ref": "",
+      "text": "Play Rules"
+    },
+    {
+      "ref": "4.1",
+      "text": "All players must rotate for every change in serve, including the 1st serve. i.e. player who is serving within team changes, team must rotate."
+    },
+    {
+      "ref": "4.2",
+      "text": "Teams swap sides of court at the start of 2nd set and after 7 points in 3rd set."
+    },
+    {
+      "ref": "4.3",
+      "text": "The players must maintain the positions before the serve and can make changes afterwards."
+    },
+    {
+      "ref": "4.4",
+      "text": "Player may not hit the ball twice in succession. (A block is not considered a hit.)"
+    },
+    {
+      "ref": "4.5",
+      "text": "Maximum of 3 hits per side"
+    },
+    {
+      "ref": "4.6",
+      "text": "Ball may be played off the net during a volley and on a serve."
+    },
+    {
+      "ref": "4.7",
+      "text": "A ball hitting a boundary line is in."
+    },
+    {
+      "ref": "4.8",
+      "text": "A ball is out if it hits an antennae, the floor completely outside the court, any of the net or cables outside the antennae, the referee stand or pole, the ceiling above a non-playable area."
+    },
+    {
+      "ref": "4.9",
+      "text": "It is legal to contact the ball with any part of a player’s body. It may happen all 3 times during the 3 hits while playing on one side. It is illegal if the ball rolls or contacts more than once on player's body (except when receiving a spike)"
+    },
+    {
+      "ref": "4.1",
+      "text": "A player cannot block or attack a serve from on or inside the 10-foot line."
+    },
+    {
+      "ref": "",
+      "text": "Violations during play resulting in a point to opponent"
+    },
+    {
+      "ref": "5.1",
+      "text": "When serving, the player steps on or across the service line as while making contact with the ball."
+    },
+    {
+      "ref": "5.2",
+      "text": "Failure to serve the ball over the net successfully."
+    },
+    {
+      "ref": "5.3",
+      "text": "Ball-handling errors. Contacting the ball illegally (double touching, lifting, carrying, throwing, etc.)"
+    },
+    {
+      "ref": "5.4",
+      "text": "Touching the net with any part of the body while the ball is in play."
+    },
+    {
+      "ref": "5.5",
+      "text": "When blocking a ball coming from the opponent’s court, it’s illegal to contact the ball when reaching over the net if both your opponent has not used 3 contacts AND they have a player there to make a play on the ball."
+    },
+    {
+      "ref": "5.5",
+      "text": "When attacking a ball coming from the opponent’s court, contacting the ball when reaching over the net is a violation if the ball has not yet broken the vertical plane of the net."
+    },
+    {
+      "ref": "5.6",
+      "text": "Crossing the court centerline with any part of your body is a violation. The umpire's call is FINAL, but if there is any sort of disturbance to opponent player its called fault."
+    },
+    {
+      "ref": "5.7",
+      "text": "Serving out of rotation/order."
+    },
+    {
+      "ref": "5.8",
+      "text": "Back-row player blocking (deflecting a ball coming from the opponent) when, at the moment of contact, the back-row player is near the net and has part of his/her body above the top of the net. This is an illegal block."
+    },
+    {
+      "ref": "5.9",
+      "text": "Back-row player attacking a ball inside the front zone (the area inside the 3M/10-foot line) when, at the moment of contact, the ball is completely above the net. This is an illegal attack."
+    },
+    {
+      "ref": "",
+      "text": "Challenges"
+    },
+    {
+      "ref": "6.1",
+      "text": "Challenge has to be done by captain. and umpire decides if he wants to revert the call and if call is reverted the point is replayed."
+    },
+    {
+      "ref": "6.2",
+      "text": "If any other player other than captain argues with umpire or delays the game for more than 30 seconds, the team will lose their timeout first and then a point subsequently"
+    },
+    {
+      "ref": "6.3",
+      "text": "Umpire's call is final on any call/challenge by Captains. If there confusion and umpire/refree(s) are unable to take decision on a critical challenge, it will be discussed with organizers and decision will be made with the help of organizing team."
+    },
+    {
+      "ref": "",
+      "text": "Rules on Rotation"
+    },
+    {
+      "ref": "7.1",
+      "text": "If the team plays 7, they must play all 7 (with one rotation) throughout including the finals."
+    },
+    {
+      "ref": "7.2",
+      "text": "Each team must provide their rotation with all players on the team to refree/umpire before the game begins. Once provided, the rotation cannot be altered with-in the game."
+    },
+    {
+      "ref": "7.3",
+      "text": "Ghost rule: During/on tournament day(s), if a player is injured, or have to leave early or come late due to other commitments, that team shall play with 5 (team with 6 players) or 6 (team with 7 players), but with ghost rotation (assuming that there is invisible player/ghost is in the missing player's place), the rotation must be followed under any circumstances. However, the player can join back anytime."
+    },
+    {
+      "ref": "7.4",
+      "text": "For the serve during ghost rotation, either injured player can serve and stay out, or, center-back (#6 player) in the rotation shall serve."
+    },
+    {
+      "ref": "",
+      "text": "Semis and Finals"
+    },
+    {
+      "ref": "8.1",
+      "text": "The finals is played for 3 sets (best of 3) with all three sets played for 25 points and 28 points maximum, in case of tie breaker"
+    },
+    {
+      "ref": "8,2",
+      "text": "Each team will get 2 timeouts per set per team for 1 minute."
+    },
+    {
+      "ref": "8.3",
+      "text": "All the rules will apply to finals as well when it comes to violations and play."
+    }
+  ]
+}
