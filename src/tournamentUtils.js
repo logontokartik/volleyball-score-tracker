@@ -89,6 +89,26 @@ export function formatMatchHeadingForScores(match, scheduleSlots) {
   return versus;
 }
 
+/**
+ * Scoring rules per match phase and set index.
+ * Pool play: sets 1-2 → play to 21, win by 2, cap 25. Set 3 → play to 15, win by 2, cap 18.
+ * Finals:    sets 1-2 → play to 25, win by 2, cap 28. Set 3 → play to 15 (no cap beyond 15).
+ */
+export function getSetCap(phase, setIndex) {
+  if (phase === 'finals') {
+    return setIndex < 2 ? 28 : 15;
+  }
+  // pool (default)
+  return setIndex < 2 ? 25 : 18;
+}
+
+export function getSetTarget(phase, setIndex) {
+  if (phase === 'finals') {
+    return setIndex < 2 ? 25 : 15;
+  }
+  return setIndex < 2 ? 21 : 15;
+}
+
 /** Sets needed to win a match (e.g. 3-set cap → 2, 5-set → 3). */
 export function setsNeededToWin(setsPerMatch) {
   const n = Math.max(1, Math.floor(Number(setsPerMatch)) || 1);
