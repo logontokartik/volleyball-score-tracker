@@ -10,6 +10,8 @@ import {
   buildDefaultScheduleSlots,
   calculateLeaderboard,
   formatMatchHeadingForScores,
+  getSetCap,
+  getSetTarget,
   orderScoresBySchedule,
 } from './tournamentUtils';
 
@@ -23,7 +25,6 @@ export default function TrackerView() {
   const [tournament, setTournament] = useState(null);
   const [scores, setScores] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [pointsToWin, setPointsToWin] = useState(25);
   const [loading, setLoading] = useState(true);
   const [jumpToGame, setJumpToGame] = useState(null);
   const matchCardRefs = useRef({});
@@ -70,9 +71,6 @@ export default function TrackerView() {
       setTournament({ id: snap.id, ...data });
       setScores(data.scores || []);
       setTeams(data.teams || []);
-      setPointsToWin(
-        typeof data.pointsToWin === 'number' && data.pointsToWin > 0 ? data.pointsToWin : 25
-      );
       setLoading(false);
     }, () => {
       setLoading(false);
@@ -103,12 +101,12 @@ export default function TrackerView() {
   const orderedScores = orderScoresBySchedule(scores, scheduleSlots);
 
   const updateScoreInput = useCallback((game, setIndex, teamKey, value) => {
-    const cap = pointsToWin;
-    const numericValue = Math.max(0, Math.min(cap, parseInt(value, 10) || 0));
     setScores((prevScores) => {
       const matchIndex = prevScores.findIndex((m) => m.game === game);
       if (matchIndex < 0) return prevScores;
       if (prevScores[matchIndex]?.completed) return prevScores;
+      const cap = getSetCap(prevScores[matchIndex].phase || 'pool', setIndex);
+      const numericValue = Math.max(0, Math.min(cap, parseInt(value, 10) || 0));
       const updatedScores = [...prevScores];
       if (!updatedScores[matchIndex]?.sets?.[setIndex]) return prevScores;
       updatedScores[matchIndex] = {
@@ -121,14 +119,14 @@ export default function TrackerView() {
       };
       return updatedScores;
     });
-  }, [pointsToWin]);
+  }, []);
 
   const adjustScoreDelta = useCallback((game, setIndex, teamKey, delta) => {
-    const cap = pointsToWin;
     setScores((prevScores) => {
       const matchIndex = prevScores.findIndex((m) => m.game === game);
       if (matchIndex < 0) return prevScores;
       if (prevScores[matchIndex]?.completed) return prevScores;
+      const cap = getSetCap(prevScores[matchIndex].phase || 'pool', setIndex);
       const updatedScores = [...prevScores];
       if (!updatedScores[matchIndex]?.sets?.[setIndex]) return prevScores;
       const cur = updatedScores[matchIndex].sets[setIndex][teamKey];
@@ -145,7 +143,7 @@ export default function TrackerView() {
       };
       return updatedScores;
     });
-  }, [pointsToWin]);
+  }, []);
 
   const markMatchComplete = useCallback(
     (game) => {
@@ -163,6 +161,16 @@ export default function TrackerView() {
     },
     [user]
   );
+
+  const toggleMatchPhase = useCallback((game) => {
+    if (!user) return;
+    setScores((prev) =>
+      prev.map((m) => {
+        if (m.game !== game || m.completed) return m;
+        return { ...m, phase: m.phase === 'finals' ? 'pool' : 'finals' };
+      })
+    );
+  }, [user]);
 
   const leaderboard = calculateLeaderboard(
     scores,
@@ -255,7 +263,7 @@ export default function TrackerView() {
                 <div className="text-center px-1">
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.name}</h1>
                   <p className="text-sm text-gray-600 mt-1">
-                    {teams.length} teams · cap {pointsToWin} pts per set
+                    {teams.length} teams · Pool: 21 pts (cap 25), 3rd set 15 (cap 18) · Finals: 25 pts (cap 28), 3rd set 15
                   </p>
                 </div>
 
@@ -408,7 +416,7 @@ export default function TrackerView() {
                       <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-3 text-center">
                         Tap <span className="font-bold text-gray-900">−</span> /{' '}
                         <span className="font-bold text-gray-900">+</span> to change points, or type a
-                        number. Max {pointsToWin} per set.
+                        number. Caps vary by game phase (pool / finals) and set.
                       </p>
                     )}
                     {!user && (
@@ -419,6 +427,7 @@ export default function TrackerView() {
                     {orderedScores.map((match) => {
                       const locked = Boolean(match.completed);
                       const heading = formatMatchHeadingForScores(match, scheduleSlots);
+                      const phase = match.phase || 'pool';
                       return (
                       <div
                         key={match.game}
@@ -433,10 +442,40 @@ export default function TrackerView() {
                         <Card>
                         <CardContent className="p-4">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
-                            <h2 className="text-lg font-bold text-gray-900 leading-snug pr-2">
-                              {heading}
-                            </h2>
+                            <div>
+                              <h2 className="text-lg font-bold text-gray-900 leading-snug pr-2">
+                                {heading}
+                              </h2>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {phase === 'finals'
+                                  ? 'Finals: 25 pts (cap 28), 3rd set 15'
+                                  : 'Pool: 21 pts (cap 25), 3rd set 15 (cap 18)'}
+                                {' · win by 2'}
+                              </p>
+                            </div>
                             <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                              {user && !locked && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleMatchPhase(match.game)}
+                                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${
+                                    phase === 'finals'
+                                      ? 'bg-amber-100 border-amber-300 text-amber-800'
+                                      : 'bg-blue-50 border-blue-200 text-blue-700'
+                                  }`}
+                                >
+                                  {phase === 'finals' ? 'Finals' : 'Pool play'}
+                                </button>
+                              )}
+                              {!user && !locked && (
+                                <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+                                  phase === 'finals'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-blue-50 text-blue-700'
+                                }`}>
+                                  {phase === 'finals' ? 'Finals' : 'Pool play'}
+                                </span>
+                              )}
                               {locked ? (
                                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-200/80 px-3 py-1.5 rounded-lg">
                                   Complete · locked
@@ -459,10 +498,16 @@ export default function TrackerView() {
                               Scores are read-only. An admin can unlock this game under Admin → Locks.
                             </p>
                           )}
-                          {match.sets.map((set, setIndex) => (
+                          {match.sets.map((set, setIndex) => {
+                            const setCap = getSetCap(phase, setIndex);
+                            const setTarget = getSetTarget(phase, setIndex);
+                            return (
                             <div key={setIndex} className="mb-4 last:mb-0">
                               <h3 className="font-semibold text-sm text-gray-600 mb-2">
                                 Set {setIndex + 1}
+                                <span className="font-normal text-xs text-gray-400 ml-2">
+                                  (to {setTarget}, cap {setCap})
+                                </span>
                               </h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {['team1', 'team2'].map((teamKey) => (
@@ -489,7 +534,7 @@ export default function TrackerView() {
                                         type="number"
                                         inputMode="numeric"
                                         min={0}
-                                        max={pointsToWin}
+                                        max={setCap}
                                         value={set[teamKey]}
                                         onChange={(e) =>
                                           updateScoreInput(
@@ -505,7 +550,7 @@ export default function TrackerView() {
                                       <button
                                         type="button"
                                         aria-label={`Add one point for ${match[teamKey]}`}
-                                        disabled={!user || locked || set[teamKey] >= pointsToWin}
+                                        disabled={!user || locked || set[teamKey] >= setCap}
                                         onClick={() =>
                                           adjustScoreDelta(match.game, setIndex, teamKey, 1)
                                         }
@@ -518,7 +563,8 @@ export default function TrackerView() {
                                 ))}
                               </div>
                             </div>
-                          ))}
+                          );
+                          })}
                         </CardContent>
                         </Card>
                       </div>

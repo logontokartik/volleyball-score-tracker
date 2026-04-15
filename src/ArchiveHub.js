@@ -83,6 +83,7 @@ function ChampionPhotoStrip({ urls, label }) {
             alt={`${label} — photo ${i + 1}`}
             className="rounded-lg border border-slate-600/80 max-h-36 sm:max-h-44 w-auto object-cover bg-slate-900"
             loading="lazy"
+            referrerPolicy="no-referrer"
           />
         ))}
       </div>
@@ -538,7 +539,7 @@ export default function ArchiveHub() {
               </a>{' '}
               (spreadsheet).
             </p>
-            {tournamentNames.map((tn) => {
+            {[...tournamentNames].reverse().map((tn) => {
               const w = champions.winners[tn] || [];
               const r = champions.runnersUp[tn] || [];
               if (!w.length && !r.length) return null;
@@ -631,6 +632,7 @@ export default function ArchiveHub() {
                               alt={label ? `${label} — winner photo` : `${g.title} — ${i + 1}`}
                               className="w-full h-full object-cover"
                               loading="lazy"
+                              referrerPolicy="no-referrer"
                             />
                           </div>
                           {label ? (
