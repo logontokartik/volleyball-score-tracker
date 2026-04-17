@@ -271,7 +271,7 @@ export default function ArchiveHub() {
               <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4">
                 <h3 className="text-xs font-bold uppercase text-emerald-400 mb-3">Most wins</h3>
                 <ol className="space-y-2 text-sm">
-                  {stats.topWon.slice(0, 5).map((p, i) => (
+                  {stats.topWon.slice(0, 7).map((p, i) => (
                     <li key={p.name} className="flex justify-between gap-2">
                       <span className="text-slate-300 truncate">
                         {i + 1}. {p.name}
@@ -284,7 +284,7 @@ export default function ArchiveHub() {
               <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4">
                 <h3 className="text-xs font-bold uppercase text-sky-400 mb-3">Most played</h3>
                 <ol className="space-y-2 text-sm">
-                  {stats.topPlayed.slice(0, 5).map((p, i) => (
+                  {stats.topPlayed.slice(0, 7).map((p, i) => (
                     <li key={p.name} className="flex justify-between gap-2">
                       <span className="text-slate-300 truncate">
                         {i + 1}. {p.name}
