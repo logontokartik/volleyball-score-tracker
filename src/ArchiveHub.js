@@ -360,7 +360,7 @@ export default function ArchiveHub() {
             </div>
 
             <div className="rounded-2xl border border-slate-700 bg-slate-800/40 overflow-hidden">
-              <div className="overflow-x-auto touch-pan-x">
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[640px]">
                   <thead>
                     <tr className="bg-slate-800 text-left text-slate-300">
@@ -488,7 +488,7 @@ export default function ArchiveHub() {
               .
             </p>
             <div className="rounded-2xl border border-slate-700 bg-slate-800/40 overflow-hidden">
-              <div className="overflow-x-auto touch-pan-x">
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[720px]">
                   <thead>
                     <tr className="bg-slate-800 text-slate-300 text-left">
