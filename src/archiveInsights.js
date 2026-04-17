@@ -78,11 +78,17 @@ export function computeArchiveStats(data) {
     championSlots += (champions?.winners?.[tn] || []).length;
   });
 
+  const firstName = (p) => normName(p.name).split(' ')[0] || normName(p.name);
+
   const sortedByPlayed = [...(masterList || [])].sort(
-    (a, b) => b.tournamentsPlayed - a.tournamentsPlayed
+    (a, b) =>
+      b.tournamentsPlayed - a.tournamentsPlayed ||
+      firstName(a).localeCompare(firstName(b))
   );
   const sortedByWon = [...(masterList || [])].sort(
-    (a, b) => b.tournamentsWon - a.tournamentsWon
+    (a, b) =>
+      b.tournamentsWon - a.tournamentsWon ||
+      firstName(a).localeCompare(firstName(b))
   );
   const sortedByRunner = [...(masterList || [])].sort(
     (a, b) => b.runnersUp - a.runnersUp
