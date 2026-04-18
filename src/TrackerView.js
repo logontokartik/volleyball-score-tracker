@@ -333,7 +333,7 @@ export default function TrackerView() {
                       <p className="md:hidden text-xs text-gray-500 text-center mb-2">
                         Swipe sideways on the table to see every column.
                       </p>
-                      <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-lg border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
+                      <div className="overflow-x-auto overscroll-x-contain rounded-lg border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
                         <table className="w-full text-left text-sm min-w-[34rem] sm:min-w-0">
                           <thead className="bg-gray-100 text-gray-800">
                             <tr>
@@ -454,28 +454,33 @@ export default function TrackerView() {
                               </p>
                             </div>
                             <div className="flex flex-col sm:items-end gap-2 shrink-0">
-                              {user && !locked && (
+                              {/* Phase selector — always visible, toggle only for logged-in users */}
+                              <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
                                 <button
                                   type="button"
-                                  onClick={() => toggleMatchPhase(match.game)}
-                                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${
-                                    phase === 'finals'
-                                      ? 'bg-amber-100 border-amber-300 text-amber-800'
-                                      : 'bg-blue-50 border-blue-200 text-blue-700'
+                                  disabled={!user || locked}
+                                  onClick={() => phase !== 'pool' && toggleMatchPhase(match.game)}
+                                  className={`px-3 py-1.5 transition-colors ${
+                                    phase === 'pool'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-gray-500 hover:bg-gray-50 disabled:hover:bg-white'
                                   }`}
                                 >
-                                  {phase === 'finals' ? 'Finals' : 'Pool play'}
+                                  Pool play
                                 </button>
-                              )}
-                              {!user && !locked && (
-                                <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                                  phase === 'finals'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-blue-50 text-blue-700'
-                                }`}>
-                                  {phase === 'finals' ? 'Finals' : 'Pool play'}
-                                </span>
-                              )}
+                                <button
+                                  type="button"
+                                  disabled={!user || locked}
+                                  onClick={() => phase !== 'finals' && toggleMatchPhase(match.game)}
+                                  className={`px-3 py-1.5 border-l border-gray-200 transition-colors ${
+                                    phase === 'finals'
+                                      ? 'bg-amber-500 text-white'
+                                      : 'bg-white text-gray-500 hover:bg-gray-50 disabled:hover:bg-white'
+                                  }`}
+                                >
+                                  Finals
+                                </button>
+                              </div>
                               {locked ? (
                                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-200/80 px-3 py-1.5 rounded-lg">
                                   Complete · locked
