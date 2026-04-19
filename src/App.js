@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import TrackerView from './TrackerView';
 import ArchiveHub from './ArchiveHub';
+import CompletedTournamentsView from './CompletedTournamentsView';
 
 function SiteNav() {
   return (
@@ -25,6 +26,18 @@ function SiteNav() {
             }
           >
             Live score tracker
+          </NavLink>
+          <NavLink
+            to="/completed"
+            className={({ isActive }) =>
+              `px-4 py-2.5 rounded-xl text-sm font-semibold min-h-[44px] flex items-center transition-colors ${
+                isActive
+                  ? 'bg-amber-500 text-slate-900 shadow'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`
+            }
+          >
+            Completed
           </NavLink>
           <NavLink
             to="/archive"
@@ -51,6 +64,7 @@ export default function App() {
         <SiteNav />
         <Routes>
           <Route path="/" element={<TrackerView />} />
+          <Route path="/completed" element={<CompletedTournamentsView />} />
           <Route path="/archive" element={<ArchiveHub />} />
         </Routes>
       </div>

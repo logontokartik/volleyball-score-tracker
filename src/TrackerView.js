@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
 import { auth, db } from './firebase';
 import Login from './Login';
 import AdminPage from './AdminPage';
 import ScheduleTable from './ScheduleTable';
 import FinalsView from './FinalsView';
 import { Card, CardContent } from './components/ui/card';
+import { isTournamentComplete } from './CompletedTournamentsView';
 import {
   buildDefaultScheduleSlots,
   calculateLeaderboard,
@@ -273,7 +275,25 @@ export default function TrackerView() {
               </Card>
             )}
 
-            {!loading && tournament && (
+            {!loading && tournament && isTournamentComplete(tournament) && (
+              <div className="grid gap-4">
+                <div className="rounded-2xl border-2 border-gray-200 bg-white p-8 text-center shadow-sm">
+                  <div className="text-5xl mb-4">🏐</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">No games live</h2>
+                  <p className="text-gray-500 mb-6">
+                    <span className="font-medium text-gray-700">{tournament.name}</span> has concluded.
+                  </p>
+                  <Link
+                    to="/completed"
+                    className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-colors"
+                  >
+                    View completed tournaments →
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {!loading && tournament && !isTournamentComplete(tournament) && (
               <>
                 <div className="text-center px-1">
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.name}</h1>
