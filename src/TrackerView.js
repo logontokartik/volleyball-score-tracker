@@ -5,6 +5,7 @@ import { auth, db } from './firebase';
 import Login from './Login';
 import AdminPage from './AdminPage';
 import ScheduleTable from './ScheduleTable';
+import FinalsView from './FinalsView';
 import { Card, CardContent } from './components/ui/card';
 import {
   buildDefaultScheduleSlots,
@@ -25,6 +26,7 @@ export default function TrackerView() {
   const [tournament, setTournament] = useState(null);
   const [scores, setScores] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [finalsMatches, setFinalsMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [jumpToGame, setJumpToGame] = useState(null);
   const matchCardRefs = useRef({});
@@ -71,6 +73,7 @@ export default function TrackerView() {
       setTournament({ id: snap.id, ...data });
       setScores(data.scores || []);
       setTeams(data.teams || []);
+      setFinalsMatches(data.finalsMatches || []);
       setLoading(false);
     }, () => {
       setLoading(false);
@@ -90,6 +93,18 @@ export default function TrackerView() {
     };
     saveScores();
   }, [scores, user, loading, activeTournamentId, tournament]);
+
+  useEffect(() => {
+    if (!user || loading || !activeTournamentId || !tournament) return undefined;
+    const saveFinalsMatches = async () => {
+      await setDoc(
+        doc(db, 'tournaments', activeTournamentId),
+        { finalsMatches },
+        { merge: true }
+      );
+    };
+    saveFinalsMatches();
+  }, [finalsMatches, user, loading, activeTournamentId, tournament]);
 
   const scheduleSlots =
     tournament?.scheduleSlots?.length > 0
@@ -274,7 +289,8 @@ export default function TrackerView() {
                   <div className="flex rounded-xl bg-white shadow-sm border border-gray-200 p-1 gap-1">
                     {[
                       { id: 'schedule', label: 'Schedule' },
-                      { id: 'scores', label: 'Enter scores' },
+                      { id: 'scores', label: 'Pool scores' },
+                      { id: 'finals', label: '🏆 Finals' },
                       { id: 'table', label: 'Table' },
                     ].map((tab) => (
                       <button
@@ -408,6 +424,16 @@ export default function TrackerView() {
                       </div>
                     </CardContent>
                   </Card>
+                )}
+
+                {scoresTab === 'finals' && (
+                  <FinalsView
+                    teams={teams}
+                    finalsMatches={finalsMatches}
+                    setFinalsMatches={setFinalsMatches}
+                    user={user}
+                    setsPerMatch={tournament?.setsPerMatch ?? 3}
+                  />
                 )}
 
                 {scoresTab === 'scores' && (
