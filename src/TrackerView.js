@@ -342,9 +342,11 @@ export default function TrackerView() {
                     <CardContent className="p-3 sm:p-4">
                       <h2 className="text-xl font-bold mb-2 text-center">Leaderboard</h2>
                       <p className="text-xs text-gray-600 text-center mb-4 max-w-xl mx-auto">
-                        Ranked by tournament points from <strong>completed</strong> games: 2 pts per set
-                        won, +2 bonus for a sweep, +1 bonus if the loser won a set. Tiebreakers: point
-                        differential in sets from matches you won, then head-to-head.
+                        Ranked by tournament points from <strong>completed</strong> games.
+                        Win = 3 pts + 3 bonus (sweep 2-0) or + 2 bonus (win 2-1).
+                        Losing team earns 1 pt if they won a set.
+                        Max 6 pts / min 5 pts per match won.
+                        Tiebreakers: point differential in sets of matches you won, then head-to-head.
                       </p>
                       <p className="md:hidden text-xs text-gray-500 text-center mb-2">
                         Swipe sideways on the table to see every column.
