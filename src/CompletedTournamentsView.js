@@ -38,6 +38,28 @@ export function isTournamentComplete(tournament) {
   );
 }
 
+function getTeamMatchResults(teamName, scores) {
+  return (scores || [])
+    .filter((m) => m.completed && (m.team1 === teamName || m.team2 === teamName))
+    .map((m) => {
+      const isT1 = m.team1 === teamName;
+      const opponent = isT1 ? m.team2 : m.team1;
+      const setLines = (m.sets || []).map((s) => {
+        const mine = isT1 ? s.team1 : s.team2;
+        const theirs = isT1 ? s.team2 : s.team1;
+        return `${mine}–${theirs}`;
+      });
+      const mySets = (m.sets || []).filter((s) => {
+        const mine = Number(isT1 ? s.team1 : s.team2);
+        const theirs = Number(isT1 ? s.team2 : s.team1);
+        return mine > theirs;
+      }).length;
+      const theirSets = (m.sets || []).length - mySets;
+      const result = mySets > theirSets ? 'W' : mySets < theirSets ? 'L' : 'D';
+      return { opponent, setLines, result };
+    });
+}
+
 function TournamentDetail({ tournament, onBack }) {
   const winner = getFinalsWinner(tournament.finalsMatches);
   const leaderboard = calculateLeaderboard(
@@ -145,35 +167,61 @@ function TournamentDetail({ tournament, onBack }) {
           <CardContent className="p-4">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Pool play standings</h2>
             <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="w-full text-sm min-w-[28rem]">
+              <table className="w-full text-sm min-w-[32rem]">
                 <thead className="bg-gray-100 text-gray-800">
                   <tr>
                     <th className="p-2 sm:p-3 font-semibold text-center w-9">#</th>
-                    <th className="p-2 sm:p-3 font-semibold">Team</th>
+                    <th className="p-2 sm:p-3 font-semibold">Team &amp; results</th>
                     <th className="p-2 sm:p-3 font-semibold text-right" title="Tournament points">Pts</th>
                     <th className="p-2 sm:p-3 font-semibold text-right" title="Matches won">W</th>
                     <th className="p-2 sm:p-3 font-semibold text-right" title="Sets won">Sets</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map(([team, data], index) => (
-                    <tr
-                      key={team}
-                      className={
-                        index === 0
-                          ? 'bg-amber-50 font-medium'
-                          : index % 2 === 1
-                          ? 'bg-gray-50'
-                          : 'bg-white'
-                      }
-                    >
-                      <td className="p-2 sm:p-3 text-center text-gray-600">{index + 1}</td>
-                      <td className="p-2 sm:p-3">{team}</td>
-                      <td className="p-2 sm:p-3 text-right tabular-nums">{data.tournamentPoints}</td>
-                      <td className="p-2 sm:p-3 text-right tabular-nums">{data.matchesWon}</td>
-                      <td className="p-2 sm:p-3 text-right tabular-nums">{data.setsWon}</td>
-                    </tr>
-                  ))}
+                  {leaderboard.map(([team, data], index) => {
+                    const results = getTeamMatchResults(team, tournament.scores);
+                    return (
+                      <tr
+                        key={team}
+                        className={
+                          index === 0
+                            ? 'bg-amber-50 font-medium'
+                            : index % 2 === 1
+                            ? 'bg-gray-50'
+                            : 'bg-white'
+                        }
+                      >
+                        <td className="p-2 sm:p-3 text-center text-gray-600 align-top">{index + 1}</td>
+                        <td className="p-2 sm:p-3 align-top">
+                          <div className="font-medium">{team}</div>
+                          {results.length > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {results.map((r, i) => (
+                                <div key={i} className="text-xs text-gray-500 tabular-nums">
+                                  <span
+                                    className={
+                                      r.result === 'W'
+                                        ? 'font-bold text-green-600'
+                                        : r.result === 'L'
+                                        ? 'font-bold text-red-500'
+                                        : 'text-gray-400'
+                                    }
+                                  >
+                                    {r.result}
+                                  </span>{' '}
+                                  vs {r.opponent}:{' '}
+                                  {r.setLines.join(', ')}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2 sm:p-3 text-right tabular-nums align-top">{data.tournamentPoints}</td>
+                        <td className="p-2 sm:p-3 text-right tabular-nums align-top">{data.matchesWon}</td>
+                        <td className="p-2 sm:p-3 text-right tabular-nums align-top">{data.setsWon}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
