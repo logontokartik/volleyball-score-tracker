@@ -1,6 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import archiveData from './data/archiveData.json';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import archiveDataBundled from './data/archiveData.json';
+import { fetchArchiveFromSheets } from './archiveRefreshUtils';
 import {
   GOOGLE_SHEETS_ARCHIVE_URL,
   computeArchiveStats,
@@ -11,6 +15,8 @@ import {
   GVW_EMBEDDED_VIDEO_IFRAME_SRC,
   GVW_MEDIA_GALLERIES,
 } from './archiveGvwMedia';
+
+const ARCHIVE_SNAPSHOT_REF = doc(db, 'settings', 'archiveSnapshot');
 
 const TABS = [
   { id: 'master', label: 'Master stats' },
@@ -120,6 +126,57 @@ export default function ArchiveHub() {
   const [askInput, setAskInput] = useState('');
   const [askResult, setAskResult] = useState(null);
 
+  // Auth
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, setUser);
+    return unsub;
+  }, []);
+
+  // Live archive data from Firestore (falls back to bundled JSON if not yet refreshed)
+  const [firestoreArchive, setFirestoreArchive] = useState(null);
+  useEffect(() => {
+    const unsub = onSnapshot(ARCHIVE_SNAPSHOT_REF, (snap) => {
+      if (snap.exists()) setFirestoreArchive(snap.data());
+      else setFirestoreArchive(null);
+    });
+    return unsub;
+  }, []);
+
+  // Use Firestore snapshot if it's newer than the bundled JSON
+  const archiveData = useMemo(() => {
+    if (
+      firestoreArchive?.generatedAt &&
+      firestoreArchive.generatedAt > archiveDataBundled.generatedAt
+    ) {
+      return firestoreArchive;
+    }
+    return archiveDataBundled;
+  }, [firestoreArchive]);
+
+  // Refresh state
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
+  const [refreshSuccess, setRefreshSuccess] = useState('');
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setRefreshError('');
+    setRefreshSuccess('');
+    try {
+      const parsed = await fetchArchiveFromSheets();
+      await setDoc(ARCHIVE_SNAPSHOT_REF, parsed);
+      setRefreshSuccess(
+        `Archive refreshed — ${parsed.masterList.length} players, ${parsed.tournamentSignups.length} seasons.`
+      );
+    } catch (err) {
+      console.error(err);
+      setRefreshError(err.message || 'Failed to refresh archive.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const { masterList, tournamentSignups, directory, champions, tournamentNames, generatedAt } =
     archiveData;
 
@@ -142,7 +199,10 @@ export default function ArchiveHub() {
       let c = 0;
       if (typeof numA === 'number' && typeof numB === 'number') c = numA - numB;
       else c = String(numA).localeCompare(String(numB));
-      return sortDir === 'desc' ? -c : c;
+      const primary = sortDir === 'desc' ? -c : c;
+      // Tiebreaker: alphabetical by name
+      if (primary !== 0) return primary;
+      return String(a.name).localeCompare(String(b.name));
     });
     return rows;
   }, [masterList, search, sortKey, sortDir]);
@@ -213,6 +273,44 @@ export default function ArchiveHub() {
             </a>
           </div>
         </div>
+
+        {/* Admin refresh panel */}
+        {user && (
+          <div className="rounded-2xl border border-slate-700 bg-slate-800/60 px-5 py-4 mb-2 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Refresh archive from Google Sheets</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Pulls live data from the{' '}
+                <a href={GOOGLE_SHEETS_ARCHIVE_URL} target="_blank" rel="noopener noreferrer" className="text-amber-400 underline">
+                  GVBL spreadsheet
+                </a>
+                {archiveData.generatedAt && (
+                  <> · Last updated {new Date(archiveData.generatedAt).toLocaleString()}{archiveData.sourceFile === 'Google Sheets (live)' ? ' (live)' : ' (bundled)'}</>
+                )}
+              </p>
+              {refreshError  && <p className="text-xs text-red-400 mt-1">{refreshError}</p>}
+              {refreshSuccess && <p className="text-xs text-emerald-400 mt-1">✓ {refreshSuccess}</p>}
+            </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="shrink-0 min-h-[44px] px-5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-900 font-bold text-sm flex items-center gap-2"
+            >
+              {refreshing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"/>
+                  </svg>
+                  Refreshing…
+                </>
+              ) : (
+                <>↻ Refresh now</>
+              )}
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-1">
           {TABS.map((t) => (
