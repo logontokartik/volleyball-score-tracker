@@ -116,8 +116,21 @@ export function setsNeededToWin(setsPerMatch) {
 }
 
 /**
- * Analyze one match for tournament points (GVBL-style).
- * Rules: 2 pts per set won; +2 bonus if winner sweeps (loser wins 0 sets); +1 bonus if loser won ≥1 set.
+ * Analyze one match for tournament points (GVBL rules).
+ *
+ * Winner points:
+ *   3 (match win) + 3 bonus if sweep (2-0)  = 6 max
+ *   3 (match win) + 2 bonus if won in 3 sets = 5 min for winner
+ *
+ * Loser points:
+ *   1 point if loser won at least 1 set
+ *   0 points if swept
+ *
+ * Tiebreakers (seeding):
+ *   1) Total tournament points
+ *   2) Point differential in sets of matches the team WON
+ *   3) Head-to-head
+ *
  * Only meaningful when match.completed — caller filters.
  */
 function analyzeMatchForPoints(match, needToWin) {
@@ -138,12 +151,17 @@ function analyzeMatchForPoints(match, needToWin) {
   if (s1 >= needToWin && s1 > s2) winner = match.team1;
   else if (s2 >= needToWin && s2 > s1) winner = match.team2;
 
-  let winBonus = 0;
-  if (winner === match.team1) winBonus = s2 === 0 ? 2 : 1;
-  else if (winner === match.team2) winBonus = s1 === 0 ? 2 : 1;
-
-  const pts1 = s1 * 2 + (winner === match.team1 ? winBonus : 0);
-  const pts2 = s2 * 2 + (winner === match.team2 ? winBonus : 0);
+  // Winner: 3 (win) + 3 (sweep bonus) or + 2 (3-set win bonus)
+  // Loser:  1 if they won ≥1 set, else 0
+  let pts1 = 0;
+  let pts2 = 0;
+  if (winner === match.team1) {
+    pts1 = 3 + (s2 === 0 ? 3 : 2); // sweep → 6, 3-set win → 5
+    pts2 = s2 > 0 ? 1 : 0;          // consolation point if loser won a set
+  } else if (winner === match.team2) {
+    pts2 = 3 + (s1 === 0 ? 3 : 2);
+    pts1 = s1 > 0 ? 1 : 0;
+  }
 
   let winPdTeam1 = 0;
   let winPdTeam2 = 0;
