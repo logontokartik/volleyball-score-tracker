@@ -199,7 +199,10 @@ export default function ArchiveHub() {
       let c = 0;
       if (typeof numA === 'number' && typeof numB === 'number') c = numA - numB;
       else c = String(numA).localeCompare(String(numB));
-      return sortDir === 'desc' ? -c : c;
+      const primary = sortDir === 'desc' ? -c : c;
+      // Tiebreaker: alphabetical by name
+      if (primary !== 0) return primary;
+      return String(a.name).localeCompare(String(b.name));
     });
     return rows;
   }, [masterList, search, sortKey, sortDir]);
