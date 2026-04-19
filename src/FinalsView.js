@@ -1,6 +1,22 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent } from './components/ui/card';
-import { getSetCap, getSetTarget } from './tournamentUtils';
+import { getSetCap, getSetTarget, setsNeededToWin } from './tournamentUtils';
+
+/** Returns the winning team name of a completed match, or null if no winner yet. */
+function getWinner(match) {
+  const need = setsNeededToWin(match.sets?.length || 3);
+  let s1 = 0, s2 = 0;
+  for (const set of match.sets || []) {
+    const a = Number(set.team1) || 0;
+    const b = Number(set.team2) || 0;
+    if (a === 0 && b === 0) continue;
+    if (a > b) s1++;
+    else if (b > a) s2++;
+  }
+  if (s1 >= need && s1 > s2) return match.team1;
+  if (s2 >= need && s2 > s1) return match.team2;
+  return null;
+}
 
 const ROUND_OPTIONS = [
   { value: 'quarter-finals', label: 'Quarter Finals' },
@@ -17,10 +33,34 @@ const ROUND_COLORS = {
 function MatchScoreCard({ match, user, onUpdate, onDelta, onComplete }) {
   const locked = Boolean(match.completed);
   const phase = 'finals'; // finals bracket always uses finals scoring rules
+  const winner = locked ? getWinner(match) : null;
+  const isFinals = match.round === 'finals';
 
   return (
-    <Card>
+    <Card className={locked && winner && isFinals ? 'ring-2 ring-amber-400 shadow-xl' : ''}>
       <CardContent className="p-4">
+        {/* Trophy winner banner — only on completed Finals round */}
+        {locked && winner && isFinals && (
+          <div className="flex flex-col items-center gap-3 mb-5 py-4 px-4 rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-100 border border-amber-300">
+            <img
+              src="/images/winnertrophy.jpg"
+              alt="Winner trophy"
+              className="h-24 w-auto object-contain drop-shadow-md"
+            />
+            <div className="text-center">
+              <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-1">Tournament Champions 🏆</p>
+              <p className="text-2xl font-black text-amber-800">{winner}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Winner highlight on QF / SF (no trophy, just a subtle banner) */}
+        {locked && winner && !isFinals && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-green-50 border border-green-200">
+            <span className="text-green-700 font-bold text-sm">✓ {winner}</span>
+            <span className="text-green-600 text-xs">advances</span>
+          </div>
+        )}
         {/* Header */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3">
           <div>
