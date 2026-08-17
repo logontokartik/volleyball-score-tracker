@@ -3,15 +3,60 @@ rules_version = '2';
 // Or paste into Firebase Console → Firestore → Rules → Publish
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Active tournament pointer
+
+    // Admin accounts, by email, lowercase.
+    //
+    // Keep this identical to REACT_APP_ADMIN_EMAILS in Vercel. That variable only
+    // decides what the app OFFERS; this list is what is actually enforced, so a
+    // scorer calling Firestore directly from the console is still stopped here.
+    //
+    // While the list is empty, every signed-in account is an admin — which is how the
+    // app behaved before roles existed, so publishing these rules before filling the
+    // list in changes nothing.
+    function adminEmails() {
+      return [
+        // 'you@example.com',
+      ];
+    }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        adminEmails().size() == 0 ||
+        // `in` on the token map, not `token.email != null` — reading an absent
+        // property raises an evaluation error rather than returning null.
+        ('email' in request.auth.token &&
+         request.auth.token.email.lower() in adminEmails())
+      );
+    }
+
+    // The only fields a scorer may change on a tournament: live scores, and finals
+    // results. Teams, schedule, format and name are all admin territory.
+    function scorerFieldsOnly() {
+      return request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(['scores', 'finalsMatches']);
+    }
+
+    // Active tournament pointer — switching which tournament is live is an admin act.
     match /settings/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
+
     // Tournament documents (teams, schedule, scores)
     match /tournaments/{tournamentId} {
       allow read: if true;
-      allow write: if request.auth != null;
+
+      // Creating and deleting a tournament is admin-only. `delete` is called out
+      // separately because `write` would otherwise cover it.
+      allow create, delete: if isAdmin();
+
+      // Admins may change anything. Scorers may only touch the two score fields, on a
+      // tournament that already exists.
+      allow update: if isAdmin() || (signedIn() && scorerFieldsOnly());
     }
   }
 }

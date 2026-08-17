@@ -2,6 +2,70 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Accounts and roles
+
+Accounts are Firebase Auth email/password users, created by hand in
+**Firebase Console → Authentication → Users**. There is no sign-up flow in the app.
+
+Every account is one of two roles:
+
+| Role | Can do |
+| --- | --- |
+| **Admin** | Everything — create, delete and activate tournaments, edit teams and schedules, unlock completed games, plus everything a scorer can do. |
+| **Scorer** | Enter and adjust scores, mark games complete, record finals results. Nothing else. The Admin tab is not shown. |
+
+Roles come from a list of admin email addresses that lives in **two places, which must
+match**:
+
+1. `REACT_APP_ADMIN_EMAILS` in Vercel — comma-separated, e.g.
+   `you@example.com,cochair@example.com`. This decides what the **app offers**.
+2. The `adminEmails()` function at the top of `firestore.rules` — the same addresses,
+   lowercase. This is what is **actually enforced**.
+
+Anyone who signs in and is not on the list is a scorer.
+
+**Only the rules file provides security.** `REACT_APP_ADMIN_EMAILS` is compiled into
+the public JS bundle (as every `REACT_APP_*` value is), so it is readable by any
+visitor and can be bypassed by anyone willing to call Firestore from the browser
+console. It is there to hide UI, not to protect data. Never put a secret in it —
+that is why the Anthropic key is `ANTHROPIC_API_KEY` and server-side only.
+
+If the two lists drift apart, the failure is loud rather than silent: the app offers
+Admin, Firestore refuses the write, and the page shows the permission error.
+
+### Adding a scorer
+
+1. Firebase Console → Authentication → **Add user**, with an email and password.
+2. Give the credentials to the person scoring. Nothing else — being absent from the
+   admin list is what makes them a scorer.
+
+### Rolling this out
+
+While both lists are empty, **every signed-in account is an admin** — exactly how the
+app behaved before roles existed. So the safe order is:
+
+1. Deploy the code (no behaviour change).
+2. Publish `firestore.rules` with `adminEmails()` still empty (no behaviour change).
+3. Fill in the same addresses in both places, then redeploy and re-publish.
+
+Step 3 is the one that takes effect. Check you can still reach Admin before handing
+out any scorer accounts — if you leave yourself off the list, the only way back is the
+Firebase Console, which ignores rules.
+
+### What a scorer is technically allowed to write
+
+The rules let a scorer update **only** the `scores` and `finalsMatches` fields of an
+existing tournament, and nothing on `settings`. They cannot create or delete a
+tournament, or change teams, format, name or schedule.
+
+Within those two fields the rules do not inspect the contents, so a scorer determined
+to use the browser console could still write a nonsense score, or re-open a game they
+had marked complete. Guarding that would mean validating the whole score array in
+rules; the app's own UI prevents it, and neither is destructive.
+
+The split is covered by tests that run against the Firestore emulator — see
+[`firestore-tests/`](firestore-tests/). Re-run them after touching `firestore.rules`.
+
 ## Claude-powered features
 
 Two Vercel Functions call Claude, both using the same server-side key:
@@ -25,6 +89,7 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost and latency. |
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
 | `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
+| `REACT_APP_ADMIN_EMAILS` | no | empty | Comma-separated admin addresses — see [Accounts and roles](#accounts-and-roles). Public (it is in the JS bundle); mirror it in `firestore.rules`. |
 
 Redeploy after adding them — env vars are read at invocation, but the deploy must
 exist for the function to pick up the new configuration.

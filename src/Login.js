@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from './firebase';
+import { isAdmin, roleLabel } from './roles';
 
 export default function Login({ user, setUser }) {
   const [email, setEmail] = useState('');
@@ -26,8 +27,19 @@ export default function Login({ user, setUser }) {
   if (user) {
     return (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-gray-100 rounded-xl border border-gray-200 w-full sm:w-auto sm:max-w-md">
-        <span className="text-xs sm:text-sm text-gray-700 truncate" title={user.email}>
-          {user.email}
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-xs sm:text-sm text-gray-700 truncate" title={user.email}>
+            {user.email}
+          </span>
+          {/* Named so a scorer can see why there is no Admin tab, rather than
+              assuming the page is broken. */}
+          <span
+            className={`shrink-0 text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${
+              isAdmin(user) ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            {roleLabel(user)}
+          </span>
         </span>
         <button
           type="button"

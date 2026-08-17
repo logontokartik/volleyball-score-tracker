@@ -10,6 +10,7 @@ import FinalsView from './FinalsView';
 import MatchScoreDialog from './MatchScoreDialog';
 import { Card, CardContent } from './components/ui/card';
 import { isTournamentComplete } from './CompletedTournamentsView';
+import { isAdmin } from './roles';
 import {
   buildDefaultScheduleSlots,
   calculateLeaderboard,
@@ -229,11 +230,12 @@ export default function TrackerView() {
     if (openGame && !openMatch) setOpenGame(null);
   }, [openGame, openMatch]);
 
-  // Admin is a logged-in-only area; falling back to Scores on logout stops a signed-out
-  // browser from sitting on it.
+  // Admin is for admin accounts only. Falling back to Scores when that stops being
+  // true covers both logging out and signing back in as a scorer.
+  const admin = isAdmin(user);
   useEffect(() => {
-    if (!user) setPage('scores');
-  }, [user]);
+    if (!admin) setPage('scores');
+  }, [admin]);
 
   return (
     <div className="min-h-screen bg-gray-50/80 pb-8 sm:pb-6">
@@ -249,7 +251,7 @@ export default function TrackerView() {
             >
               Scores
             </button>
-            {user && (
+            {admin && (
               <button
                 type="button"
                 onClick={() => setPage('admin')}
@@ -264,7 +266,7 @@ export default function TrackerView() {
           <Login user={user} setUser={setUser} />
         </header>
 
-        {page === 'admin' && user && (
+        {page === 'admin' && admin && (
           <AdminPage user={user} onNavigateScores={() => setPage('scores')} />
         )}
 
@@ -278,11 +280,11 @@ export default function TrackerView() {
               <Card>
                 <CardContent className="p-6 text-center text-gray-700">
                   <p className="mb-3">
-                    {user
+                    {admin
                       ? 'No active tournament. Use Admin to create one and set it active.'
                       : 'No active tournament right now.'}
                   </p>
-                  {user && (
+                  {admin && (
                     <button
                       type="button"
                       onClick={() => setPage('admin')}
@@ -357,7 +359,7 @@ export default function TrackerView() {
                   </div>
                 </nav>
 
-                {!hasSavedSchedule && user && (
+                {!hasSavedSchedule && admin && (
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                     Schedule is auto-paired from the match list. Open{' '}
                     <button
