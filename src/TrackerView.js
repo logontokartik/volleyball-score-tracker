@@ -57,6 +57,7 @@ export default function TrackerView() {
       setTournament(null);
       setScores([]);
       setTeams([]);
+      setFinalsMatches([]);
       setLoading(false);
       return undefined;
     }
@@ -68,6 +69,7 @@ export default function TrackerView() {
         setTournament(null);
         setScores([]);
         setTeams([]);
+        setFinalsMatches([]);
         setLoading(false);
         return;
       }
@@ -84,8 +86,17 @@ export default function TrackerView() {
     return () => unsub();
   }, [activeTournamentId]);
 
+  // `scores` and `finalsMatches` are component state that outlives a tournament switch.
+  // When activeTournamentId changes, these effects re-run before the new document's
+  // snapshot has replaced that state — and `loading` is still false in this render, since
+  // the subscribe effect's setLoading(true) only takes effect on the next one. Writing
+  // here would copy the previous tournament's results into the newly activated one, so
+  // hold off until the loaded document is actually the active tournament.
+  const loadedTournamentIsActive =
+    Boolean(activeTournamentId) && tournament?.id === activeTournamentId;
+
   useEffect(() => {
-    if (!user || loading || !activeTournamentId || !tournament) return undefined;
+    if (!user || loading || !loadedTournamentIsActive) return undefined;
     const saveScores = async () => {
       await setDoc(
         doc(db, 'tournaments', activeTournamentId),
@@ -94,10 +105,10 @@ export default function TrackerView() {
       );
     };
     saveScores();
-  }, [scores, user, loading, activeTournamentId, tournament]);
+  }, [scores, user, loading, activeTournamentId, loadedTournamentIsActive]);
 
   useEffect(() => {
-    if (!user || loading || !activeTournamentId || !tournament) return undefined;
+    if (!user || loading || !loadedTournamentIsActive) return undefined;
     const saveFinalsMatches = async () => {
       await setDoc(
         doc(db, 'tournaments', activeTournamentId),
@@ -106,7 +117,7 @@ export default function TrackerView() {
       );
     };
     saveFinalsMatches();
-  }, [finalsMatches, user, loading, activeTournamentId, tournament]);
+  }, [finalsMatches, user, loading, activeTournamentId, loadedTournamentIsActive]);
 
   const scheduleSlots =
     tournament?.scheduleSlots?.length > 0
