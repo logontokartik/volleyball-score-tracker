@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -8,8 +8,8 @@ import { fetchArchiveFromSheets } from './archiveRefreshUtils';
 import {
   GOOGLE_SHEETS_ARCHIVE_URL,
   computeArchiveStats,
-  answerArchiveQuestion,
 } from './archiveInsights';
+import { askArchive } from './askArchiveAI';
 import {
   CHAMPION_PHOTOS_BY_TOURNAMENT,
   GVW_EMBEDDED_VIDEO_IFRAME_SRC,
@@ -29,9 +29,10 @@ const TABS = [
 const EXAMPLE_QUESTIONS = [
   'Which pairs won together on a championship team?',
   'Who has the most tournament wins?',
-  'Who played the most tournaments?',
-  'Who has the most runner-up finishes?',
-  'How many unique players are in the archive?',
+  'Who won the most without ever finishing runner-up?',
+  'Which setters have won a title?',
+  'Who played in Summer 2017 and is still playing in Spring 2026?',
+  'How many points is the third set?',
 ];
 
 function TabButton({ id, label, active, onClick }) {
@@ -125,6 +126,8 @@ export default function ArchiveHub() {
   const [sortDir, setSortDir] = useState('desc');
   const [askInput, setAskInput] = useState('');
   const [askResult, setAskResult] = useState(null);
+  const [asking, setAsking] = useState(false);
+  const askAbortRef = useRef(null);
 
   // Auth
   const [user, setUser] = useState(null);
@@ -227,9 +230,34 @@ export default function ArchiveHub() {
 
   const selectedSignup = tournamentSignups[signupPick] || tournamentSignups[0];
 
-  const runAsk = () => {
-    setAskResult(answerArchiveQuestion(askInput, archiveData, stats));
+  const runAsk = async (question = askInput) => {
+    const trimmed = question.trim();
+    if (!trimmed || asking) return;
+
+    askAbortRef.current?.abort();
+    const controller = new AbortController();
+    askAbortRef.current = controller;
+
+    setAsking(true);
+    setAskResult(null);
+    try {
+      const result = await askArchive(trimmed, archiveData, stats, {
+        signal: controller.signal,
+      });
+      if (!controller.signal.aborted) setAskResult(result);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setAskResult({ title: 'Something went wrong', body: err.message, source: 'error' });
+      }
+    } finally {
+      if (askAbortRef.current === controller) {
+        askAbortRef.current = null;
+        setAsking(false);
+      }
+    }
   };
+
+  useEffect(() => () => askAbortRef.current?.abort(), []);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 pb-12">
@@ -413,24 +441,42 @@ export default function ArchiveHub() {
             <div className="rounded-2xl border border-amber-500/30 bg-slate-800/60 p-4 sm:p-6 mb-8">
               <h2 className="text-lg font-bold text-white mb-1">Ask the archive</h2>
               <p className="text-xs text-slate-400 mb-4">
-                Free-form questions are answered from this snapshot only (patterns + stats — not a
-                live AI). Great for &ldquo;who won most&rdquo;, &ldquo;most played&rdquo;, or
-                &ldquo;which pairs won on the same team&rdquo;.
+                Ask anything about the club&rsquo;s history in plain English — career stats, who
+                played when, championship rosters, even the match rules. Answers come from Claude
+                reading the live spreadsheet.
               </p>
               <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <textarea
                   value={askInput}
                   onChange={(e) => setAskInput(e.target.value)}
-                  placeholder="e.g. Which pairs won together on a championship team?"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      runAsk();
+                    }
+                  }}
+                  disabled={asking}
+                  placeholder="e.g. Which setters have won a title?"
                   rows={2}
-                  className="flex-1 rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-base text-white placeholder:text-slate-500 min-h-[88px] resize-y"
+                  className="flex-1 rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-base text-white placeholder:text-slate-500 min-h-[88px] resize-y disabled:opacity-60"
                 />
                 <button
                   type="button"
-                  onClick={runAsk}
-                  className="shrink-0 min-h-[48px] px-6 rounded-xl bg-amber-500 text-slate-900 font-bold text-sm hover:bg-amber-400"
+                  onClick={() => runAsk()}
+                  disabled={asking || !askInput.trim()}
+                  className="shrink-0 min-h-[48px] px-6 rounded-xl bg-amber-500 text-slate-900 font-bold text-sm hover:bg-amber-400 disabled:opacity-60 disabled:hover:bg-amber-500 flex items-center justify-center gap-2"
                 >
-                  Get answer
+                  {asking ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
+                      </svg>
+                      Thinking…
+                    </>
+                  ) : (
+                    'Get answer'
+                  )}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -438,20 +484,31 @@ export default function ArchiveHub() {
                   <button
                     key={ex}
                     type="button"
+                    disabled={asking}
                     onClick={() => {
                       setAskInput(ex);
-                      setAskResult(answerArchiveQuestion(ex, archiveData, stats));
+                      runAsk(ex);
                     }}
-                    className="text-xs px-3 py-2 rounded-lg bg-slate-700/80 text-slate-200 hover:bg-slate-600 border border-slate-600 text-left max-w-full"
+                    className="text-xs px-3 py-2 rounded-lg bg-slate-700/80 text-slate-200 hover:bg-slate-600 border border-slate-600 text-left max-w-full disabled:opacity-50"
                   >
                     {ex}
                   </button>
                 ))}
               </div>
-              {askResult && (
+              {asking && (
+                <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">
+                  Reading the archive…
+                </div>
+              )}
+              {!asking && askResult && (
                 <div className="rounded-xl border border-slate-600 bg-slate-900/80 p-4">
                   <h3 className="text-amber-400 font-bold text-sm mb-2">{askResult.title}</h3>
                   <RichAnswerBody text={askResult.body} />
+                  {askResult.notice && (
+                    <p className="mt-3 pt-3 border-t border-slate-700 text-[11px] text-amber-400/80">
+                      {askResult.notice}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

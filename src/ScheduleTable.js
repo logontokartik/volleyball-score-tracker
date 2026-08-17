@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatMatchLabel } from './tournamentUtils';
+import { formatMatchLabel, slotUmpires } from './tournamentUtils';
 
 function matchByGame(scores, gameId) {
   if (!gameId) return null;
@@ -107,7 +107,9 @@ export default function ScheduleTable({
 
           const m1 = matchByGame(scores, slot.gameCourt1);
           const m2 = matchByGame(scores, slot.gameCourt2);
-          const ump = slot.umpire || '—';
+          const umps = slotUmpires(slot);
+          const ump1 = umps.court1 || '—';
+          const ump2 = umps.court2 || '—';
           const clickable = typeof onMatchClick === 'function';
           const m1Live = isInProgress(m1);
           const m2Live = isInProgress(m2);
@@ -154,7 +156,7 @@ export default function ScheduleTable({
                     </span>
                   )}
                 </button>
-                <div className="p-2 text-center text-xs sm:text-sm">{ump}</div>
+                <div className="p-2 text-center text-xs sm:text-sm">{ump1}</div>
               </div>
               <div className={`grid grid-cols-2 ${
                 m2Live ? 'bg-green-50/80' : 'bg-orange-50/80'
@@ -176,7 +178,7 @@ export default function ScheduleTable({
                     </span>
                   )}
                 </button>
-                <div className="p-2 text-center text-xs sm:text-sm">{ump}</div>
+                <div className="p-2 text-center text-xs sm:text-sm">{ump2}</div>
               </div>
             </div>
           );
@@ -221,7 +223,9 @@ export default function ScheduleTable({
 
           const m1 = matchByGame(scores, slot.gameCourt1);
           const m2 = matchByGame(scores, slot.gameCourt2);
-          const ump = slot.umpire || '—';
+          const umps = slotUmpires(slot);
+          const ump1 = umps.court1 || '—';
+          const ump2 = umps.court2 || '—';
           const clickable = typeof onMatchClick === 'function';
           const m1Live = isInProgress(m1);
           const m2Live = isInProgress(m2);
@@ -270,7 +274,7 @@ export default function ScheduleTable({
                       {m1Score}{m1?.completed ? ' (Final)' : ''}
                     </div>
                   )}
-                  <div className="text-xs text-gray-600 mt-1">Umpire: {ump}</div>
+                  <div className="text-xs text-gray-600 mt-1">Umpire: {ump1}</div>
                 </div>
                 <div className={`p-3 ${m2Live ? 'bg-green-50/90' : 'bg-orange-50/90'}`}>
                   <div className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
@@ -295,7 +299,7 @@ export default function ScheduleTable({
                       {m2Score}{m2?.completed ? ' (Final)' : ''}
                     </div>
                   )}
-                  <div className="text-xs text-gray-600 mt-1">Umpire: {ump}</div>
+                  <div className="text-xs text-gray-600 mt-1">Umpire: {ump2}</div>
                 </div>
               </div>
             </div>
