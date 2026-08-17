@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { buildDefaultScheduleSlots, formatMatchLabel } from './tournamentUtils';
+import {
+  blankSlot,
+  buildDefaultScheduleSlots,
+  buildFinalsSlots,
+  formatMatchLabel,
+  slotUmpires,
+} from './tournamentUtils';
 
 function firestoreRulesHint(err) {
   const code = err?.code;
@@ -17,16 +23,7 @@ function firestoreRulesHint(err) {
 }
 
 function newSlot(kind) {
-  const base = {
-    id: crypto.randomUUID(),
-    timeLabel: '',
-    rowKind: kind,
-    gameCourt1: null,
-    gameCourt2: null,
-    umpire: '',
-    noteCourt1: '',
-    noteCourt2: '',
-  };
+  const base = blankSlot({ rowKind: kind });
   if (kind === 'break') base.timeLabel = 'Mini-Break';
   if (kind === 'note') {
     base.timeLabel = '7:00 PM';
@@ -88,11 +85,19 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
     }
     setError('');
     setSaving(true);
+    // Resolve any legacy shared `umpire` into explicit per-court fields and drop it, so
+    // the fallback in slotUmpires only ever applies to rows this editor hasn't saved yet.
+    const normalized = slots.map((slot) => {
+      const { umpire, ...rest } = slot;
+      if (slot.rowKind && slot.rowKind !== 'double') return rest;
+      const { court1, court2 } = slotUmpires(slot);
+      return { ...rest, umpireCourt1: court1, umpireCourt2: court2 };
+    });
     try {
       await setDoc(
         doc(db, 'tournaments', tournament.id),
         {
-          scheduleSlots: slots,
+          scheduleSlots: normalized,
           scheduleTitle: scheduleTitle.trim() || tournament.scheduleTitle || '',
           scheduleSubtitle: scheduleSubtitle.trim() || tournament.scheduleSubtitle || '',
         },
@@ -147,7 +152,7 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
       </div>
       <p className="text-xs text-gray-600">
         Reorder rows with the arrows. Assign which game ({scores[0]?.game || 'G1'}…) plays on each
-        court. One umpire name applies to both courts for that time slot (like the paper schedule).
+        court, and the umpiring team for each court — they can differ, or use “Same as court 1”.
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -171,6 +176,14 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
           className="text-sm bg-amber-100 border border-amber-300 px-3 py-2 rounded-lg min-h-[44px]"
         >
           + Note / final row
+        </button>
+        <button
+          type="button"
+          onClick={() => setSlots((s) => [...s, ...buildFinalsSlots()])}
+          className="text-sm bg-emerald-100 border border-emerald-300 px-3 py-2 rounded-lg min-h-[44px]"
+          title="Adds break, both semifinals (1v4, 2v3) and the final"
+        >
+          + Semis &amp; final
         </button>
         <button
           type="button"
@@ -256,20 +269,50 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
 
             {slot.rowKind === 'double' && (
               <>
-                <label className="text-xs font-medium text-gray-600">Umpiring team (both courts)</label>
-                <input
-                  type="text"
-                  value={slot.umpire}
-                  onChange={(e) => updateSlot(slot.id, { umpire: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
-                  placeholder="e.g. Yellow"
-                  list={`teams-${tournament.id}`}
-                />
                 <datalist id={`teams-${tournament.id}`}>
                   {(tournament.teams || []).map((t) => (
                     <option key={t} value={t} />
                   ))}
                 </datalist>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-sky-800">
+                      Court 1 — umpiring team
+                    </label>
+                    <input
+                      type="text"
+                      value={slotUmpires(slot).court1}
+                      onChange={(e) => updateSlot(slot.id, { umpireCourt1: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
+                      placeholder="e.g. Green"
+                      list={`teams-${tournament.id}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <label className="text-xs font-medium text-orange-900">
+                        Court 2 — umpiring team
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateSlot(slot.id, { umpireCourt2: slotUmpires(slot).court1 })
+                        }
+                        className="text-xs text-blue-700 underline"
+                      >
+                        Same as court 1
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={slotUmpires(slot).court2}
+                      onChange={(e) => updateSlot(slot.id, { umpireCourt2: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
+                      placeholder="e.g. Red"
+                      list={`teams-${tournament.id}`}
+                    />
+                  </div>
+                </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-sky-800">Court 1 — game</label>
