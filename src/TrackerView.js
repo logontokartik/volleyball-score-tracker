@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
@@ -7,14 +7,15 @@ import Login from './Login';
 import AdminPage from './AdminPage';
 import ScheduleTable from './ScheduleTable';
 import FinalsView from './FinalsView';
+import MatchScoreDialog from './MatchScoreDialog';
 import { Card, CardContent } from './components/ui/card';
 import { isTournamentComplete } from './CompletedTournamentsView';
 import {
   buildDefaultScheduleSlots,
   calculateLeaderboard,
-  formatMatchHeadingForScores,
   getSetCap,
-  getSetTarget,
+  matchSetSummary,
+  matchSlotInfo,
   orderScoresBySchedule,
 } from './tournamentUtils';
 
@@ -30,8 +31,7 @@ export default function TrackerView() {
   const [teams, setTeams] = useState([]);
   const [finalsMatches, setFinalsMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [jumpToGame, setJumpToGame] = useState(null);
-  const matchCardRefs = useRef({});
+  const [openGame, setOpenGame] = useState(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
@@ -173,19 +173,22 @@ export default function TrackerView() {
     });
   }, []);
 
+  // Returns whether the game was actually marked, so the scoring dialog knows
+  // whether to close or to stay open on a dismissed confirm.
   const markMatchComplete = useCallback(
     (game) => {
-      if (!user) return;
+      if (!user) return false;
       if (
         !window.confirm(
           'Mark this game complete? Scores will be locked until an admin unlocks them under Admin → Locks.'
         )
       ) {
-        return;
+        return false;
       }
       setScores((prev) =>
         prev.map((m) => (m.game === game ? { ...m, completed: true } : m))
       );
+      return true;
     },
     [user]
   );
@@ -211,20 +214,26 @@ export default function TrackerView() {
     (teams.length ? `${teams.length} Teams Format` : 'Tournament schedule');
   const scheduleSubtitle = tournament?.scheduleSubtitle || tournament?.name || '';
 
+  // Clicking a game anywhere — schedule row or score tile — goes straight to scoring it.
   const onScheduleMatchClick = useCallback((gameId) => {
     setScoresTab('scores');
-    setJumpToGame(gameId);
-    window.requestAnimationFrame(() => {
-      const el = matchCardRefs.current[gameId];
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    setOpenGame(gameId);
   }, []);
 
+  // The open game can vanish under us: a tournament switch, or an admin rebuilding
+  // the match list. Deriving it rather than storing the match keeps the dialog in
+  // sync with live score edits, and drops it when the id no longer resolves.
+  const openMatch = openGame ? scores.find((m) => m.game === openGame) : null;
+
   useEffect(() => {
-    if (!jumpToGame) return undefined;
-    const t = window.setTimeout(() => setJumpToGame(null), 2500);
-    return () => window.clearTimeout(t);
-  }, [jumpToGame]);
+    if (openGame && !openMatch) setOpenGame(null);
+  }, [openGame, openMatch]);
+
+  // Admin is a logged-in-only area; falling back to Scores on logout stops a signed-out
+  // browser from sitting on it.
+  useEffect(() => {
+    if (!user) setPage('scores');
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gray-50/80 pb-8 sm:pb-6">
@@ -240,20 +249,22 @@ export default function TrackerView() {
             >
               Scores
             </button>
-            <button
-              type="button"
-              onClick={() => setPage('admin')}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold min-h-[48px] ${
-                page === 'admin' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-gray-200 text-gray-800'
-              }`}
-            >
-              Admin
-            </button>
+            {user && (
+              <button
+                type="button"
+                onClick={() => setPage('admin')}
+                className={`px-4 py-3 rounded-xl text-sm font-semibold min-h-[48px] ${
+                  page === 'admin' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-gray-200 text-gray-800'
+                }`}
+              >
+                Admin
+              </button>
+            )}
           </div>
           <Login user={user} setUser={setUser} />
         </header>
 
-        {page === 'admin' && (
+        {page === 'admin' && user && (
           <AdminPage user={user} onNavigateScores={() => setPage('scores')} />
         )}
 
@@ -266,14 +277,20 @@ export default function TrackerView() {
             {!loading && !activeTournamentId && (
               <Card>
                 <CardContent className="p-6 text-center text-gray-700">
-                  <p className="mb-3">No active tournament. Use Admin to create one and set it active.</p>
-                  <button
-                    type="button"
-                    onClick={() => setPage('admin')}
-                    className="bg-blue-600 text-white px-5 py-3 rounded-xl text-sm font-medium min-h-[48px]"
-                  >
-                    Open Admin
-                  </button>
+                  <p className="mb-3">
+                    {user
+                      ? 'No active tournament. Use Admin to create one and set it active.'
+                      : 'No active tournament right now.'}
+                  </p>
+                  {user && (
+                    <button
+                      type="button"
+                      onClick={() => setPage('admin')}
+                      className="bg-blue-600 text-white px-5 py-3 rounded-xl text-sm font-medium min-h-[48px]"
+                    >
+                      Open Admin
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -340,7 +357,7 @@ export default function TrackerView() {
                   </div>
                 </nav>
 
-                {!hasSavedSchedule && (
+                {!hasSavedSchedule && user && (
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                     Schedule is auto-paired from the match list. Open{' '}
                     <button
@@ -471,169 +488,90 @@ export default function TrackerView() {
 
                 {scoresTab === 'scores' && (
                   <div className="grid gap-4">
-                    {user && (
-                      <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-3 text-center">
-                        Tap <span className="font-bold text-gray-900">−</span> /{' '}
-                        <span className="font-bold text-gray-900">+</span> to change points, or type a
-                        number. Caps vary by game phase (pool / finals) and set.
-                      </p>
-                    )}
-                    {!user && (
-                      <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
-                        Log in to enter or adjust scores.
-                      </p>
-                    )}
-                    {orderedScores.map((match) => {
-                      const locked = Boolean(match.completed);
-                      const heading = formatMatchHeadingForScores(match, scheduleSlots);
-                      const phase = match.phase || 'pool';
-                      return (
-                      <div
-                        key={match.game}
-                        ref={(el) => {
-                          if (el) matchCardRefs.current[match.game] = el;
-                          else delete matchCardRefs.current[match.game];
-                        }}
-                        className={`scroll-mt-28 transition-shadow rounded-2xl ${
-                          jumpToGame === match.game ? 'ring-2 ring-blue-500 shadow-lg' : ''
-                        } ${locked ? 'opacity-95' : ''}`}
-                      >
-                        <Card>
-                        <CardContent className="p-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
-                            <div>
-                              <h2 className="text-lg font-bold text-gray-900 leading-snug pr-2">
-                                {heading}
-                              </h2>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {phase === 'finals'
-                                  ? 'Finals: 25 pts (cap 28), 3rd set 15'
-                                  : 'Pool: 21 pts (cap 25), 3rd set 15 (cap 18)'}
-                                {' · win by 2'}
-                              </p>
-                            </div>
-                            <div className="flex flex-col sm:items-end gap-2 shrink-0">
-                              {/* Phase selector — always visible, toggle only for logged-in users */}
-                              <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
-                                <button
-                                  type="button"
-                                  disabled={!user || locked}
-                                  onClick={() => phase !== 'pool' && toggleMatchPhase(match.game)}
-                                  className={`px-3 py-1.5 transition-colors ${
-                                    phase === 'pool'
-                                      ? 'bg-blue-600 text-white'
-                                      : 'bg-white text-gray-500 hover:bg-gray-50 disabled:hover:bg-white'
-                                  }`}
-                                >
-                                  Pool play
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={!user || locked}
-                                  onClick={() => phase !== 'finals' && toggleMatchPhase(match.game)}
-                                  className={`px-3 py-1.5 border-l border-gray-200 transition-colors ${
-                                    phase === 'finals'
-                                      ? 'bg-amber-500 text-white'
-                                      : 'bg-white text-gray-500 hover:bg-gray-50 disabled:hover:bg-white'
-                                  }`}
-                                >
+                    <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-3 text-center">
+                      {user
+                        ? 'Tap a game to open it and enter the score. It reopens wherever you left off, so you can close it mid-game.'
+                        : 'Tap a game to see its score. Log in to enter or adjust scores.'}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {orderedScores.map((match) => {
+                        const locked = Boolean(match.completed);
+                        const slot = matchSlotInfo(match, scheduleSlots);
+                        const { team1: sets1, team2: sets2, setsPlayed } = matchSetSummary(match);
+                        const started = setsPlayed > 0;
+                        // Unplayed sets are all 0-0; listing them would read as a real score.
+                        const playedSets = match.sets.filter(
+                          (s) => (Number(s.team1) || 0) !== 0 || (Number(s.team2) || 0) !== 0
+                        );
+                        return (
+                          <button
+                            key={match.game}
+                            type="button"
+                            onClick={() => setOpenGame(match.game)}
+                            className={`text-left rounded-2xl border-2 p-4 shadow-sm transition-colors hover:border-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                              locked
+                                ? 'border-gray-200 bg-gray-50'
+                                : started
+                                  ? 'border-blue-300 bg-white'
+                                  : 'border-gray-200 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-baseline justify-between gap-2 mb-2">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 truncate">
+                                {slot ? `${slot.when} · Court ${slot.court}` : match.game}
+                              </span>
+                              {match.phase === 'finals' && (
+                                <span className="shrink-0 text-[0.65rem] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
                                   Finals
-                                </button>
-                              </div>
-                              {locked ? (
-                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-200/80 px-3 py-1.5 rounded-lg">
-                                  Complete · locked
                                 </span>
-                              ) : (
-                                user && (
-                                  <button
-                                    type="button"
-                                    onClick={() => markMatchComplete(match.game)}
-                                    className="text-sm font-semibold bg-green-700 text-white px-4 py-3 rounded-xl min-h-[48px] hover:bg-green-800 active:bg-green-900"
-                                  >
-                                    Mark game complete
-                                  </button>
-                                )
                               )}
                             </div>
-                          </div>
-                          {locked && (
-                            <p className="text-xs text-gray-600 mb-3">
-                              Scores are read-only. An admin can unlock this game under Admin → Locks.
-                            </p>
-                          )}
-                          {match.sets.map((set, setIndex) => {
-                            const setCap = getSetCap(phase, setIndex);
-                            const setTarget = getSetTarget(phase, setIndex);
-                            return (
-                            <div key={setIndex} className="mb-4 last:mb-0">
-                              <h3 className="font-semibold text-sm text-gray-600 mb-2">
-                                Set {setIndex + 1}
-                                <span className="font-normal text-xs text-gray-400 ml-2">
-                                  (to {setTarget}, cap {setCap})
+
+                            {[
+                              ['team1', sets1],
+                              ['team2', sets2],
+                            ].map(([teamKey, setsWon]) => (
+                              <div
+                                key={teamKey}
+                                className="flex items-center justify-between gap-3 py-0.5"
+                              >
+                                <span className="font-semibold text-gray-900 truncate">
+                                  {match[teamKey]}
                                 </span>
-                              </h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {['team1', 'team2'].map((teamKey) => (
-                                  <div
-                                    key={teamKey}
-                                    className="flex flex-col gap-2 bg-gray-50 rounded-xl px-3 py-3"
-                                  >
-                                    <label className="font-medium text-sm text-gray-800">
-                                      {match[teamKey]}
-                                    </label>
-                                    <div className="flex items-center justify-center gap-2 sm:gap-3">
-                                      <button
-                                        type="button"
-                                        aria-label={`Subtract one point for ${match[teamKey]}`}
-                                        disabled={!user || locked || set[teamKey] <= 0}
-                                        onClick={() =>
-                                          adjustScoreDelta(match.game, setIndex, teamKey, -1)
-                                        }
-                                        className="flex items-center justify-center min-w-[52px] min-h-[52px] rounded-xl border-2 border-gray-300 bg-white text-2xl font-bold text-gray-800 shadow-sm active:bg-gray-100 disabled:opacity-40 disabled:active:bg-white"
-                                      >
-                                        −
-                                      </button>
-                                      <input
-                                        type="number"
-                                        inputMode="numeric"
-                                        min={0}
-                                        max={setCap}
-                                        value={set[teamKey]}
-                                        onChange={(e) =>
-                                          updateScoreInput(
-                                            match.game,
-                                            setIndex,
-                                            teamKey,
-                                            e.target.value
-                                          )
-                                        }
-                                        disabled={!user || locked}
-                                        className="border border-gray-300 rounded-xl w-[4.5rem] sm:w-24 text-center text-xl font-semibold py-3 min-h-[52px] bg-white disabled:bg-gray-100 disabled:text-gray-700"
-                                      />
-                                      <button
-                                        type="button"
-                                        aria-label={`Add one point for ${match[teamKey]}`}
-                                        disabled={!user || locked || set[teamKey] >= setCap}
-                                        onClick={() =>
-                                          adjustScoreDelta(match.game, setIndex, teamKey, 1)
-                                        }
-                                        className="flex items-center justify-center min-w-[52px] min-h-[52px] rounded-xl border-2 border-gray-300 bg-white text-2xl font-bold text-gray-800 shadow-sm active:bg-gray-100 disabled:opacity-40 disabled:active:bg-white"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
+                                <span className="shrink-0 flex items-baseline gap-2 tabular-nums">
+                                  <span className="text-xs text-gray-500">
+                                    {playedSets.length
+                                      ? playedSets.map((s) => s[teamKey]).join(' · ')
+                                      : '—'}
+                                  </span>
+                                  <span className="text-lg font-bold text-gray-900 w-4 text-right">
+                                    {setsWon}
+                                  </span>
+                                </span>
                               </div>
+                            ))}
+
+                            <div className="mt-3">
+                              <span
+                                className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-lg ${
+                                  locked
+                                    ? 'bg-gray-200/80 text-gray-700'
+                                    : started
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                {locked
+                                  ? 'Complete · locked'
+                                  : started
+                                    ? 'In progress'
+                                    : 'Not started'}
+                              </span>
                             </div>
-                          );
-                          })}
-                        </CardContent>
-                        </Card>
-                      </div>
-                    );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </>
@@ -641,6 +579,19 @@ export default function TrackerView() {
           </>
         )}
       </div>
+
+      {openMatch && (
+        <MatchScoreDialog
+          match={openMatch}
+          scheduleSlots={scheduleSlots}
+          user={user}
+          onClose={() => setOpenGame(null)}
+          onAdjust={adjustScoreDelta}
+          onInput={updateScoreInput}
+          onTogglePhase={toggleMatchPhase}
+          onMarkComplete={markMatchComplete}
+        />
+      )}
     </div>
   );
 }
