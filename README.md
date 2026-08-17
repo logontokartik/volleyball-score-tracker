@@ -2,6 +2,58 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## "Ask the archive" (Claude)
+
+The Archive page's **Ask the archive** panel sends questions to Claude via a Vercel
+Function at `api/ask-archive.mjs`. The function pulls the GVBL spreadsheet server-side,
+hands Claude the rosters, career stats, champions and rules, and returns a
+`{ title, body }` answer.
+
+### Setup
+
+Add the key in **Vercel → Project → Settings → Environment Variables**:
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `ANTHROPIC_API_KEY` | yes | — | From [console.anthropic.com](https://console.anthropic.com). Server-side only. |
+| `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost. |
+| `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
+
+Redeploy after adding them — env vars are read at invocation, but the deploy must
+exist for the function to pick up the new configuration.
+
+**The key never reaches the browser.** It is only read inside the function, which is
+why it is `ANTHROPIC_API_KEY` and *not* `REACT_APP_ANTHROPIC_API_KEY` — anything
+prefixed `REACT_APP_` is compiled into the public JS bundle and would be readable by
+any visitor.
+
+### Local development
+
+`npm start` alone does **not** run the function; CRA's dev server returns `index.html`
+for `/api/*`. The panel detects this and quietly falls back to the offline
+pattern-matching answers in `src/archiveInsights.js`.
+
+To exercise the real Claude path locally:
+
+```bash
+npm i -g vercel
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env.local   # already gitignored
+vercel dev
+```
+
+### Notes
+
+- Answers are grounded in the **live spreadsheet**, not the bundled
+  `src/data/archiveData.json` snapshot — the function re-fetches every 10 minutes.
+- Precomputed totals are passed alongside the raw data, and Claude is instructed to use
+  those figures rather than recount, so stat answers stay exact.
+- The archive prefix is sent with `cache_control`, so repeat questions bill the ~16k
+  tokens of context at roughly 10% of list price.
+- Requests are capped at 10/minute per IP and 500 characters per question.
+- `directory[].appearances` is **deliberately excluded** from the AI context — see the
+  comment in `api/ask-archive.mjs`; that field is populated from the wrong spreadsheet
+  columns and contains other players' names.
+
 ## Available Scripts
 
 In the project directory, you can run:
