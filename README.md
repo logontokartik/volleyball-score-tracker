@@ -2,12 +2,18 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## "Ask the archive" (Claude)
+## Claude-powered features
 
-The Archive page's **Ask the archive** panel sends questions to Claude via a Vercel
-Function at `api/ask-archive.mjs`. The function pulls the GVBL spreadsheet server-side,
-hands Claude the rosters, career stats, champions and rules, and returns a
-`{ title, body }` answer.
+Two Vercel Functions call Claude, both using the same server-side key:
+
+- **`api/ask-archive.mjs`** — the Archive page's *Ask the archive* panel. Pulls the GVBL
+  spreadsheet server-side, hands Claude the rosters, career stats, champions and rules,
+  and returns a `{ title, body }` answer.
+- **`api/build-schedule.mjs`** — Admin → Schedule → *Build with AI*. Takes a screenshot
+  of a schedule (or a typed description) and returns schedule rows. The tournament's
+  game list is sent along so Claude maps "Black v Yellow" onto the real game id; any id
+  it returns that isn't in that list, or that it uses twice, is dropped server-side and
+  reported as a warning rather than trusted.
 
 ### Setup
 
@@ -29,9 +35,9 @@ any visitor.
 
 ### Local development
 
-`npm start` alone does **not** run the function; CRA's dev server returns `index.html`
-for `/api/*`. The panel detects this and quietly falls back to the offline
-pattern-matching answers in `src/archiveInsights.js`.
+`npm start` alone does **not** run the functions; CRA's dev server returns `index.html`
+for `/api/*`. Ask the archive detects this and falls back to the offline pattern-matching
+answers in `src/archiveInsights.js`; Build with AI reports that it needs `vercel dev`.
 
 To exercise the real Claude path locally:
 

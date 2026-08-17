@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import ScheduleAIBuilder from './ScheduleAIBuilder';
 import {
   blankSlot,
   buildDefaultScheduleSlots,
@@ -193,6 +194,15 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
           Reset from match list
         </button>
       </div>
+
+      <ScheduleAIBuilder tournament={tournament} scores={scores} onSlots={setSlots} />
+
+      {slots.length === 0 && (
+        <p className="text-sm text-gray-600 bg-white border rounded-lg p-3">
+          No rows yet. Add them by hand, use “Reset from match list”, or build them from a
+          screenshot with “Build with AI”.
+        </p>
+      )}
 
       <div className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
         {slots.map((slot, index) => (

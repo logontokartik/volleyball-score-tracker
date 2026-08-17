@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   collection,
+  deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   setDoc,
@@ -18,6 +20,7 @@ import {
 import ScheduleEditor from './ScheduleEditor';
 import AdminMatchLocks from './AdminMatchLocks';
 import AdminTeamsEditor from './AdminTeamsEditor';
+import ConfirmDialog from './components/ConfirmDialog';
 
 const SETTINGS_REF = doc(db, 'settings', 'app');
 
@@ -60,6 +63,8 @@ export default function AdminPage({ user, onNavigateScores }) {
   const [editingScheduleForId, setEditingScheduleForId] = useState(null);
   const [editingLocksForId, setEditingLocksForId] = useState(null);
   const [editingTeamsForId, setEditingTeamsForId] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let settingsReady = false;
@@ -186,6 +191,29 @@ export default function AdminPage({ user, onNavigateScores }) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!pendingDelete || !user) return;
+    setError('');
+    setDeleting(true);
+    try {
+      // Clear the active pointer first, so nothing re-reads a document that is about
+      // to disappear. deleteField() rather than null — TrackerView treats a missing
+      // id as "no tournament", but would try to load the literal string "null".
+      if (pendingDelete.id === activeTournamentId) {
+        await setDoc(SETTINGS_REF, { activeTournamentId: deleteField() }, { merge: true });
+      }
+      await deleteDoc(doc(db, 'tournaments', pendingDelete.id));
+      setEditingScheduleForId((cur) => (cur === pendingDelete.id ? null : cur));
+      setEditingLocksForId((cur) => (cur === pendingDelete.id ? null : cur));
+      setEditingTeamsForId((cur) => (cur === pendingDelete.id ? null : cur));
+      setPendingDelete(null);
+    } catch (e) {
+      setError(firestoreRulesHint(e));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleActivate = async (id) => {
     if (!user) {
       setError('Log in to switch the active tournament.');
@@ -209,6 +237,28 @@ export default function AdminPage({ user, onNavigateScores }) {
 
   return (
     <div className="grid gap-6 max-w-3xl mx-auto">
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete this tournament?"
+        confirmLabel="Delete tournament"
+        busy={deleting}
+        onCancel={() => (deleting ? null : setPendingDelete(null))}
+        onConfirm={handleDelete}
+      >
+        <p>
+          <span className="font-semibold text-gray-900">{pendingDelete?.name}</span> and everything
+          in it — {(pendingDelete?.teams || []).length} teams, {(pendingDelete?.scores || []).length}{' '}
+          games, all scores, the schedule and any finals — will be permanently deleted.
+        </p>
+        {pendingDelete?.id === activeTournamentId && (
+          <p className="text-amber-700 font-medium">
+            This is the active tournament. The scores page will show no live games until you set
+            another one active.
+          </p>
+        )}
+        <p className="font-medium text-gray-900">This cannot be undone.</p>
+      </ConfirmDialog>
+
       {listenError && (
         <div className="p-4 border border-red-200 bg-red-50 text-red-800 text-sm rounded-lg">
           {listenError}
@@ -404,6 +454,14 @@ export default function AdminPage({ user, onNavigateScores }) {
                       className="text-sm bg-gray-100 border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-200 disabled:opacity-50"
                     >
                       Set active
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(t)}
+                      disabled={saving || !user}
+                      className="text-sm bg-white border border-red-300 text-red-700 px-3 py-2 rounded-lg min-h-[44px] hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Delete
                     </button>
                   </div>
                 </div>
