@@ -8,12 +8,16 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import {
+  DEFAULT_SCHEDULE_FORMAT,
+  SCHEDULE_FORMATS,
   buildDefaultScheduleSlots,
-  buildRoundRobinSchedule,
+  buildScheduleForFormat,
   matchesWithEmptySets,
+  previewGameCount,
 } from './tournamentUtils';
 import ScheduleEditor from './ScheduleEditor';
 import AdminMatchLocks from './AdminMatchLocks';
+import AdminTeamsEditor from './AdminTeamsEditor';
 
 const SETTINGS_REF = doc(db, 'settings', 'app');
 
@@ -52,8 +56,10 @@ export default function AdminPage({ user, onNavigateScores }) {
   const [setsPerMatch, setSetsPerMatch] = useState(3);
   const [meetingsPerPair, setMeetingsPerPair] = useState(1);
   const [pointsToWin, setPointsToWin] = useState(25);
+  const [scheduleFormat, setScheduleFormat] = useState(DEFAULT_SCHEDULE_FORMAT);
   const [editingScheduleForId, setEditingScheduleForId] = useState(null);
   const [editingLocksForId, setEditingLocksForId] = useState(null);
+  const [editingTeamsForId, setEditingTeamsForId] = useState(null);
 
   useEffect(() => {
     let settingsReady = false;
@@ -132,7 +138,13 @@ export default function AdminPage({ user, onNavigateScores }) {
     const mpp = Math.min(10, Math.max(1, parseInt(meetingsPerPair, 10) || 1));
     const ptw = Math.min(50, Math.max(1, parseInt(pointsToWin, 10) || 25));
 
-    const scheduled = buildRoundRobinSchedule(teamNames, mpp);
+    const format = SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
+    if (teamNames.length < format.minTeams) {
+      setError(`"${format.label}" needs at least ${format.minTeams} teams.`);
+      return;
+    }
+
+    const scheduled = buildScheduleForFormat(scheduleFormat, teamNames, mpp);
     const scores = matchesWithEmptySets(scheduled, spm);
     const scheduleSlots = buildDefaultScheduleSlots(scores);
 
@@ -140,6 +152,7 @@ export default function AdminPage({ user, onNavigateScores }) {
     const payload = {
       name: formName.trim(),
       teams: teamNames,
+      scheduleFormat,
       setsPerMatch: spm,
       meetingsPerPair: mpp,
       pointsToWin: ptw,
@@ -164,6 +177,7 @@ export default function AdminPage({ user, onNavigateScores }) {
       setSetsPerMatch(3);
       setMeetingsPerPair(1);
       setPointsToWin(25);
+      setScheduleFormat(DEFAULT_SCHEDULE_FORMAT);
       if (onNavigateScores) onNavigateScores();
     } catch (e) {
       setError(firestoreRulesHint(e));
@@ -257,8 +271,32 @@ export default function AdminPage({ user, onNavigateScores }) {
           </div>
         </div>
 
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Schedule format</label>
+          <select
+            value={scheduleFormat}
+            onChange={(e) => setScheduleFormat(e.target.value)}
+            className="border p-2 rounded w-full bg-white"
+          >
+            {Object.values(SCHEDULE_FORMATS).map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-600 mt-1">
+            {(SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT])
+              .description}
+          </p>
+        </div>
+
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Teams</span>
+          <span className="text-sm font-medium text-gray-700">
+            Teams{' '}
+            {scheduleFormat === 'skipAdjacent' && (
+              <span className="font-normal text-gray-500">— order = seating around the circle</span>
+            )}
+          </span>
           <button
             type="button"
             onClick={addTeamRow}
@@ -288,6 +326,18 @@ export default function AdminPage({ user, onNavigateScores }) {
             </div>
           ))}
         </div>
+
+        {(() => {
+          const named = teamRows.map((r) => r.name.trim()).filter(Boolean);
+          const games = previewGameCount(scheduleFormat, named.length, meetingsPerPair);
+          if (!games) return null;
+          return (
+            <p className="text-sm text-gray-700 mb-3">
+              <span className="font-semibold">{games}</span> league game{games === 1 ? '' : 's'} will
+              be generated for {named.length} teams.
+            </p>
+          );
+        })()}
 
         {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
 
@@ -326,6 +376,13 @@ export default function AdminPage({ user, onNavigateScores }) {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
+                      onClick={() => setEditingTeamsForId((cur) => (cur === t.id ? null : t.id))}
+                      className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-50"
+                    >
+                      {editingTeamsForId === t.id ? 'Close teams' : 'Teams'}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() =>
                         setEditingScheduleForId((cur) => (cur === t.id ? null : t.id))
                       }
@@ -350,6 +407,14 @@ export default function AdminPage({ user, onNavigateScores }) {
                     </button>
                   </div>
                 </div>
+                {editingTeamsForId === t.id && (
+                  <AdminTeamsEditor
+                    key={`teams-${t.id}`}
+                    tournament={t}
+                    user={user}
+                    onClose={() => setEditingTeamsForId(null)}
+                  />
+                )}
                 {editingScheduleForId === t.id && (
                   <ScheduleEditor
                     key={t.id}
