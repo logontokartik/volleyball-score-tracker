@@ -4,26 +4,64 @@ import { blankSlot } from './tournamentUtils';
 const ENDPOINT = '/api/build-schedule';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** File/Blob → { mediaType, data } with base64 payload, no data-URL prefix. */
-function readImage(file) {
-  return new Promise((resolve, reject) => {
+// Long edge to downscale to before upload. A full-resolution screenshot costs several
+// times the vision tokens — and therefore the latency — of one this size, and the
+// function runs against a hard timeout. A schedule table stays legible at this width.
+const MAX_IMAGE_EDGE = 1568;
+
+// The whole round trip: reading the image, the model call, and the response.
+const REQUEST_TIMEOUT_MS = 290_000;
+
+const readAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read that image.'));
-    reader.onload = () => {
-      const result = String(reader.result || '');
-      const comma = result.indexOf(',');
-      if (comma < 0) {
-        reject(new Error('Could not read that image.'));
-        return;
-      }
-      resolve({
-        mediaType: file.type,
-        data: result.slice(comma + 1),
-        preview: result,
-      });
-    };
+    reader.onload = () => resolve(String(reader.result || ''));
     reader.readAsDataURL(file);
   });
+
+const splitDataUrl = (dataUrl) => {
+  const comma = dataUrl.indexOf(',');
+  if (comma < 0) throw new Error('Could not read that image.');
+  const mediaType = dataUrl.slice(5, dataUrl.indexOf(';'));
+  return { mediaType, data: dataUrl.slice(comma + 1), preview: dataUrl };
+};
+
+/**
+ * File/Blob → { mediaType, data, preview }, downscaled when oversized.
+ *
+ * Falls back to the original bytes if anything about the canvas path fails, so an
+ * unusual image format costs accuracy at worst rather than blocking the feature.
+ */
+async function readImage(file) {
+  const original = splitDataUrl(await readAsDataUrl(file));
+
+  try {
+    const bitmap = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('decode failed'));
+      img.src = original.preview;
+    });
+
+    const longEdge = Math.max(bitmap.width, bitmap.height);
+    if (longEdge <= MAX_IMAGE_EDGE) return original;
+
+    const scale = MAX_IMAGE_EDGE / longEdge;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    // JPEG at high quality: a screenshot this size stays readable and the payload is a
+    // fraction of the equivalent PNG.
+    const resized = canvas.toDataURL('image/jpeg', 0.92);
+    return splitDataUrl(resized);
+  } catch {
+    return original;
+  }
 }
 
 export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
@@ -74,10 +112,13 @@ export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
     setError('');
     setWarnings([]);
     setBusy(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           text: text.trim(),
           image: image ? { mediaType: image.mediaType, data: image.data } : null,
@@ -90,9 +131,19 @@ export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
         }),
       });
 
+      const contentType = res.headers.get('content-type') || '';
+
+      // A 504 comes from Vercel, not the function, so it has no JSON body to read.
+      if (res.status === 504) {
+        throw new Error(
+          'The schedule builder timed out. Try a tighter screenshot of just the schedule table, ' +
+            'or type the rows instead. If it keeps happening, set ANTHROPIC_SCHEDULE_EFFORT=low ' +
+            'or ANTHROPIC_MODEL=claude-sonnet-5 in the Vercel environment variables.'
+        );
+      }
+
       // Anything that isn't a deployed function serves the SPA's index.html for /api/*,
       // so HTML here means the request never reached the function.
-      const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         throw new Error(
           `${ENDPOINT} returned ${res.status} ${contentType || 'no content-type'} instead of JSON — ` +
@@ -108,8 +159,13 @@ export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
       onSlots(data.slots.map((slot) => blankSlot(slot)));
       setWarnings(data.warnings || []);
     } catch (e) {
-      setError(e.message);
+      setError(
+        e.name === 'AbortError'
+          ? 'The schedule builder took too long and was cancelled. Try a tighter screenshot, or type the rows instead.'
+          : e.message
+      );
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   };

@@ -22,8 +22,9 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | yes | — | From [console.anthropic.com](https://console.anthropic.com). Server-side only. |
-| `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost. |
+| `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost and latency. |
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
+| `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
 
 Redeploy after adding them — env vars are read at invocation, but the deploy must
 exist for the function to pick up the new configuration.
@@ -64,6 +65,17 @@ vercel dev
   to it fall through to the SPA and return `index.html`. ESM syntax works fine in
   `api/*.js` without `"type": "module"` — the root `package.json` must *not* set that,
   since `postcss.config.js` and `tailwind.config.js` are CommonJS.
+
+### If a call times out (504)
+
+A 504 means the function ran but exceeded its duration. `vercel.json` pins
+`maxDuration` to 300s — the Hobby maximum — because the default drops to 10s on
+projects without fluid compute enabled, which no model call will fit inside.
+
+If it still times out, reduce the work rather than the limit: screenshots are
+downscaled to 1568px on the long edge before upload, so crop to just the schedule
+table, or set `ANTHROPIC_SCHEDULE_EFFORT=low` / `ANTHROPIC_MODEL=claude-sonnet-5`.
+Each call logs its model, effort, duration and token counts to the function logs.
 
 ### Checking the functions are deployed
 
