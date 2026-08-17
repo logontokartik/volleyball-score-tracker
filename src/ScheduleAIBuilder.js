@@ -90,10 +90,14 @@ export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
         }),
       });
 
+      // Anything that isn't a deployed function serves the SPA's index.html for /api/*,
+      // so HTML here means the request never reached the function.
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         throw new Error(
-          'The schedule builder is not running on this environment. It needs `vercel dev` locally.'
+          `${ENDPOINT} returned ${res.status} ${contentType || 'no content-type'} instead of JSON — ` +
+            'the function is not running here. Locally use `vercel dev`; on Vercel check that it ' +
+            "is listed under the deployment's Functions."
         );
       }
 
