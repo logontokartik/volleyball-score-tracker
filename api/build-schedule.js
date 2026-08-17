@@ -10,7 +10,12 @@
  */
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
-const EFFORT = process.env.ANTHROPIC_EFFORT || 'medium';
+
+// Reading a schedule off a screenshot is extraction, not deep reasoning, and it runs
+// against a hard function timeout — so this defaults lower than the archive assistant.
+// Override with ANTHROPIC_SCHEDULE_EFFORT if a messy source needs more.
+const EFFORT =
+  process.env.ANTHROPIC_SCHEDULE_EFFORT || process.env.ANTHROPIC_EFFORT || 'low';
 
 const MAX_TEXT_CHARS = 8000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Anthropic's per-image ceiling
@@ -173,6 +178,7 @@ export default {
           : 'Convert the schedule in the image above.'),
     });
 
+    const startedAt = Date.now();
     let res;
     try {
       res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -213,8 +219,23 @@ export default {
     }
 
     const message = await res.json();
+    console.log(
+      `[build-schedule] ${MODEL} effort=${EFFORT} took ${Date.now() - startedAt}ms ` +
+        `stop=${message.stop_reason} in=${message.usage?.input_tokens} out=${message.usage?.output_tokens}`
+    );
+
     if (message.stop_reason === 'refusal') {
       return json({ error: 'That input could not be processed.' }, 422);
+    }
+    if (message.stop_reason === 'max_tokens') {
+      // The JSON is truncated, so parsing below would fail with a vaguer message.
+      return json(
+        {
+          error:
+            'That schedule was too long to convert in one go. Try a screenshot of just the league games, then add the finals rows separately.',
+        },
+        422
+      );
     }
 
     const raw = (message.content || [])
