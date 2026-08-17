@@ -6,10 +6,10 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Two Vercel Functions call Claude, both using the same server-side key:
 
-- **`api/ask-archive.mjs`** — the Archive page's *Ask the archive* panel. Pulls the GVBL
+- **`api/ask-archive.js`** — the Archive page's *Ask the archive* panel. Pulls the GVBL
   spreadsheet server-side, hands Claude the rosters, career stats, champions and rules,
   and returns a `{ title, body }` answer.
-- **`api/build-schedule.mjs`** — Admin → Schedule → *Build with AI*. Takes a screenshot
+- **`api/build-schedule.js`** — Admin → Schedule → *Build with AI*. Takes a screenshot
   of a schedule (or a typed description) and returns schedule rows. The tournament's
   game list is sent along so Claude maps "Black v Yellow" onto the real game id; any id
   it returns that isn't in that list, or that it uses twice, is dropped server-side and
@@ -57,8 +57,22 @@ vercel dev
   tokens of context at roughly 10% of list price.
 - Requests are capped at 10/minute per IP and 500 characters per question.
 - `directory[].appearances` is **deliberately excluded** from the AI context — see the
-  comment in `api/ask-archive.mjs`; that field is populated from the wrong spreadsheet
+  comment in `api/ask-archive.js`; that field is populated from the wrong spreadsheet
   columns and contains other players' names.
+- **Keep these files `.js`, not `.mjs`.** Vercel's zero-config detection for the `/api`
+  directory does not pick up `.mjs`; such a file is silently not deployed, and requests
+  to it fall through to the SPA and return `index.html`. ESM syntax works fine in
+  `api/*.js` without `"type": "module"` — the root `package.json` must *not* set that,
+  since `postcss.config.js` and `tailwind.config.js` are CommonJS.
+
+### Checking the functions are deployed
+
+```bash
+curl -i https://<your-app>/api/build-schedule      # 405 "Use POST" = deployed
+                                                   # HTML          = not deployed
+```
+
+They should also be listed under the deployment's **Functions** tab in Vercel.
 
 ## Available Scripts
 

@@ -35,12 +35,17 @@ export async function askArchiveAI(question, { signal } = {}) {
     signal,
   });
 
-  // A CRA dev server with no function runtime returns index.html for /api/*.
+  // Anything that isn't a deployed function serves the SPA's index.html for /api/*,
+  // so HTML here means the request never reached the function — either the CRA dev
+  // server is handling it, or the function is missing from this deployment.
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
-    throw new ArchiveAskError('The archive assistant is not running on this environment.', {
-      status: res.status,
-    });
+    throw new ArchiveAskError(
+      `/api/ask-archive returned ${res.status} ${contentType || 'no content-type'} instead of JSON — ` +
+        'the function is not running here. Locally use `vercel dev`; on Vercel check that it ' +
+        'is listed under the deployment\'s Functions.',
+      { status: res.status }
+    );
   }
 
   const data = await res.json();
