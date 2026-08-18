@@ -43,3 +43,32 @@ export function roleLabel(user) {
   if (!user) return null;
   return isAdmin(user) ? 'Admin' : 'Scorer';
 }
+
+/* --------------------------------------------------------------------------
+ * Super admins (multi-tenant)
+ *
+ * A super admin is an operator of the whole installation: they administer every
+ * club without holding a member document in any of them, and they alone reach
+ * /super to create clubs.
+ *
+ * Same caveat as the list above, and it matters more here: REACT_APP_* values are
+ * compiled into the public bundle, so this list is a UI gate only — it decides what
+ * the nav and the pages offer, never what Firestore accepts. The enforced copy is
+ * `superAdmins()` in firestore.rules (currently ['logontokartik@gmail.com']).
+ * Changing one without the other either hides a working page or shows a page whose
+ * every write is rejected, so keep the two in sync.
+ * ------------------------------------------------------------------------ */
+
+const RAW_SUPER = process.env.REACT_APP_SUPER_ADMIN_EMAILS || '';
+
+export const SUPER_ADMIN_EMAILS = RAW_SUPER.split(',').map(normalize).filter(Boolean);
+
+/**
+ * Unlike ADMIN_EMAILS there is no "empty list means everyone" fallback: an
+ * unconfigured deploy must not hand every visitor club-creation rights, and the rules
+ * would reject them anyway.
+ */
+export function isSuperAdmin(user) {
+  if (!user?.email) return false;
+  return SUPER_ADMIN_EMAILS.includes(normalize(user.email));
+}
