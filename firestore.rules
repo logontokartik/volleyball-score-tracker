@@ -1,38 +1,46 @@
 rules_version = '2';
 // Deploy: firebase deploy --only firestore:rules
 // Or paste into Firebase Console → Firestore → Rules → Publish
+//
+// Multi-tenant model. A club owns its tournaments and its archive; membership in a
+// club is what grants any write at all, so two clubs can never touch each other:
+//
+//   users/{uid}                          profile written by that user on sign-in
+//   clubs/{clubId}                       { name, slug, createdBy, archiveSheetId,
+//                                          activeTournamentId }
+//   clubs/{clubId}/members/{uid}         { uid, email, role: 'admin'|'scorer', … }
+//   clubs/{clubId}/invites/{emailLower}  { email, role, invitedBy, createdAt }
+//   clubs/{clubId}/tournaments/{id}      teams, schedule, scores
+//   clubs/{clubId}/archive/snapshot      archived-season snapshot
+//   slugs/{slug}                         { clubId } — the public URL reservation
+//
+// The pre-multi-tenant top-level `tournaments/` and `settings/` documents deliberately
+// have no rules here. The migration copies them under a club; the originals stay in
+// Firestore as dead weight and become unreachable to clients, which is the intent —
+// nothing should keep reading or writing the old single-tenant paths.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin accounts, by email, lowercase.
-    //
-    // Keep this identical to REACT_APP_ADMIN_EMAILS in Vercel. That variable only
-    // decides what the app OFFERS; this list is what is actually enforced, so a
-    // scorer calling Firestore directly from the console is still stopped here.
-    //
-    // While the list is empty, every signed-in account is an admin — which is how the
-    // app behaved before roles existed, so publishing these rules before filling the
-    // list in changes nothing.
-    function adminEmails() {
-      return [
-        // 'you@example.com',
-      ];
-    }
+    // Super admins see and manage every club. Mirrored to REACT_APP_SUPER_ADMIN_EMAILS
+    // for the UI only; that variable decides what the app OFFERS, this list is what is
+    // actually enforced, so a direct Firestore call is still stopped here.
+    function superAdmins() { return ['logontokartik@gmail.com']; }
 
-    function signedIn() {
-      return request.auth != null;
-    }
+    function signedIn()   { return request.auth != null; }
+    // `in` on the token map, not `token.email != null` — reading an absent property
+    // raises an evaluation error rather than returning null.
+    function hasEmail()   { return signedIn() && 'email' in request.auth.token; }
+    function verified()   { return hasEmail() && request.auth.token.email_verified == true; }
+    function email()      { return request.auth.token.email.lower(); }
+    function isSuper()    { return hasEmail() && email() in superAdmins(); }
 
-    function isAdmin() {
-      return signedIn() && (
-        adminEmails().size() == 0 ||
-        // `in` on the token map, not `token.email != null` — reading an absent
-        // property raises an evaluation error rather than returning null.
-        ('email' in request.auth.token &&
-         request.auth.token.email.lower() in adminEmails())
-      );
+    function memberRef(clubId) {
+      return /databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid);
     }
-
+    function isMember(clubId)  { return signedIn() && exists(memberRef(clubId)); }
+    function isClubAdmin(clubId) {
+      return isSuper() || (isMember(clubId) && get(memberRef(clubId)).data.role == 'admin');
+    }
     // The only fields a scorer may change on a tournament: live scores, and finals
     // results. Teams, schedule, format and name are all admin territory.
     function scorerFieldsOnly() {
@@ -40,23 +48,86 @@ service cloud.firestore {
         .affectedKeys().hasOnly(['scores', 'finalsMatches']);
     }
 
-    // Active tournament pointer — switching which tournament is live is an admin act.
-    match /settings/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
+    // Sign-in upserts { email, displayName, photoURL, lastSeenAt } here. Only the
+    // account itself may write it, so a uid can never be impersonated or scraped.
+    match /users/{uid} {
+      allow read:  if signedIn() && (request.auth.uid == uid || isSuper());
+      allow write: if signedIn() && request.auth.uid == uid;
     }
 
-    // Tournament documents (teams, schedule, scores)
-    match /tournaments/{tournamentId} {
+    // "Which clubs am I in / invited to" — collection-group queries. Scoped to your own
+    // rows, so these cannot be turned into a directory of everyone's memberships.
+    match /{path=**}/members/{memberId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+    match /{path=**}/invites/{inviteId} {
+      allow read: if verified() && resource.data.email == email();
+    }
+
+    match /slugs/{slug} {
       allow read: if true;
+      // Claimable once, by the creator of the club it points at, in the same batch.
+      // getAfter() because a batched write is evaluated against pre-batch state, so the
+      // club document does not exist yet from get()'s point of view.
+      allow create: if signedIn()
+        && getAfter(/databases/$(database)/documents/clubs/$(request.resource.data.clubId))
+             .data.createdBy == request.auth.uid;
+      allow update, delete: if isSuper();
+    }
 
-      // Creating and deleting a tournament is admin-only. `delete` is called out
-      // separately because `write` would otherwise cover it.
-      allow create, delete: if isAdmin();
+    match /clubs/{clubId} {
+      allow read: if true;
+      // The mutual check with slugs/ above is what prevents slug squatting: a club may
+      // only be created alongside the slug that points back at it, and vice versa.
+      // Neither half is safe alone.
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug))
+             .data.clubId == clubId;
+      allow update: if isClubAdmin(clubId);
+      allow delete: if isSuper();
 
-      // Admins may change anything. Scorers may only touch the two score fields, on a
-      // tournament that already exists.
-      allow update: if isAdmin() || (signedIn() && scorerFieldsOnly());
+      // Not publicly readable, unlike everything else under a club: member documents
+      // carry email addresses.
+      match /members/{uid} {
+        allow read: if isMember(clubId) || isSuper();
+        // Two separate creates, OR'd. Founding admin: allowed only in the batch that
+        // creates the club (hence getAfter again).
+        allow create: if signedIn() && uid == request.auth.uid
+          && request.resource.data.role == 'admin'
+          && request.resource.data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId))
+               .data.createdBy == request.auth.uid;
+        // Claiming an invite: only your own verified address, and pinned to the role the
+        // invite named — otherwise an invited scorer could write themselves in as admin.
+        allow create: if verified() && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email == email()
+          && exists(/databases/$(database)/documents/clubs/$(clubId)/invites/$(email()))
+          && get(/databases/$(database)/documents/clubs/$(clubId)/invites/$(email()))
+               .data.role == request.resource.data.role;
+        allow update, delete: if isClubAdmin(clubId);
+      }
+
+      // Doc id is the lowercased invited email, so an invite is looked up by address
+      // without a query.
+      match /invites/{inviteEmail} {
+        allow read:   if isClubAdmin(clubId);
+        allow create, update: if isClubAdmin(clubId);
+        // The invitee deletes their own invite as they claim it.
+        allow delete: if isClubAdmin(clubId) || (verified() && inviteEmail == email());
+      }
+
+      match /tournaments/{tournamentId} {
+        allow read: if true;
+        allow create, delete: if isClubAdmin(clubId);
+        allow update: if isClubAdmin(clubId) || (isMember(clubId) && scorerFieldsOnly());
+      }
+
+      match /archive/{docId} {
+        allow read: if true;
+        allow write: if isClubAdmin(clubId);
+      }
     }
   }
 }
