@@ -268,28 +268,30 @@ function TournamentCard({ tournament, onClick }) {
 
 export default function CompletedTournamentsView() {
   const { clubId } = useClub();
-  const [tournaments, setTournaments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Tagged with the club it came from, and read back only while that still matches.
+  // Clearing inside the effect is not enough: effects run AFTER the render that
+  // already carries the new clubId, so for one frame the previous club's history
+  // would paint under the new club's heading.
+  const [loaded, setLoaded] = useState({ clubId: null, list: [], loading: true });
   const [selected, setSelected] = useState(null);
+
+  const matches = loaded.clubId === clubId;
+  const tournaments = matches ? loaded.list : [];
+  const loading = !matches || loaded.loading;
 
   useEffect(() => {
     if (!clubId) return undefined;
-    // A club switch must not leave the previous club's history on screen while the
-    // new subscription's first snapshot is in flight.
-    setTournaments([]);
     setSelected(null);
-    setLoading(true);
     const unsub = onSnapshot(
       tournamentsCol(clubId),
       (snap) => {
-        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        const completed = all
+        const completed = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
           .filter(isTournamentComplete)
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-        setTournaments(completed);
-        setLoading(false);
+        setLoaded({ clubId, list: completed, loading: false });
       },
-      () => setLoading(false)
+      () => setLoaded({ clubId, list: [], loading: false })
     );
     return unsub;
   }, [clubId]);
