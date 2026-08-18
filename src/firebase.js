@@ -1,6 +1,6 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { GoogleAuthProvider, getAuth, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -19,4 +19,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-export { auth, db };
+// Google is the only sign-in method: club volunteers already have a Google account
+// for the shared spreadsheet, and it saves us managing passwords.
+const googleProvider = new GoogleAuthProvider();
+
+export function signInWithGoogle() {
+  return signInWithPopup(auth, googleProvider);
+}
+
+export function signOutUser() {
+  return signOut(auth);
+}
+
+export { auth, db, googleProvider };

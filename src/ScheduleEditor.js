@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { setDoc } from 'firebase/firestore';
+import { tournamentDoc } from './clubPaths';
+import { useClub } from './ClubContext';
 import ScheduleAIBuilder from './ScheduleAIBuilder';
 import {
   blankSlot,
@@ -33,7 +34,8 @@ function newSlot(kind) {
   return base;
 }
 
-export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
+export default function ScheduleEditor({ tournament, onClose, onSaved }) {
+  const { clubId, isClubAdmin } = useClub();
   const scores = tournament.scores || [];
   const initialSlots = useMemo(() => {
     if (tournament.scheduleSlots?.length) {
@@ -80,8 +82,8 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
   };
 
   const handleSave = async () => {
-    if (!user) {
-      setError('Log in to save the schedule.');
+    if (!isClubAdmin) {
+      setError('Only a club admin can save the schedule.');
       return;
     }
     setError('');
@@ -96,7 +98,7 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
     });
     try {
       await setDoc(
-        doc(db, 'tournaments', tournament.id),
+        tournamentDoc(clubId, tournament.id),
         {
           scheduleSlots: normalized,
           scheduleTitle: scheduleTitle.trim() || tournament.scheduleTitle || '',
@@ -393,7 +395,7 @@ export default function ScheduleEditor({ tournament, user, onClose, onSaved }) {
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || !user}
+          disabled={saving || !isClubAdmin}
           className="flex-1 bg-blue-600 text-white font-medium py-3 px-4 rounded-xl min-h-[48px] disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save schedule'}

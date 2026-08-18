@@ -21,3 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Firestore rules test local deps
+/firestore-tests/node_modules
+/firestore-tests/package.json
+/firestore-tests/package-lock.json

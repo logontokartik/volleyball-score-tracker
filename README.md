@@ -2,13 +2,100 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Accounts and roles
+
+Sign-in is **Google only** — there is no password form and no account creation in the
+Firebase console. Anyone can sign in; signing in by itself grants nothing.
+
+The app is **multi-tenant**. A club owns its tournaments, its schedule and its archive,
+and permission is always *per club*:
+
+| Role | Scope |
+| --- | --- |
+| **Super admin** | Every club, everything. |
+| **Club admin** | One club: create/delete/activate tournaments, edit teams and schedules, unlock completed games, manage members — plus everything a scorer can do. |
+| **Scorer** | One club: enter and adjust scores, mark games complete, record finals results. Nothing else; no Admin tab. |
+| **Signed in, no membership** | Reads the public scoreboard like anyone else, and can create a club of their own. |
+
+A club's roles come from its member documents at `clubs/{clubId}/members/{uid}`. A club
+admin grants them; nobody can grant themselves one.
+
+### Super admins
+
+Admin of every club without holding a member document anywhere. The list lives in
+**two places, which must match**:
+
+1. `REACT_APP_SUPER_ADMIN_EMAILS` in Vercel — comma-separated. Decides what the **app
+   offers**.
+2. `superAdmins()` at the top of `firestore.rules` — same addresses, lowercase. This is
+   what is **actually enforced**.
+
+**Only the rules file provides security.** `REACT_APP_SUPER_ADMIN_EMAILS` is compiled
+into the public JS bundle (as every `REACT_APP_*` value is), so any visitor can read it
+and anyone willing to call Firestore from the browser console can ignore it. It hides UI;
+it does not protect data. Never put a secret in it — that is why the Anthropic key is
+`ANTHROPIC_API_KEY` and server-side only.
+
+If the two drift apart the failure is loud, not silent: the app offers the page,
+Firestore refuses the write, and the permission error is shown.
+
+Unlike the club roles there is deliberately **no "empty list means everyone" fallback**.
+An unconfigured deploy must not hand every visitor super-admin rights.
+
+### Adding someone to a club
+
+There is no invitation email — an invite pre-authorises an address, and the person picks
+up the role the moment they sign in with Google.
+
+1. A club admin adds the person's email to the club, as **scorer** or **admin**.
+2. That person signs in with Google using the same address.
+
+Because roles are matched by email address, an invite can only be claimed by a
+**verified** address, and the claim is pinned to the role the invite named — an invited
+scorer cannot write themselves in as an admin. Both are enforced in the rules and
+covered by tests.
+
+### What a scorer is technically allowed to write
+
+The rules let a scorer update **only** the `scores` and `finalsMatches` fields of an
+existing tournament in their own club. They cannot create or delete a tournament, change
+teams, format, name or schedule, switch which tournament is live, or touch any other
+club at all.
+
+Within those two fields the rules do not inspect the contents, so a scorer determined to
+use the browser console could still write a nonsense score, or re-open a game they had
+marked complete. Guarding that would mean validating the whole score array in rules; the
+app's own UI prevents it, and neither is destructive.
+
+The whole model — cross-club isolation, the admin/scorer split, invite claiming, club
+creation and slug squatting — is covered by tests that run against the Firestore
+emulator. See [`firestore-tests/`](firestore-tests/), and re-run them after touching
+`firestore.rules`.
+
 ## Claude-powered features
 
 Two Vercel Functions call Claude, both using the same server-side key:
 
-- **`api/ask-archive.js`** — the Archive page's *Ask the archive* panel. Pulls the GVBL
-  spreadsheet server-side, hands Claude the rosters, career stats, champions and rules,
-  and returns a `{ title, body }` answer.
+- **`api/ask-archive.js`** — the Archive page's *Ask the archive* panel, per club. The
+  browser posts `{ question, clubId }`; the function reads `archiveSheetId` off
+  `clubs/{clubId}` itself, pulls that spreadsheet server-side, hands Claude the rosters,
+  career stats, champions and rules, and returns a `{ title, body }` answer.
+
+  **The client never sends a spreadsheet id.** If it could, anyone could POST an
+  arbitrary sheet and spend the project's Anthropic credits summarising it, and the
+  function would double as an open fetch proxy. Resolving the id from the club document
+  closes that only in combination with the second half: **`archiveSheetId` is
+  super-admin-only in `firestore.rules`** — a club admin may edit everything else on the
+  club document but not that field. Anyone with a Google account can create a club and
+  become its admin, so if club admins could set `archiveSheetId` the "resolve it
+  server-side" step would be no barrier at all: create a club, point it anywhere, ask
+  away. Attaching a spreadsheet is therefore an operator action.
+  `clubs/{clubId}` is world-readable, so the lookup uses the Firestore REST API with **no
+  service-account key and no new dependency**; the club id is validated against
+  `/^[A-Za-z0-9_-]{1,128}$/` before it is interpolated into that URL. A club that does
+  not exist and a club with no `archiveSheetId` both return 404 with distinct messages.
+  Sheet id and archive are cached separately, each keyed by id, since one warm function
+  instance serves every club.
 - **`api/build-schedule.js`** — Admin → Schedule → *Build with AI*. Takes a screenshot
   of a schedule (or a typed description) and returns schedule rows. The tournament's
   game list is sent along so Claude maps "Black v Yellow" onto the real game id; any id
@@ -25,9 +112,36 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost and latency. |
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
 | `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
+| `FIREBASE_PROJECT_ID` | no | `volleyball-score-tracker` | Project whose Firestore `clubs/{clubId}` documents `ask-archive` reads to resolve `archiveSheetId`. Server-side only; must match `projectId` in `src/firebase.js`. |
+| `REACT_APP_SUPER_ADMIN_EMAILS` | no | empty | Comma-separated super-admin addresses — admin of every club, no member document needed. Public (it is in the JS bundle); mirror it in `superAdmins()` in `firestore.rules`, which is the list `isSuper()` checks against and the only one that is enforced. |
+| `REACT_APP_DEFAULT_CLUB_SLUG` | no | `gvbl` | Club that `/`, `/completed` and `/archive` redirect to. |
 
 Redeploy after adding them — env vars are read at invocation, but the deploy must
 exist for the function to pick up the new configuration.
+
+Firestore needs **both** halves published, and neither implies the other. Run these on
+your own machine, **from the repository root** — `firebase.json` and `.firebaserc` there
+tell the CLI which files to publish and which project to publish them to:
+
+```bash
+npm install -g firebase-tools   # once
+firebase login                  # once, opens a browser
+cd /path/to/volleyball-score-tracker
+
+firebase deploy --only firestore:rules
+firebase deploy --only firestore:indexes
+```
+
+This is a Firebase deploy, not a Vercel one — it publishes `firestore.rules` and
+`firestore.indexes.json` to the `volleyball-score-tracker` Firebase project. It is
+entirely separate from deploying the app itself, which Vercel does from git.
+
+Index builds are asynchronous: `firestore:indexes` returns before the indexes are ready,
+and the collection-group queries keep failing until they finish. Watch
+**Firebase Console → Firestore → Indexes** for them to go from *Building* to *Enabled*.
+
+Without the indexes the club-scoped queries fail at runtime with a "requires an index"
+error; without the rules the writes are refused.
 
 **The key never reaches the browser.** It is only read inside the function, which is
 why it is `ANTHROPIC_API_KEY` and *not* `REACT_APP_ANTHROPIC_API_KEY` — anything
@@ -50,8 +164,16 @@ vercel dev
 
 ### Notes
 
-- Answers are grounded in the **live spreadsheet**, not the bundled
+- Answers are grounded in the **club's live spreadsheet**, not the bundled
   `src/data/archiveData.json` snapshot — the function re-fetches every 10 minutes.
+- That bundled snapshot is one club's history (the club seeded with
+  `GVBL_ARCHIVE_SHEET_ID` from `src/archiveRefreshUtils.js`). `ArchiveHub` renders it,
+  and the bundled champion photos and video, **only** for the club whose
+  `archiveSheetId` matches it; every other club shows its Firestore snapshot or nothing.
+  The offline pattern-matching fallback is skipped rather than answered from the wrong
+  club's data.
+- A club with no `archiveSheetId` has no archive: the page says so instead of rendering
+  empty tables and a link to nothing.
 - Precomputed totals are passed alongside the raw data, and Claude is instructed to use
   those figures rather than recount, so stat answers stay exact.
 - The archive prefix is sent with `cache_control`, so repeat questions bill the ~16k

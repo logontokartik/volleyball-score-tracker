@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from './firebase';
+import { onSnapshot } from 'firebase/firestore';
+import { useClub } from './ClubContext';
+import { tournamentsCol } from './clubPaths';
 import { calculateLeaderboard, setsNeededToWin } from './tournamentUtils';
 import { Card, CardContent } from './components/ui/card';
 
@@ -266,25 +267,34 @@ function TournamentCard({ tournament, onClick }) {
 }
 
 export default function CompletedTournamentsView() {
-  const [tournaments, setTournaments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { clubId } = useClub();
+  // Tagged with the club it came from, and read back only while that still matches.
+  // Clearing inside the effect is not enough: effects run AFTER the render that
+  // already carries the new clubId, so for one frame the previous club's history
+  // would paint under the new club's heading.
+  const [loaded, setLoaded] = useState({ clubId: null, list: [], loading: true });
   const [selected, setSelected] = useState(null);
 
+  const matches = loaded.clubId === clubId;
+  const tournaments = matches ? loaded.list : [];
+  const loading = !matches || loaded.loading;
+
   useEffect(() => {
+    if (!clubId) return undefined;
+    setSelected(null);
     const unsub = onSnapshot(
-      collection(db, 'tournaments'),
+      tournamentsCol(clubId),
       (snap) => {
-        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        const completed = all
+        const completed = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
           .filter(isTournamentComplete)
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-        setTournaments(completed);
-        setLoading(false);
+        setLoaded({ clubId, list: completed, loading: false });
       },
-      () => setLoading(false)
+      () => setLoaded({ clubId, list: [], loading: false })
     );
     return unsub;
-  }, []);
+  }, [clubId]);
 
   return (
     <div className="min-h-screen bg-gray-50/80 pb-8">
