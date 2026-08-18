@@ -4,69 +4,73 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Accounts and roles
 
-Accounts are Firebase Auth email/password users, created by hand in
-**Firebase Console → Authentication → Users**. There is no sign-up flow in the app.
+Sign-in is **Google only** — there is no password form and no account creation in the
+Firebase console. Anyone can sign in; signing in by itself grants nothing.
 
-Every account is one of two roles:
+The app is **multi-tenant**. A club owns its tournaments, its schedule and its archive,
+and permission is always *per club*:
 
-| Role | Can do |
+| Role | Scope |
 | --- | --- |
-| **Admin** | Everything — create, delete and activate tournaments, edit teams and schedules, unlock completed games, plus everything a scorer can do. |
-| **Scorer** | Enter and adjust scores, mark games complete, record finals results. Nothing else. The Admin tab is not shown. |
+| **Super admin** | Every club, everything. |
+| **Club admin** | One club: create/delete/activate tournaments, edit teams and schedules, unlock completed games, manage members — plus everything a scorer can do. |
+| **Scorer** | One club: enter and adjust scores, mark games complete, record finals results. Nothing else; no Admin tab. |
+| **Signed in, no membership** | Reads the public scoreboard like anyone else, and can create a club of their own. |
 
-Roles are per club: they come from the member document at
-`clubs/{clubId}/members/{uid}`, granted by a club admin. On top of that there is a
-**super admin** list — admin of every club without a member document — which lives in
+A club's roles come from its member documents at `clubs/{clubId}/members/{uid}`. A club
+admin grants them; nobody can grant themselves one.
+
+### Super admins
+
+Admin of every club without holding a member document anywhere. The list lives in
 **two places, which must match**:
 
-1. `REACT_APP_SUPER_ADMIN_EMAILS` in Vercel — comma-separated, e.g.
-   `you@example.com,cochair@example.com`. This decides what the **app offers**.
-2. The `isSuper()` function at the top of `firestore.rules` — the same addresses,
-   lowercase. This is what is **actually enforced**.
-
-Anyone who signs in with no member document and is not a super admin is a spectator.
+1. `REACT_APP_SUPER_ADMIN_EMAILS` in Vercel — comma-separated. Decides what the **app
+   offers**.
+2. `superAdmins()` at the top of `firestore.rules` — same addresses, lowercase. This is
+   what is **actually enforced**.
 
 **Only the rules file provides security.** `REACT_APP_SUPER_ADMIN_EMAILS` is compiled
-into the public JS bundle (as every `REACT_APP_*` value is), so it is readable by any
-visitor and can be bypassed by anyone willing to call Firestore from the browser
-console. It is there to hide UI, not to protect data. Never put a secret in it —
-that is why the Anthropic key is `ANTHROPIC_API_KEY` and server-side only.
+into the public JS bundle (as every `REACT_APP_*` value is), so any visitor can read it
+and anyone willing to call Firestore from the browser console can ignore it. It hides UI;
+it does not protect data. Never put a secret in it — that is why the Anthropic key is
+`ANTHROPIC_API_KEY` and server-side only.
 
-If the two lists drift apart, the failure is loud rather than silent: the app offers
-Admin, Firestore refuses the write, and the page shows the permission error.
+If the two drift apart the failure is loud, not silent: the app offers the page,
+Firestore refuses the write, and the permission error is shown.
 
-### Adding a scorer
+Unlike the club roles there is deliberately **no "empty list means everyone" fallback**.
+An unconfigured deploy must not hand every visitor super-admin rights.
 
-1. Firebase Console → Authentication → **Add user**, with an email and password.
-2. Give the credentials to the person scoring. Nothing else — being absent from the
-   admin list is what makes them a scorer.
+### Adding someone to a club
 
-### Rolling this out
+There is no invitation email — an invite pre-authorises an address, and the person picks
+up the role the moment they sign in with Google.
 
-While both lists are empty, **every signed-in account is an admin** — exactly how the
-app behaved before roles existed. So the safe order is:
+1. A club admin adds the person's email to the club, as **scorer** or **admin**.
+2. That person signs in with Google using the same address.
 
-1. Deploy the code (no behaviour change).
-2. Publish `firestore.rules` with `adminEmails()` still empty (no behaviour change).
-3. Fill in the same addresses in both places, then redeploy and re-publish.
-
-Step 3 is the one that takes effect. Check you can still reach Admin before handing
-out any scorer accounts — if you leave yourself off the list, the only way back is the
-Firebase Console, which ignores rules.
+Because roles are matched by email address, an invite can only be claimed by a
+**verified** address, and the claim is pinned to the role the invite named — an invited
+scorer cannot write themselves in as an admin. Both are enforced in the rules and
+covered by tests.
 
 ### What a scorer is technically allowed to write
 
 The rules let a scorer update **only** the `scores` and `finalsMatches` fields of an
-existing tournament, and nothing on `settings`. They cannot create or delete a
-tournament, or change teams, format, name or schedule.
+existing tournament in their own club. They cannot create or delete a tournament, change
+teams, format, name or schedule, switch which tournament is live, or touch any other
+club at all.
 
-Within those two fields the rules do not inspect the contents, so a scorer determined
-to use the browser console could still write a nonsense score, or re-open a game they
-had marked complete. Guarding that would mean validating the whole score array in
-rules; the app's own UI prevents it, and neither is destructive.
+Within those two fields the rules do not inspect the contents, so a scorer determined to
+use the browser console could still write a nonsense score, or re-open a game they had
+marked complete. Guarding that would mean validating the whole score array in rules; the
+app's own UI prevents it, and neither is destructive.
 
-The split is covered by tests that run against the Firestore emulator — see
-[`firestore-tests/`](firestore-tests/). Re-run them after touching `firestore.rules`.
+The whole model — cross-club isolation, the admin/scorer split, invite claiming, club
+creation and slug squatting — is covered by tests that run against the Firestore
+emulator. See [`firestore-tests/`](firestore-tests/), and re-run them after touching
+`firestore.rules`.
 
 ## Claude-powered features
 
