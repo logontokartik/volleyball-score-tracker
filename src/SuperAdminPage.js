@@ -179,10 +179,15 @@ function MigrationPanel({ user }) {
   const [error, setError] = useState('');
   const [plan, setPlan] = useState(null);
   const [report, setReport] = useState(null);
+  // Off by default, and reset by every dry run: overwriting is the destructive mode, so
+  // it must be chosen for the run in front of the operator, not left ticked from an
+  // earlier one.
+  const [overwriteExisting, setOverwriteExisting] = useState(false);
 
   const preview = async () => {
     setError('');
     setReport(null);
+    setOverwriteExisting(false);
     setBusy('preview');
     try {
       setPlan(await inspectMigration(db, { clubId: clubId.trim(), slug: slug.trim(), uid: user.uid }));
@@ -207,9 +212,12 @@ function MigrationPanel({ user }) {
         slug: slug.trim(),
         name: name.trim(),
         user,
+        overwriteExisting,
       });
       setReport(result);
-      // Re-survey so the panel shows the world as it now is, not as it was before.
+      // Re-survey so the panel shows the world as it now is, not as it was before, and
+      // un-tick overwrite so a second click cannot inherit the destructive choice.
+      setOverwriteExisting(false);
       setPlan(await inspectMigration(db, { clubId: clubId.trim(), slug: slug.trim(), uid: user.uid }));
     } catch (err) {
       setError(`The migration stopped: ${err?.message || err}`);
@@ -225,7 +233,8 @@ function MigrationPanel({ user }) {
         Copies the old top-level <span className="font-mono">tournaments/</span> collection and{' '}
         <span className="font-mono">settings/</span> documents under a club, keeping every document id.{' '}
         <span className="font-semibold text-amber-300">It copies — nothing is deleted or changed at the
-        old paths</span>, and running it twice rewrites the same documents rather than duplicating them.
+        old paths</span>. Safe to run again: a tournament that is already under the club is skipped, so a
+        run that finishes a half-done copy cannot wipe out games scored in the meantime.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-3 mb-4">
@@ -247,19 +256,55 @@ function MigrationPanel({ user }) {
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {/* The overwrite choice is only offered when there is actually something to
+          overwrite, and it names the consequence rather than the mechanism — the
+          operator's question is "will I lose scores", not "does this call setDoc". */}
+      {plan && plan.blockers.length === 0 && plan.willOverwrite.length > 0 && (
+        <label className="flex items-start gap-3 min-h-[48px] rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 mb-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={overwriteExisting}
+            onChange={(e) => setOverwriteExisting(e.target.checked)}
+            className="mt-1 h-5 w-5 shrink-0 accent-amber-500"
+          />
+          <span className="text-sm text-slate-200">
+            <span className="font-semibold text-white">
+              Overwrite the {plan.willOverwrite.length} tournament
+              {plan.willOverwrite.length === 1 ? '' : 's'} already under this club
+            </span>
+            <span className="block text-xs text-red-300 mt-0.5">
+              Destructive. Anything scored in them since the last run is replaced by the legacy
+              copy and cannot be recovered. Leave this off to finish an interrupted migration.
+            </span>
+          </span>
+        </label>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={preview} disabled={Boolean(busy)} className={secondaryButtonClass}>
           {busy === 'preview' ? 'Checking…' : 'Dry run'}
         </button>
         {/* The perform button only appears once a dry run has been read, and never while
-            something in the plan makes the run unsafe. */}
+            something in the plan makes the run unsafe. Its label states the mode, so the
+            destructive one is never a click the operator has to infer. */}
         {plan && plan.blockers.length === 0 && (
-          <button type="button" onClick={perform} disabled={Boolean(busy)} className={primaryButtonClass}>
+          <button
+            type="button"
+            onClick={perform}
+            disabled={Boolean(busy)}
+            className={
+              overwriteExisting && plan.willOverwrite.length > 0
+                ? 'min-h-[48px] px-5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-500 disabled:opacity-50'
+                : primaryButtonClass
+            }
+          >
             {busy === 'run'
               ? 'Migrating…'
-              : plan.clubExists
-                ? 'Re-copy into the existing club'
-                : 'Create the club and copy'}
+              : !plan.clubExists
+                ? 'Create the club and copy'
+                : overwriteExisting && plan.willOverwrite.length > 0
+                  ? `Overwrite ${plan.willOverwrite.length} and copy ${plan.willCopy.length}`
+                  : `Copy ${plan.willCopy.length} missing tournament${plan.willCopy.length === 1 ? '' : 's'}`}
           </button>
         )}
       </div>
@@ -270,7 +315,7 @@ function MigrationPanel({ user }) {
         </div>
       )}
 
-      {plan && <PlanView plan={plan} />}
+      {plan && <PlanView plan={plan} overwriteExisting={overwriteExisting} />}
       {report && <ReportView report={report} />}
     </section>
   );
@@ -285,7 +330,8 @@ function Row({ label, children }) {
   );
 }
 
-function PlanView({ plan }) {
+function PlanView({ plan, overwriteExisting }) {
+  const overwriting = overwriteExisting && plan.willOverwrite.length > 0;
   return (
     <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4 text-sm">
       <h3 className="font-bold text-white mb-2">What is there now</h3>
@@ -324,14 +370,29 @@ function PlanView({ plan }) {
           ) : (
             <li>Leave the existing club document alone (only genuinely missing fields are filled in).</li>
           )}
+          {plan.willRepairSlug && (
+            <li className="text-amber-200">
+              Create the missing <span className="font-mono">slugs/{plan.slug}</span> — without it{' '}
+              <span className="font-mono">/c/{plan.slug}</span> does not resolve at all.
+            </li>
+          )}
           <li>
-            Copy {plan.willCopy.length} new tournament{plan.willCopy.length === 1 ? '' : 's'} and overwrite{' '}
-            {plan.willOverwrite.length} already copied, all at their original ids.
+            Copy {plan.willCopy.length} new tournament{plan.willCopy.length === 1 ? '' : 's'} at their
+            original ids.
+          </li>
+          <li className={overwriting ? 'text-red-200 font-semibold' : undefined}>
+            {plan.willOverwrite.length === 0
+              ? 'Nothing is already under this club, so nothing is at risk of being overwritten.'
+              : overwriting
+                ? `OVERWRITE the ${plan.willOverwrite.length} tournament${plan.willOverwrite.length === 1 ? '' : 's'} already there, discarding anything scored in them since.`
+                : `Skip the ${plan.willOverwrite.length} tournament${plan.willOverwrite.length === 1 ? '' : 's'} already there, leaving live scores intact.`}
           </li>
           <li>
-            {plan.archiveSnapshotExists
-              ? `Write clubs/${plan.clubId}/archive/snapshot${plan.archiveAlreadyCopied ? ' (replacing the one already there)' : ''}.`
-              : 'No archive snapshot to copy.'}
+            {!plan.archiveSnapshotExists
+              ? 'No archive snapshot to copy.'
+              : plan.archiveAlreadyCopied && !overwriting
+                ? `Leave clubs/${plan.clubId}/archive/snapshot alone — it is already there and may have been refreshed since.`
+                : `Write clubs/${plan.clubId}/archive/snapshot${plan.archiveAlreadyCopied ? ' (replacing the one already there)' : ''}.`}
           </li>
           <li>Delete nothing.</li>
         </ul>
@@ -379,6 +440,16 @@ function ReportView({ report }) {
             {report.copied.length} document{report.copied.length === 1 ? '' : 's'} copied
           </summary>
           <p className="mt-2 font-mono text-xs break-all text-slate-400">{report.copied.join(', ')}</p>
+        </details>
+      )}
+
+      {report.skipped.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-slate-300">
+            {report.skipped.length} document{report.skipped.length === 1 ? '' : 's'} already under the club,
+            left untouched
+          </summary>
+          <p className="mt-2 font-mono text-xs break-all text-slate-400">{report.skipped.join(', ')}</p>
         </details>
       )}
     </div>

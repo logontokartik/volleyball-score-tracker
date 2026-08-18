@@ -141,18 +141,23 @@ export default function ArchiveHub() {
   const [asking, setAsking] = useState(false);
   const askAbortRef = useRef(null);
 
-  const { club, clubId, slug, isClubAdmin } = useClub();
+  const { club, clubId, slug, isClubAdmin, isSuperAdmin } = useClub();
   const sheetId = club?.archiveSheetId || '';
   const sheetUrl = googleSheetsArchiveUrl(sheetId);
   const bundledIsOurs = ownsBundledArchive(sheetId);
 
   // Live archive data from Firestore for this club.
-  const [firestoreArchive, setFirestoreArchive] = useState(null);
+  //
+  // The snapshot is stored WITH the club it came from, and read back only when that
+  // still matches. Clearing it inside the effect is not enough: the effect runs after
+  // React has already painted a render carrying the new clubId, so a club switch would
+  // show the previous club's career stats for a frame.
+  const [archiveState, setArchiveState] = useState({ clubId: null, data: null });
+  const firestoreArchive = archiveState.clubId === clubId ? archiveState.data : null;
   useEffect(() => {
     if (!clubId) return undefined;
-    setFirestoreArchive(null);
     const unsub = onSnapshot(archiveSnapshotDoc(clubId), (snap) => {
-      setFirestoreArchive(snap.exists() ? snap.data() : null);
+      setArchiveState({ clubId, data: snap.exists() ? snap.data() : null });
     });
     return unsub;
   }, [clubId]);
@@ -301,12 +306,27 @@ export default function ArchiveHub() {
               The archive is built from a club-owned Google Sheet, and this club does not have one
               configured.
             </p>
-            {isClubAdmin && (
+            {/* Attaching a spreadsheet is an operator action, not a club-admin one:
+                `archiveSheetId` is super-admin-only in firestore.rules because
+                api/ask-archive fetches whatever it points at on the project's Anthropic
+                key. Telling a club admin to go set it would send them at a write the
+                rules reject. */}
+            {isSuperAdmin ? (
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-                Set <code className="text-amber-300">archiveSheetId</code> on the club to the id of
-                a spreadsheet shared as &ldquo;Anyone with the link can view&rdquo;, then come back
-                here and refresh it.
+                As an installation operator you can set{' '}
+                <code className="text-amber-300">archiveSheetId</code> on{' '}
+                <code className="text-amber-300">clubs/{clubId}</code> to the id of a spreadsheet
+                shared as &ldquo;Anyone with the link can view&rdquo;, then come back here and
+                refresh it.
               </p>
+            ) : (
+              isClubAdmin && (
+                <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                  Attaching a spreadsheet is an installation-operator action rather than a club
+                  setting — the server fetches whatever it points at — so ask an operator to
+                  attach one. Once it is attached you can refresh it from this page yourself.
+                </p>
+              )
             )}
             <div className="mt-6">
               <Link
@@ -367,8 +387,8 @@ export default function ArchiveHub() {
           </div>
         </div>
 
-        {/* Admin refresh panel. This writes settings/archiveSnapshot, which
-            firestore.rules restricts to admins — a scorer must not be shown a
+        {/* Admin refresh panel. This writes clubs/{clubId}/archive/snapshot, which
+            firestore.rules restricts to club admins — a scorer must not be shown a
             button that can only fail. */}
         {isClubAdmin && (
           <div className="rounded-2xl border border-slate-700 bg-slate-800/60 px-5 py-4 mb-2 flex flex-col sm:flex-row sm:items-center gap-3">

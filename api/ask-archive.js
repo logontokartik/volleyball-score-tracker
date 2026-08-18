@@ -7,8 +7,17 @@
  * The client posts a *club id*, never a spreadsheet id: the sheet is resolved from
  * `clubs/{clubId}.archiveSheetId` here. Accepting a sheet id would make this an open
  * fetch proxy and let anyone spend the project's Anthropic credits summarising an
- * arbitrary spreadsheet. The club document is world-readable, so the lookup goes
- * through the Firestore REST API and needs no service-account credentials.
+ * arbitrary spreadsheet.
+ *
+ * That only holds because `archiveSheetId` is **super-admin-only** in `firestore.rules`
+ * — a club admin may update every other field on the club document but not that one.
+ * Anyone with a Google account can create a club and become its admin, so a
+ * club-admin-writable `archiveSheetId` would leave this endpoint just as open: create a
+ * club, point it at any sheet, ask. Attaching a spreadsheet is an operator action, and
+ * these two halves have to stay together.
+ *
+ * The club document is world-readable, so the lookup goes through the Firestore REST
+ * API and needs no service-account credentials.
  *
  * The archive itself is likewise fetched here rather than accepted from the client, so
  * the prompt prefix stays byte-stable (prompt caching) and the endpoint can't be used

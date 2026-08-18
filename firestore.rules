@@ -102,7 +102,16 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && getAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug))
              .data.clubId == clubId;
-      allow update: if isClubAdmin(clubId);
+      // `archiveSheetId` is deliberately NOT club-admin writable. api/ask-archive
+      // resolves the spreadsheet from this field server-side and then fetches it on the
+      // project's Anthropic key. Since anyone with a Google account can create a club
+      // and become its admin, letting a club admin set this field would turn that
+      // function into an open, Claude-billed fetch proxy for any spreadsheet on the
+      // internet. Attaching an archive is an operator action: super admin only.
+      allow update: if isSuper()
+        || (isClubAdmin(clubId)
+            && !request.resource.data.diff(resource.data)
+                 .affectedKeys().hasAny(['archiveSheetId', 'createdBy', 'slug']));
       allow delete: if isSuper();
 
       // Not publicly readable, unlike everything else under a club: member documents

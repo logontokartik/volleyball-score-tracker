@@ -1,6 +1,29 @@
 import React from 'react';
 import { useAuth } from './AuthContext';
-import { isAdmin, roleLabel } from './roles';
+import { useClubOptional } from './ClubContext';
+import { isSuperAdmin } from './roles';
+
+/**
+ * What the badge next to the address says.
+ *
+ * Roles are club-scoped, so the badge has to be too: outside a club there is no role to
+ * report and the badge is omitted entirely rather than guessing one. Inside a club it
+ * says what this account may actually do there — a spectator seeing "Admin" while the
+ * Admin tab is missing is exactly the confusion the badge exists to prevent.
+ *
+ * Returns null for "show nothing".
+ */
+function badgeFor(user, club) {
+  if (!user) return null;
+  // Installation operators are admin of every club, with or without one in scope.
+  if (isSuperAdmin(user)) return { label: 'Super admin', className: 'bg-fuchsia-400 text-slate-900' };
+  // No club provider (/clubs, /super, 404) or one still resolving: nothing honest to say.
+  if (!club || !club.clubId || club.loading) return null;
+  if (club.role === 'admin') return { label: 'Admin', className: 'bg-amber-400 text-slate-900' };
+  if (club.role === 'scorer') return { label: 'Scorer', className: 'bg-white/20 text-slate-100' };
+  // Signed in, but not a member of THIS club — read-only here.
+  return { label: 'Signed in', className: 'bg-white/10 text-slate-300' };
+}
 
 /** Google mark, inline so it works offline courtside. */
 function GoogleIcon() {
@@ -16,6 +39,9 @@ function GoogleIcon() {
 
 export default function Login() {
   const { user, loading, signIn, signOut, error } = useAuth();
+  // Null outside a club route — the nav renders on pages that have no club.
+  const club = useClubOptional();
+  const badge = badgeFor(user, club);
 
   // Render nothing until Firebase has answered, so the nav does not flash a
   // "Sign in" button at someone who is already signed in.
@@ -30,13 +56,13 @@ export default function Login() {
           </span>
           {/* Named so a scorer can see why there is no Admin tab, rather than
               assuming the page is broken. */}
-          <span
-            className={`shrink-0 text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${
-              isAdmin(user) ? 'bg-amber-400 text-slate-900' : 'bg-white/20 text-slate-100'
-            }`}
-          >
-            {roleLabel(user)}
-          </span>
+          {badge && (
+            <span
+              className={`shrink-0 text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          )}
         </span>
         <button
           type="button"

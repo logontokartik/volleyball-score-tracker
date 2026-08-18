@@ -9,7 +9,7 @@
 //     "RULES_FILE=$PWD/../firestore.rules node --import ./register-hooks.mjs migration.test.mjs"
 import fs from 'fs';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, Timestamp } from 'firebase/firestore';
 import { inspectMigration, runMigration } from '../src/migrateToClubs.js';
 import { GVBL_ARCHIVE_SHEET_ID } from '../src/archiveRefreshUtils.js';
 
@@ -213,10 +213,12 @@ const after2 = await readAll();
 
 t('run 2 reports ok', () => ok(report2.ok, `report: ${JSON.stringify(report2)}`));
 t('run 2 skipped club creation', () => ok(report2.skippedClubCreation && !report2.createdClub));
-t('run 2 copied the same 3, none failed', () => {
-  eq(report2.copied.sort(), Object.keys(LEGACY).sort(), 'copied ids');
+t('run 2 wrote nothing: all 3 were already there', () => {
+  eq(report2.copied, [], 'copied ids');
+  eq(report2.skipped.sort(), Object.keys(LEGACY).sort(), 'skipped ids');
   eq(report2.failed, [], 'failed');
 });
+t('run 2 left the archive snapshot alone rather than re-copying it', () => eq(report2.archive, 'skipped'));
 t('run 2 did not duplicate anything', () => eq(Object.keys(after2.clubTournaments).length, 3));
 t('run 2 left the club document byte-identical', () => eq(after2.club, after1.club));
 t('run 2 left the member document byte-identical', () => eq(after2.member, after1.member));
@@ -226,6 +228,81 @@ t('run 2 still deleted nothing from the legacy paths', () => {
   eq(after2.legacy, before.legacy, 'legacy tournaments');
   eq(after2.settingsApp, before.settingsApp, 'settings/app');
 });
+
+console.log('\n--- re-running after the club has gone live must not eat live scores ---');
+// The scenario the default protects: a first run copies most of the tournaments, a club
+// admin then scores games in the migrated club, and the operator re-runs to pick up what
+// the first run missed. Simulated by editing one copied tournament (as a scorer would)
+// and deleting another (as a run that failed on it would have left things).
+const LIVE_EDIT = { a: 25, b: 23 };
+await env.withSecurityRulesDisabled(async (c) => {
+  const d = c.firestore();
+  const live = { ...LEGACY['spring-2024'] };
+  live.scores = live.scores.map((m, i) => (i === 2 ? { ...m, sets: [LIVE_EDIT], completed: true } : m));
+  live.name = 'Spring 2024 (scored since the migration)';
+  await setDoc(doc(d, 'clubs', 'gvbl', 'tournaments', 'spring-2024'), live);
+  await deleteDoc(doc(d, 'clubs', 'gvbl', 'tournaments', 'fall-2024'));
+});
+const liveBefore = (await readAll()).clubTournaments['spring-2024'];
+
+const report3 = await runMigration(superDb, {
+  clubId: 'gvbl',
+  slug: 'gvbl',
+  name: 'Greenville Volleyball League',
+  user: SUPER,
+});
+const after3 = await readAll();
+
+t('run 3 reports ok', () => ok(report3.ok, `report: ${JSON.stringify(report3)}`));
+t('run 3 copied only the tournament that was missing', () => {
+  eq(report3.copied, ['fall-2024'], 'copied ids');
+  eq(report3.skipped.sort(), ['spring-2024', 'summer-2024'], 'skipped ids');
+  eq(report3.failed, [], 'failed');
+});
+t('the live edit SURVIVED the re-run', () => eq(after3.clubTournaments['spring-2024'], liveBefore));
+t('the missing tournament was restored from the legacy copy', () =>
+  eq(after3.clubTournaments['fall-2024'], before.legacy['fall-2024']));
+t('run 3 defaulted to not overwriting', () => ok(report3.overwriteExisting === false));
+
+console.log('\n--- overwriteExisting: true is the deliberate, destructive re-copy ---');
+const report4 = await runMigration(superDb, {
+  clubId: 'gvbl',
+  slug: 'gvbl',
+  name: 'Greenville Volleyball League',
+  user: SUPER,
+  overwriteExisting: true,
+});
+const after4 = await readAll();
+
+t('run 4 reports ok', () => ok(report4.ok, `report: ${JSON.stringify(report4)}`));
+t('run 4 copied all 3 and skipped none', () => {
+  eq(report4.copied.sort(), Object.keys(LEGACY).sort(), 'copied ids');
+  eq(report4.skipped, [], 'skipped ids');
+});
+t('the live edit was deliberately overwritten', () =>
+  eq(after4.clubTournaments['spring-2024'], before.legacy['spring-2024']));
+
+console.log('\n--- a club whose slug reservation is missing is repaired, not called a success ---');
+await env.withSecurityRulesDisabled(async (c) => {
+  await deleteDoc(doc(c.firestore(), 'slugs', 'gvbl'));
+});
+const plan5 = await inspectMigration(superDb, { clubId: 'gvbl', slug: 'gvbl', uid: SUPER.uid });
+t('dry run notices the club exists with no address reserved', () =>
+  ok(plan5.clubExists && !plan5.slugExists && plan5.willRepairSlug));
+t('a missing slug is not a blocker (the run repairs it)', () => eq(plan5.blockers, []));
+
+const report5 = await runMigration(superDb, {
+  clubId: 'gvbl',
+  slug: 'gvbl',
+  name: 'Greenville Volleyball League',
+  user: SUPER,
+});
+const after5 = await readAll();
+t('run 5 recreated slugs/gvbl', () => {
+  ok(report5.repairedSlug, `report: ${JSON.stringify(report5)}`);
+  eq(after5.slug, { clubId: 'gvbl' }, 'slug document');
+});
+t('run 5 reports ok', () => ok(report5.ok, `report: ${JSON.stringify(report5)}`));
 
 console.log('\n--- a non-super-admin is stopped by the rules ---');
 const outsiderDb = env

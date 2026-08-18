@@ -137,6 +137,32 @@ await t('super CANNOT write a legacy tournament',             ()=>assertFails(up
 await t('super CANNOT write legacy settings',                 ()=>assertFails(updateDoc(doc(superA,'settings/app'), { activeTournamentId:'x' })));
 await t('super CANNOT delete a legacy tournament',            ()=>assertFails(deleteDoc(doc(superA,'tournaments/legacy1'))));
 
+
+console.log('\n--- archiveSheetId is operator-only (the Claude-billed fetch-proxy lever) ---');
+await t('club admin may still rename their club',
+        ()=>assertSucceeds(updateDoc(doc(gAdmin,'clubs/gvbl'), { name:'GVBL Renamed' })));
+await t('club admin may still set the active tournament',
+        ()=>assertSucceeds(updateDoc(doc(gAdmin,'clubs/gvbl'), { activeTournamentId:'t1' })));
+await t('club admin CANNOT point their club at another spreadsheet',
+        ()=>assertFails(updateDoc(doc(gAdmin,'clubs/gvbl'), { archiveSheetId:'ATTACKER-SHEET' })));
+await t('club admin CANNOT smuggle archiveSheetId in beside a legal field',
+        ()=>assertFails(updateDoc(doc(gAdmin,'clubs/gvbl'), { name:'x', archiveSheetId:'ATTACKER-SHEET' })));
+await t('club admin CANNOT reassign their club slug',
+        ()=>assertFails(updateDoc(doc(gAdmin,'clubs/gvbl'), { slug:'stolen' })));
+await t('club admin CANNOT rewrite createdBy',
+        ()=>assertFails(updateDoc(doc(gAdmin,'clubs/gvbl'), { createdBy:'someone-else' })));
+await t('super admin CAN attach a spreadsheet',
+        ()=>assertSucceeds(updateDoc(doc(superA,'clubs/gvbl'), { archiveSheetId:'SHEET-OK' })));
+// The full attack path from the review: create your own club, then try to attach a sheet.
+await t('a stranger who created their own club still cannot attach a spreadsheet', async () => {
+  const b = writeBatch(outsid);
+  b.set(doc(outsid,'clubs/proxyclub'), { name:'P', slug:'proxyslug', createdBy:'out' });
+  b.set(doc(outsid,'slugs/proxyslug'), { clubId:'proxyclub' });
+  b.set(doc(outsid,'clubs/proxyclub/members/out'), { uid:'out', email:'outsider@example.com', role:'admin' });
+  await assertSucceeds(b.commit());
+  await assertFails(updateDoc(doc(outsid,'clubs/proxyclub'), { archiveSheetId:'ANY-PUBLIC-SHEET' }));
+});
+
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

@@ -138,6 +138,10 @@ export async function inspectMigration(database, { clubId, slug, uid } = {}) {
     memberError,
     destinationTournamentIds: Array.from(destinationIds),
     willCreateClub: !clubExists,
+    // A club that exists without its slug reservation is unreachable: /c/{slug} 404s
+    // because nothing resolves the address. A run repairs that rather than reporting
+    // success over a club nobody can open.
+    willRepairSlug: clubExists && !slugSnap.exists(),
     willCopy: toCopy,
     willOverwrite: toOverwrite,
     archiveSheetId: GVBL_ARCHIVE_SHEET_ID,
@@ -148,15 +152,25 @@ export async function inspectMigration(database, { clubId, slug, uid } = {}) {
 /**
  * Performs the migration described by `inspectMigration`.
  *
- * Idempotent by construction:
- *  - the club/slug/member batch is skipped entirely when the club already exists;
- *  - tournaments are written with `setDoc` at their ORIGINAL ids, so a second run
- *    rewrites the same documents with the same content rather than adding copies;
- *  - the archive snapshot is a single fixed document id, same story.
+ * Re-runnable, and non-destructive on a second run by default:
+ *  - the club/slug/member batch is skipped entirely when the club already exists (a
+ *    missing slug reservation is repaired on its own);
+ *  - tournaments are written with `setDoc` at their ORIGINAL ids, and a document that
+ *    already exists under the club is SKIPPED. This is the whole point: once a club is
+ *    live its tournaments carry scores entered AFTER the first run, and re-copying the
+ *    legacy snapshot over them would silently delete those games. A first run that
+ *    copied 8 of 10 must be re-runnable to finish the last 2 without eating the 8.
+ *  - the archive snapshot is one fixed document id, and the same reasoning applies: the
+ *    Archive page's Refresh button rewrites it from the live spreadsheet, so a copy that
+ *    is already there is newer than the legacy one, not older.
  *
- * Returns an honest report: every tournament id lands in either `copied` or `failed`.
+ * Pass `overwriteExisting: true` for the deliberate "put the legacy data back over what
+ * is there" case. It is opt-in because it discards everything written since the last run.
+ *
+ * Returns an honest report: every tournament id lands in exactly one of `copied`,
+ * `skipped` or `failed`.
  */
-export async function runMigration(database, { clubId, slug, name, user } = {}) {
+export async function runMigration(database, { clubId, slug, name, user, overwriteExisting = false } = {}) {
   const uid = user?.uid;
   if (!uid) throw new Error('runMigration needs the signed-in user.');
 
@@ -169,17 +183,27 @@ export async function runMigration(database, { clubId, slug, name, user } = {}) 
   // this same tool in another tab).
   const plan = await inspectMigration(database, { clubId: targetClubId, slug: targetSlug, uid });
 
+  const overwrite = Boolean(overwriteExisting);
+
   const report = {
     clubId: targetClubId,
     slug: targetSlug,
+    overwriteExisting: overwrite,
     createdClub: false,
     skippedClubCreation: false,
+    repairedSlug: false,
     copied: [],
+    skipped: [],
     failed: [],
     archive: 'absent',
     notes: [],
     ok: false,
   };
+
+  // Anything that went wrong outside the per-document `failed` list — a club field
+  // patch, the slug repair, the archive. `report.ok` has to see these too, or the UI
+  // prints "Migration finished" in green over a club whose address 404s.
+  let sideOperationFailed = false;
 
   if (plan.blockers.length) {
     report.failed = plan.legacyTournamentIds.map((id) => ({ id, error: 'not attempted — blocked' }));
@@ -189,7 +213,32 @@ export async function runMigration(database, { clubId, slug, name, user } = {}) 
 
   if (plan.clubExists) {
     report.skippedClubCreation = true;
-    report.notes.push(`Club "${targetClubId}" already existed — creation skipped, tournaments re-copied into it.`);
+    report.notes.push(
+      `Club "${targetClubId}" already existed — creation skipped, ${
+        overwrite
+          ? 'and OVERWRITE was on, so tournaments already under it were re-copied over.'
+          : 'and tournaments already under it were left alone.'
+      }`
+    );
+
+    // A club without its slugs/{slug} row is unreachable. Repair it here rather than
+    // finishing "successfully" over a /c/{slug} that 404s. The rules let the club's own
+    // creator claim its slug, which for a club this tool created is the operator running
+    // it; anything else is reported, not swallowed.
+    if (!plan.slugExists) {
+      try {
+        await setDoc(slugDoc(targetSlug, database), { clubId: targetClubId });
+        report.repairedSlug = true;
+        report.notes.push(`Club "${targetClubId}" had no address reserved — created slugs/${targetSlug}.`);
+      } catch (err) {
+        sideOperationFailed = true;
+        report.notes.push(
+          `Club "${targetClubId}" has no slugs/${targetSlug}, so /c/${targetSlug} will not resolve, and it could not be created: ${describeError(
+            err
+          )}`
+        );
+      }
+    }
 
     // Only fill in fields the existing club is missing. Overwriting an
     // activeTournamentId a club admin has since changed would be a regression, not a
@@ -204,6 +253,7 @@ export async function runMigration(database, { clubId, slug, name, user } = {}) 
         await updateDoc(clubDoc(targetClubId, database), patch);
         report.notes.push(`Filled in missing club fields: ${Object.keys(patch).join(', ')}.`);
       } catch (err) {
+        sideOperationFailed = true;
         report.notes.push(`Could not fill in ${Object.keys(patch).join(', ')}: ${describeError(err)}`);
       }
     }
@@ -254,7 +304,26 @@ export async function runMigration(database, { clubId, slug, name, user } = {}) 
     return report;
   }
 
-  for (const group of chunk(legacyDocs, BATCH_LIMIT)) {
+  // The survey above is this run's own, seconds old, so it is what decides which
+  // destination documents already exist.
+  const alreadyThere = new Set(plan.destinationTournamentIds);
+  const toWrite = [];
+  for (const entry of legacyDocs) {
+    if (!overwrite && alreadyThere.has(entry.id)) {
+      report.skipped.push(entry.id);
+      continue;
+    }
+    toWrite.push(entry);
+  }
+  if (report.skipped.length) {
+    report.notes.push(
+      `${report.skipped.length} tournament${report.skipped.length === 1 ? ' was' : 's were'} already under the club and ${
+        report.skipped.length === 1 ? 'was' : 'were'
+      } left untouched. Tick "overwrite" only if you mean to discard whatever has been scored in them since.`
+    );
+  }
+
+  for (const group of chunk(toWrite, BATCH_LIMIT)) {
     try {
       const batch = writeBatch(database);
       group.forEach(({ id, data }) => batch.set(tournamentDoc(targetClubId, id, database), data));
@@ -279,17 +348,23 @@ export async function runMigration(database, { clubId, slug, name, user } = {}) 
   }
 
   if (plan.archiveSnapshotExists) {
-    try {
-      const snap = await getDoc(legacyArchiveDoc(database));
-      await setDoc(archiveSnapshotDoc(targetClubId, database), snap.data());
-      report.archive = 'copied';
-    } catch (err) {
-      report.archive = 'failed';
-      report.notes.push(`Archive snapshot could not be copied: ${describeError(err)}`);
+    if (plan.archiveAlreadyCopied && !overwrite) {
+      // The Archive page's Refresh button rewrites this document from the live
+      // spreadsheet, so the copy already under the club is newer than the legacy one.
+      report.archive = 'skipped';
+    } else {
+      try {
+        const snap = await getDoc(legacyArchiveDoc(database));
+        await setDoc(archiveSnapshotDoc(targetClubId, database), snap.data());
+        report.archive = 'copied';
+      } catch (err) {
+        report.archive = 'failed';
+        report.notes.push(`Archive snapshot could not be copied: ${describeError(err)}`);
+      }
     }
   }
 
-  report.ok = report.failed.length === 0 && report.archive !== 'failed';
+  report.ok = report.failed.length === 0 && report.archive !== 'failed' && !sideOperationFailed;
   return report;
 }
 
@@ -298,8 +373,11 @@ export function summarizeReport(report) {
   const parts = [];
   parts.push(report.createdClub ? `Created club "${report.clubId}"` : `Club "${report.clubId}" already existed`);
   parts.push(`${report.copied.length} tournament${report.copied.length === 1 ? '' : 's'} copied`);
+  if (report.skipped.length) parts.push(`${report.skipped.length} already there, left alone`);
   if (report.failed.length) parts.push(`${report.failed.length} FAILED`);
+  if (report.repairedSlug) parts.push(`address /c/${report.slug} repaired`);
   if (report.archive === 'copied') parts.push('archive snapshot copied');
+  if (report.archive === 'skipped') parts.push('archive snapshot already there, left alone');
   if (report.archive === 'failed') parts.push('archive snapshot FAILED');
   if (report.archive === 'absent') parts.push('no archive snapshot to copy');
   return `${parts.join(' · ')}. Nothing was deleted.`;

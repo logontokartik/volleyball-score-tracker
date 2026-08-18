@@ -38,10 +38,12 @@ export default function ClubMembersAdmin({ onClose }) {
   const { clubId, isClubAdmin } = useClub();
   const { user } = useAuth();
 
-  const [members, setMembers] = useState([]);
-  const [invites, setInvites] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [listenError, setListenError] = useState('');
+  // Both lists are stored WITH the club they were read from and only used while that
+  // still matches the club in scope. Clearing them inside the effect would be a frame
+  // too late — the effect runs after React has painted a render already carrying the new
+  // clubId, and in that frame a "Remove" click would target clubs/B/members/<uidFromA>.
+  const [membersState, setMembersState] = useState({ clubId: null, list: [], loading: true, error: '' });
+  const [invitesState, setInvitesState] = useState({ clubId: null, list: [] });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -49,18 +51,28 @@ export default function ClubMembersAdmin({ onClose }) {
   const [inviteRole, setInviteRole] = useState('scorer');
   const [pendingRemove, setPendingRemove] = useState(null);
 
+  const membersMatch = membersState.clubId === clubId;
+  const members = membersMatch ? membersState.list : [];
+  const loading = !membersMatch || membersState.loading;
+  const listenError = membersMatch ? membersState.error : '';
+  // Also gated on isClubAdmin, so losing admin in a club empties the list rather than
+  // leaving the last snapshot on screen.
+  const invites = invitesState.clubId === clubId && isClubAdmin ? invitesState.list : [];
+
   useEffect(() => {
     if (!clubId) return undefined;
     const unsubMembers = onSnapshot(
       membersCol(clubId),
       (snap) => {
-        setMembers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-        setListenError('');
+        setMembersState({
+          clubId,
+          list: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+          loading: false,
+          error: '',
+        });
       },
       (err) => {
-        setListenError(errorText(err));
-        setLoading(false);
+        setMembersState({ clubId, list: [], loading: false, error: errorText(err) });
       }
     );
     return unsubMembers;
@@ -72,8 +84,8 @@ export default function ClubMembersAdmin({ onClose }) {
     // otherwise every scorer opening this screen would trip a permission error.
     const unsub = onSnapshot(
       invitesCol(clubId),
-      (snap) => setInvites(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      (err) => setListenError(errorText(err))
+      (snap) => setInvitesState({ clubId, list: snap.docs.map((d) => ({ id: d.id, ...d.data() })) }),
+      (err) => setMembersState((s) => (s.clubId === clubId ? { ...s, error: errorText(err) } : s))
     );
     return unsub;
   }, [clubId, isClubAdmin]);

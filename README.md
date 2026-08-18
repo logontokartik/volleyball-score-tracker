@@ -84,7 +84,12 @@ Two Vercel Functions call Claude, both using the same server-side key:
   **The client never sends a spreadsheet id.** If it could, anyone could POST an
   arbitrary sheet and spend the project's Anthropic credits summarising it, and the
   function would double as an open fetch proxy. Resolving the id from the club document
-  means the only sheets reachable are ones a club admin has already attached to a club.
+  closes that only in combination with the second half: **`archiveSheetId` is
+  super-admin-only in `firestore.rules`** — a club admin may edit everything else on the
+  club document but not that field. Anyone with a Google account can create a club and
+  become its admin, so if club admins could set `archiveSheetId` the "resolve it
+  server-side" step would be no barrier at all: create a club, point it anywhere, ask
+  away. Attaching a spreadsheet is therefore an operator action.
   `clubs/{clubId}` is world-readable, so the lookup uses the Firestore REST API with **no
   service-account key and no new dependency**; the club id is validated against
   `/^[A-Za-z0-9_-]{1,128}$/` before it is interpolated into that URL. A club that does
@@ -108,7 +113,7 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
 | `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
 | `FIREBASE_PROJECT_ID` | no | `volleyball-score-tracker` | Project whose Firestore `clubs/{clubId}` documents `ask-archive` reads to resolve `archiveSheetId`. Server-side only; must match `projectId` in `src/firebase.js`. |
-| `REACT_APP_SUPER_ADMIN_EMAILS` | no | empty | Comma-separated super-admin addresses — admin of every club, no member document needed. Public (it is in the JS bundle); mirror it in `isSuper()` in `firestore.rules`. |
+| `REACT_APP_SUPER_ADMIN_EMAILS` | no | empty | Comma-separated super-admin addresses — admin of every club, no member document needed. Public (it is in the JS bundle); mirror it in `superAdmins()` in `firestore.rules`, which is the list `isSuper()` checks against and the only one that is enforced. |
 | `REACT_APP_DEFAULT_CLUB_SLUG` | no | `gvbl` | Club that `/`, `/completed` and `/archive` redirect to. |
 
 Redeploy after adding them — env vars are read at invocation, but the deploy must
