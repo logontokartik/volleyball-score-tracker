@@ -11,7 +11,8 @@ import { formatMatchHeadingForScores, getSetCap, getSetTarget } from './tourname
 export default function MatchScoreDialog({
   match,
   scheduleSlots,
-  user,
+  canScore,
+  signedIn,
   onClose,
   onAdjust,
   onInput,
@@ -79,7 +80,7 @@ export default function MatchScoreDialog({
             <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
               <button
                 type="button"
-                disabled={!user || locked}
+                disabled={!canScore || locked}
                 onClick={() => phase !== 'pool' && onTogglePhase(match.game)}
                 className={`px-3 py-2 transition-colors ${
                   phase === 'pool'
@@ -91,7 +92,7 @@ export default function MatchScoreDialog({
               </button>
               <button
                 type="button"
-                disabled={!user || locked}
+                disabled={!canScore || locked}
                 onClick={() => phase !== 'finals' && onTogglePhase(match.game)}
                 className={`px-3 py-2 border-l border-gray-200 transition-colors ${
                   phase === 'finals'
@@ -114,9 +115,11 @@ export default function MatchScoreDialog({
               Scores are read-only. An admin can unlock this game under Admin → Locks.
             </p>
           )}
-          {!user && (
+          {!canScore && (
             <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-              Log in to enter or adjust scores.
+              {signedIn
+                ? 'Your account is not on this club’s scoring team, so scores are read-only. Ask a club admin for scorer access.'
+                : 'Log in to enter or adjust scores.'}
             </p>
           )}
 
@@ -144,7 +147,7 @@ export default function MatchScoreDialog({
                         <button
                           type="button"
                           aria-label={`Subtract one point for ${match[teamKey]}`}
-                          disabled={!user || locked || set[teamKey] <= 0}
+                          disabled={!canScore || locked || set[teamKey] <= 0}
                           onClick={() => onAdjust(match.game, setIndex, teamKey, -1)}
                           className="flex items-center justify-center min-w-[52px] min-h-[52px] rounded-xl border-2 border-gray-300 bg-white text-2xl font-bold text-gray-800 shadow-sm active:bg-gray-100 disabled:opacity-40 disabled:active:bg-white"
                         >
@@ -157,13 +160,13 @@ export default function MatchScoreDialog({
                           max={setCap}
                           value={set[teamKey]}
                           onChange={(e) => onInput(match.game, setIndex, teamKey, e.target.value)}
-                          disabled={!user || locked}
+                          disabled={!canScore || locked}
                           className="border border-gray-300 rounded-xl w-[4.5rem] sm:w-24 text-center text-xl font-semibold py-3 min-h-[52px] bg-white disabled:bg-gray-100 disabled:text-gray-700"
                         />
                         <button
                           type="button"
                           aria-label={`Add one point for ${match[teamKey]}`}
-                          disabled={!user || locked || set[teamKey] >= setCap}
+                          disabled={!canScore || locked || set[teamKey] >= setCap}
                           onClick={() => onAdjust(match.game, setIndex, teamKey, 1)}
                           className="flex items-center justify-center min-w-[52px] min-h-[52px] rounded-xl border-2 border-gray-300 bg-white text-2xl font-bold text-gray-800 shadow-sm active:bg-gray-100 disabled:opacity-40 disabled:active:bg-white"
                         >
@@ -186,7 +189,7 @@ export default function MatchScoreDialog({
           >
             Close
           </button>
-          {user && !locked && (
+          {canScore && !locked && (
             <button
               type="button"
               // Closing is the caller's signal that the mark actually went through —

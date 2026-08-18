@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { setDoc } from 'firebase/firestore';
+import { tournamentDoc } from './clubPaths';
+import { useClub } from './ClubContext';
 import {
   DEFAULT_SCHEDULE_FORMAT,
   SCHEDULE_FORMATS,
@@ -25,7 +26,8 @@ function firestoreRulesHint(err) {
 
 const rowFor = (name) => ({ id: crypto.randomUUID(), name });
 
-export default function AdminTeamsEditor({ tournament, user, onClose }) {
+export default function AdminTeamsEditor({ tournament, onClose }) {
+  const { clubId, isClubAdmin } = useClub();
   const [rows, setRows] = useState(() =>
     (tournament.teams || []).map(rowFor).concat((tournament.teams || []).length ? [] : [rowFor('')])
   );
@@ -91,8 +93,8 @@ export default function AdminTeamsEditor({ tournament, user, onClose }) {
   };
 
   const handleSave = async () => {
-    if (!user) {
-      setError('Log in to edit teams.');
+    if (!isClubAdmin) {
+      setError('Only a club admin can edit teams.');
       return;
     }
     if (teamNames.length < format.minTeams) {
@@ -118,7 +120,7 @@ export default function AdminTeamsEditor({ tournament, user, onClose }) {
     setSaving(true);
     try {
       await setDoc(
-        doc(db, 'tournaments', tournament.id),
+        tournamentDoc(clubId, tournament.id),
         {
           teams: teamNames,
           scheduleFormat: formatId,
@@ -279,12 +281,14 @@ export default function AdminTeamsEditor({ tournament, user, onClose }) {
       <button
         type="button"
         onClick={handleSave}
-        disabled={saving || !user || !preview || duplicate}
+        disabled={saving || !isClubAdmin || !preview || duplicate}
         className="w-full bg-emerald-600 text-white px-4 py-3 rounded-lg font-semibold disabled:opacity-50 min-h-[48px]"
       >
         {saving ? 'Saving…' : 'Save teams and rebuild match list'}
       </button>
-      {!user && <p className="text-sm text-amber-700">Log in to edit teams.</p>}
+      {!isClubAdmin && (
+        <p className="text-sm text-amber-700">Only a club admin can edit teams.</p>
+      )}
     </div>
   );
 }

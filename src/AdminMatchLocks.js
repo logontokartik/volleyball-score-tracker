@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { setDoc } from 'firebase/firestore';
+import { tournamentDoc } from './clubPaths';
+import { useClub } from './ClubContext';
 import {
   buildDefaultScheduleSlots,
   formatMatchHeadingForScores,
@@ -20,7 +21,8 @@ function firestoreRulesHint(err) {
   return message || 'Save failed.';
 }
 
-export default function AdminMatchLocks({ tournament, user, onClose }) {
+export default function AdminMatchLocks({ tournament, onClose }) {
+  const { clubId, isClubAdmin } = useClub();
   const scores = tournament.scores || [];
   const scheduleSlots = useMemo(() => {
     if (tournament.scheduleSlots?.length) return tournament.scheduleSlots;
@@ -47,7 +49,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
   }, [scores]);
 
   const saveScores = useCallback(async (gameId) => {
-    if (!user) return;
+    if (!isClubAdmin) return;
     const sets = localSets[gameId];
     if (!sets) return;
     setSavingGame(gameId);
@@ -56,7 +58,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
       const next = scores.map((m) =>
         m.game === gameId ? { ...m, sets } : m
       );
-      await setDoc(doc(db, 'tournaments', tournament.id), { scores: next }, { merge: true });
+      await setDoc(tournamentDoc(clubId, tournament.id), { scores: next }, { merge: true });
       setLocalSets((prev) => {
         const { [gameId]: _, ...rest } = prev;
         return rest;
@@ -66,26 +68,26 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
     } finally {
       setSavingGame(null);
     }
-  }, [user, localSets, scores, tournament.id]);
+  }, [isClubAdmin, localSets, scores, clubId, tournament.id]);
 
   const unlockMatch = useCallback(async (gameId) => {
-    if (!user) return;
+    if (!isClubAdmin) return;
     setSavingGame(gameId);
     setError('');
     try {
       const next = scores.map((m) =>
         m.game === gameId ? { ...m, completed: false } : m
       );
-      await setDoc(doc(db, 'tournaments', tournament.id), { scores: next }, { merge: true });
+      await setDoc(tournamentDoc(clubId, tournament.id), { scores: next }, { merge: true });
     } catch (e) {
       setError(firestoreRulesHint(e));
     } finally {
       setSavingGame(null);
     }
-  }, [user, scores, tournament.id]);
+  }, [isClubAdmin, scores, clubId, tournament.id]);
 
   const lockMatch = useCallback(async (gameId) => {
-    if (!user) return;
+    if (!isClubAdmin) return;
     setSavingGame(gameId);
     setError('');
     try {
@@ -94,7 +96,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
         if (m.game !== gameId) return m;
         return { ...m, completed: true, ...(pendingSets ? { sets: pendingSets } : {}) };
       });
-      await setDoc(doc(db, 'tournaments', tournament.id), { scores: next }, { merge: true });
+      await setDoc(tournamentDoc(clubId, tournament.id), { scores: next }, { merge: true });
       setLocalSets((prev) => {
         const { [gameId]: _, ...rest } = prev;
         return rest;
@@ -104,7 +106,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
     } finally {
       setSavingGame(null);
     }
-  }, [user, localSets, scores, tournament.id]);
+  }, [isClubAdmin, localSets, scores, clubId, tournament.id]);
 
   return (
     <div className="mt-4 p-4 border-2 border-amber-200 rounded-xl bg-amber-50/50 space-y-3">
@@ -125,7 +127,9 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
       </div>
 
       {error && <div className="text-red-600 text-sm">{error}</div>}
-      {!user && <p className="text-sm text-amber-800">Log in to edit matches.</p>}
+      {!isClubAdmin && (
+        <p className="text-sm text-amber-800">Only a club admin can edit matches.</p>
+      )}
 
       {scores.length === 0 ? (
         <p className="text-sm text-gray-600">No matches in this tournament.</p>
@@ -162,7 +166,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
                     {locked ? (
                       <button
                         type="button"
-                        disabled={!user || isSaving}
+                        disabled={!isClubAdmin || isSaving}
                         onClick={() => unlockMatch(match.game)}
                         className="text-xs font-medium bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-lg min-h-[36px] hover:bg-amber-200 disabled:opacity-50"
                       >
@@ -173,7 +177,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
                         {hasLocalChanges && (
                           <button
                             type="button"
-                            disabled={!user || isSaving}
+                            disabled={!isClubAdmin || isSaving}
                             onClick={() => saveScores(match.game)}
                             className="text-xs font-medium bg-blue-600 text-white px-3 py-1.5 rounded-lg min-h-[36px] hover:bg-blue-700 disabled:opacity-50"
                           >
@@ -182,7 +186,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
                         )}
                         <button
                           type="button"
-                          disabled={!user || isSaving}
+                          disabled={!isClubAdmin || isSaving}
                           onClick={() => lockMatch(match.game)}
                           className="text-xs font-medium bg-green-100 border border-green-300 px-3 py-1.5 rounded-lg min-h-[36px] hover:bg-green-200 disabled:opacity-50"
                         >
@@ -215,7 +219,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
                               min={0}
                               max={cap}
                               value={set.team1}
-                              disabled={!user}
+                              disabled={!isClubAdmin}
                               onChange={(e) =>
                                 updateLocalScore(match.game, si, 'team1', e.target.value, cap)
                               }
@@ -228,7 +232,7 @@ export default function AdminMatchLocks({ tournament, user, onClose }) {
                               min={0}
                               max={cap}
                               value={set.team2}
-                              disabled={!user}
+                              disabled={!isClubAdmin}
                               onChange={(e) =>
                                 updateLocalScore(match.game, si, 'team2', e.target.value, cap)
                               }

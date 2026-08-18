@@ -589,12 +589,12 @@ export default function TrackerView() {
         )}
       </div>
 
-      {/* The dialog's `user` prop enables the score inputs, so it means "may score". */}
       {openMatch && (
         <MatchScoreDialog
           match={openMatch}
           scheduleSlots={scheduleSlots}
-          user={canScore}
+          canScore={canScore}
+          signedIn={Boolean(user)}
           onClose={() => setOpenGame(null)}
           onAdjust={adjustScoreDelta}
           onInput={updateScoreInput}

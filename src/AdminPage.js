@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import {
-  collection,
-  deleteDoc,
-  deleteField,
-  doc,
-  onSnapshot,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { deleteDoc, deleteField, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { clubDoc, tournamentDoc, tournamentsCol } from './clubPaths';
+import { useClub } from './ClubContext';
 import {
   DEFAULT_SCHEDULE_FORMAT,
   SCHEDULE_FORMATS,
@@ -22,8 +15,6 @@ import AdminMatchLocks from './AdminMatchLocks';
 import AdminTeamsEditor from './AdminTeamsEditor';
 import ConfirmDialog from './components/ConfirmDialog';
 
-const SETTINGS_REF = doc(db, 'settings', 'app');
-
 function firestoreRulesHint(err) {
   const code = err?.code;
   const message = typeof err?.message === 'string' ? err.message : '';
@@ -32,7 +23,7 @@ function firestoreRulesHint(err) {
     message.toLowerCase().includes('permission') ||
     message.toLowerCase().includes('insufficient')
   ) {
-    return 'Firestore blocked this request. In Firebase Console → Firestore → Rules, allow access to settings and tournaments (copy from firestore.rules in this project), then click Publish. Signing in does not bypass rules.';
+    return 'Firestore blocked this request. Writing here needs an admin membership in this club (clubs/{clubId}/members/{uid} with role "admin"). If the rules themselves are out of date, publish firestore.rules from this project in Firebase Console → Firestore → Rules. Signing in does not bypass rules.';
   }
   return message || 'Request failed.';
 }
@@ -41,9 +32,13 @@ function emptyTeamRow() {
   return { id: crypto.randomUUID(), name: '' };
 }
 
-export default function AdminPage({ user, onNavigateScores }) {
+export default function AdminPage({ onNavigateScores }) {
+  // The club doc is already subscribed live by ClubContext, so the active pointer is read
+  // from there rather than opening a second listener on the same document.
+  const { clubId, club, isClubAdmin } = useClub();
+  const activeTournamentId = club?.activeTournamentId || null;
+
   const [tournaments, setTournaments] = useState([]);
-  const [activeTournamentId, setActiveTournamentId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -67,31 +62,10 @@ export default function AdminPage({ user, onNavigateScores }) {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    let settingsReady = false;
-    let listReady = false;
-    const tryClearListenError = () => {
-      if (settingsReady && listReady) setListenError('');
-    };
-
-    const unsubSettings = onSnapshot(
-      SETTINGS_REF,
-      (snap) => {
-        if (snap.exists()) {
-          setActiveTournamentId(snap.data().activeTournamentId || null);
-        } else {
-          setActiveTournamentId(null);
-        }
-        settingsReady = true;
-        tryClearListenError();
-      },
-      (err) => {
-        setListenError(firestoreRulesHint(err));
-        setLoading(false);
-      }
-    );
+    if (!clubId) return undefined;
 
     const unsubList = onSnapshot(
-      collection(db, 'tournaments'),
+      tournamentsCol(clubId),
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         list.sort((a, b) => {
@@ -102,8 +76,7 @@ export default function AdminPage({ user, onNavigateScores }) {
         });
         setTournaments(list);
         setLoading(false);
-        listReady = true;
-        tryClearListenError();
+        setListenError('');
       },
       (err) => {
         setListenError(firestoreRulesHint(err));
@@ -111,11 +84,8 @@ export default function AdminPage({ user, onNavigateScores }) {
       }
     );
 
-    return () => {
-      unsubSettings();
-      unsubList();
-    };
-  }, []);
+    return unsubList;
+  }, [clubId]);
 
   const addTeamRow = () => setTeamRows((rows) => [...rows, emptyTeamRow()]);
   const removeTeamRow = (id) =>
@@ -153,7 +123,7 @@ export default function AdminPage({ user, onNavigateScores }) {
     const scores = matchesWithEmptySets(scheduled, spm);
     const scheduleSlots = buildDefaultScheduleSlots(scores);
 
-    const id = doc(collection(db, 'tournaments')).id;
+    const id = doc(tournamentsCol(clubId)).id;
     const payload = {
       name: formName.trim(),
       teams: teamNames,
@@ -168,15 +138,15 @@ export default function AdminPage({ user, onNavigateScores }) {
       createdAt: serverTimestamp(),
     };
 
-    if (!user) {
-      setError('Log in to create a tournament.');
+    if (!isClubAdmin) {
+      setError('Only a club admin can create a tournament.');
       return;
     }
 
     setSaving(true);
     try {
-      await setDoc(doc(db, 'tournaments', id), payload);
-      await setDoc(SETTINGS_REF, { activeTournamentId: id }, { merge: true });
+      await setDoc(tournamentDoc(clubId, id), payload);
+      await setDoc(clubDoc(clubId), { activeTournamentId: id }, { merge: true });
       setFormName('');
       setTeamRows([emptyTeamRow(), emptyTeamRow(), emptyTeamRow(), emptyTeamRow()]);
       setSetsPerMatch(3);
@@ -192,7 +162,7 @@ export default function AdminPage({ user, onNavigateScores }) {
   };
 
   const handleDelete = async () => {
-    if (!pendingDelete || !user) return;
+    if (!pendingDelete || !isClubAdmin) return;
     setError('');
     setDeleting(true);
     try {
@@ -200,9 +170,9 @@ export default function AdminPage({ user, onNavigateScores }) {
       // to disappear. deleteField() rather than null — TrackerView treats a missing
       // id as "no tournament", but would try to load the literal string "null".
       if (pendingDelete.id === activeTournamentId) {
-        await setDoc(SETTINGS_REF, { activeTournamentId: deleteField() }, { merge: true });
+        await setDoc(clubDoc(clubId), { activeTournamentId: deleteField() }, { merge: true });
       }
-      await deleteDoc(doc(db, 'tournaments', pendingDelete.id));
+      await deleteDoc(tournamentDoc(clubId, pendingDelete.id));
       setEditingScheduleForId((cur) => (cur === pendingDelete.id ? null : cur));
       setEditingLocksForId((cur) => (cur === pendingDelete.id ? null : cur));
       setEditingTeamsForId((cur) => (cur === pendingDelete.id ? null : cur));
@@ -215,14 +185,14 @@ export default function AdminPage({ user, onNavigateScores }) {
   };
 
   const handleActivate = async (id) => {
-    if (!user) {
-      setError('Log in to switch the active tournament.');
+    if (!isClubAdmin) {
+      setError('Only a club admin can switch the active tournament.');
       return;
     }
     setError('');
     setSaving(true);
     try {
-      await setDoc(SETTINGS_REF, { activeTournamentId: id }, { merge: true });
+      await setDoc(clubDoc(clubId), { activeTournamentId: id }, { merge: true });
       if (onNavigateScores) onNavigateScores();
     } catch (e) {
       setError(firestoreRulesHint(e));
@@ -394,13 +364,15 @@ export default function AdminPage({ user, onNavigateScores }) {
         <button
           type="button"
           onClick={handleCreateTournament}
-          disabled={saving || !user}
+          disabled={saving || !isClubAdmin}
           className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Create and set active'}
         </button>
-        {!user && (
-          <p className="text-sm text-amber-700 mt-2">Log in to create or switch tournaments.</p>
+        {!isClubAdmin && (
+          <p className="text-sm text-amber-700 mt-2">
+            Only a club admin can create or switch tournaments.
+          </p>
         )}
       </div>
 
@@ -450,7 +422,7 @@ export default function AdminPage({ user, onNavigateScores }) {
                     <button
                       type="button"
                       onClick={() => handleActivate(t.id)}
-                      disabled={saving || !user || t.id === activeTournamentId}
+                      disabled={saving || !isClubAdmin || t.id === activeTournamentId}
                       className="text-sm bg-gray-100 border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-200 disabled:opacity-50"
                     >
                       Set active
@@ -458,7 +430,7 @@ export default function AdminPage({ user, onNavigateScores }) {
                     <button
                       type="button"
                       onClick={() => setPendingDelete(t)}
-                      disabled={saving || !user}
+                      disabled={saving || !isClubAdmin}
                       className="text-sm bg-white border border-red-300 text-red-700 px-3 py-2 rounded-lg min-h-[44px] hover:bg-red-50 disabled:opacity-50"
                     >
                       Delete
@@ -469,7 +441,6 @@ export default function AdminPage({ user, onNavigateScores }) {
                   <AdminTeamsEditor
                     key={`teams-${t.id}`}
                     tournament={t}
-                    user={user}
                     onClose={() => setEditingTeamsForId(null)}
                   />
                 )}
@@ -477,7 +448,6 @@ export default function AdminPage({ user, onNavigateScores }) {
                   <ScheduleEditor
                     key={t.id}
                     tournament={t}
-                    user={user}
                     onClose={() => setEditingScheduleForId(null)}
                     onSaved={() => {}}
                   />
@@ -485,7 +455,6 @@ export default function AdminPage({ user, onNavigateScores }) {
                 {editingLocksForId === t.id && (
                   <AdminMatchLocks
                     tournament={t}
-                    user={user}
                     onClose={() => setEditingLocksForId(null)}
                   />
                 )}
