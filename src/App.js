@@ -5,6 +5,7 @@ import ArchiveHub from './ArchiveHub';
 import CompletedTournamentsView from './CompletedTournamentsView';
 import Login from './Login';
 import MyClubsPage from './MyClubsPage';
+import SuperAdminPage from './SuperAdminPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ClubProvider, useClub, useClubOptional } from './ClubContext';
 import { isSuperAdmin } from './roles';
@@ -137,11 +138,6 @@ function PlainLayout() {
   );
 }
 
-// Placeholder — a later task fills in the super-admin console.
-function SuperAdminPage() {
-  return <PageMessage title="Super admin">Club administration will live here.</PageMessage>;
-}
-
 function NotFoundPage() {
   return <PageMessage title="Page not found">That address does not exist.</PageMessage>;
 }
@@ -171,6 +167,12 @@ export default function App() {
             </Route>
 
             <Route element={<PlainLayout />}>
+              {/* Both pages gate themselves on the signed-in account — SiteNav hides
+                  their links, but a hidden link is not a gate and the URL is guessable.
+                  MyClubsPage asks a signed-out visitor to sign in; SuperAdminPage shows
+                  a "not available" page to anyone who is not a super admin. Neither is
+                  security: firestore.rules is, and it rejects the reads and writes
+                  behind these pages no matter what React decides to render. */}
               <Route path="/clubs" element={<MyClubsPage />} />
               <Route path="/super" element={<SuperAdminPage />} />
               <Route path="*" element={<NotFoundPage />} />

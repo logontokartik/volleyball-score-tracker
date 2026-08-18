@@ -25,11 +25,35 @@ npm i @firebase/rules-unit-testing firebase firebase-tools
   "RULES_FILE=$PWD/../firestore.rules node rules.test.mjs"
 ```
 
+Expect `59 passed, 0 failed`.
+
+`migration.test.mjs` is the end-to-end test of the legacy → clubs migration. It seeds an
+emulator with realistic pre-multi-tenant data (three `tournaments/*` documents,
+`settings/app` pointing at one of them, `settings/archiveSnapshot`), then runs
+`src/migrateToClubs.js` — the same module the `/super` console calls, not a copy —
+as the super admin against the real rules. It asserts that the club, slug and founding
+admin documents are written in one batch; that every tournament lands under the club at
+its original id with identical content; that `activeTournamentId` survives and still
+resolves; that the archive snapshot moved; that the legacy documents are untouched; that
+a second run changes nothing (idempotency); and that a non-super-admin is rejected by the
+rules.
+
+```bash
+./node_modules/.bin/firebase emulators:exec --only firestore --project demo-clubs \
+  "RULES_FILE=$PWD/../firestore.rules node --import ./register-hooks.mjs migration.test.mjs"
+```
+
+Expect `37 passed, 0 failed`.
+
+The `--import ./register-hooks.mjs` is not optional: it installs `cra-resolve-hook.mjs`,
+which lets plain node import the app's own `src/*.js` (extensionless relative imports,
+and one shared copy of `firebase` — the repo root has v9, this directory has v12, and a
+v12 Firestore handed to v9's `doc()` is rejected). The hook is a test-harness concern
+only and has no effect on the app build.
+
 The rules file is tested as-is — the super admin is hardcoded in `superAdmins()`, so
 there is nothing to substitute in first (older revisions `sed`-ed an admin email list
 into a throwaway copy; that no longer applies).
-
-Expect `59 passed, 0 failed`.
 
 ## Indexes
 
