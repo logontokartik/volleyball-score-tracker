@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { db } from './firebase';
+import { useAuth } from './AuthContext';
+import { isAdmin } from './roles';
 import archiveDataBundled from './data/archiveData.json';
 import { fetchArchiveFromSheets } from './archiveRefreshUtils';
 import {
@@ -129,12 +130,7 @@ export default function ArchiveHub() {
   const [asking, setAsking] = useState(false);
   const askAbortRef = useRef(null);
 
-  // Auth
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, setUser);
-    return unsub;
-  }, []);
+  const { user } = useAuth();
 
   // Live archive data from Firestore (falls back to bundled JSON if not yet refreshed)
   const [firestoreArchive, setFirestoreArchive] = useState(null);
@@ -302,8 +298,10 @@ export default function ArchiveHub() {
           </div>
         </div>
 
-        {/* Admin refresh panel */}
-        {user && (
+        {/* Admin refresh panel. This writes settings/archiveSnapshot, which
+            firestore.rules restricts to admins — a scorer must not be shown a
+            button that can only fail. */}
+        {isAdmin(user) && (
           <div className="rounded-2xl border border-slate-700 bg-slate-800/60 px-5 py-4 mb-2 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white">Refresh archive from Google Sheets</p>

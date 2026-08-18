@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import TrackerView from './TrackerView';
 import ArchiveHub from './ArchiveHub';
 import CompletedTournamentsView from './CompletedTournamentsView';
+import Login from './Login';
+import { AuthProvider } from './AuthContext';
 
 function SiteNav() {
   return (
@@ -52,6 +54,11 @@ function SiteNav() {
             Tournament archive
           </NavLink>
         </nav>
+        {/* Sign-in lives in the nav so it is reachable from every page, not just the
+            tracker. On a phone it wraps onto its own full-width row. */}
+        <div className="w-full sm:w-auto flex justify-start sm:justify-end">
+          <Login />
+        </div>
       </div>
     </header>
   );
@@ -59,15 +66,17 @@ function SiteNav() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-slate-950">
-        <SiteNav />
-        <Routes>
-          <Route path="/" element={<TrackerView />} />
-          <Route path="/completed" element={<CompletedTournamentsView />} />
-          <Route path="/archive" element={<ArchiveHub />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="min-h-screen bg-slate-950">
+          <SiteNav />
+          <Routes>
+            <Route path="/" element={<TrackerView />} />
+            <Route path="/completed" element={<CompletedTournamentsView />} />
+            <Route path="/archive" element={<ArchiveHub />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

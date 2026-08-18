@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
-import { auth, db } from './firebase';
-import Login from './Login';
+import { db } from './firebase';
+import { useAuth } from './AuthContext';
 import AdminPage from './AdminPage';
 import ScheduleTable from './ScheduleTable';
 import FinalsView from './FinalsView';
@@ -23,7 +22,7 @@ import {
 const SETTINGS_REF = doc(db, 'settings', 'app');
 
 export default function TrackerView() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [page, setPage] = useState('scores');
   const [scoresTab, setScoresTab] = useState('schedule');
   const [activeTournamentId, setActiveTournamentId] = useState(null);
@@ -35,10 +34,6 @@ export default function TrackerView() {
   const [openGame, setOpenGame] = useState(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-
     const unsubSettings = onSnapshot(SETTINGS_REF, (snap) => {
       if (snap.exists()) {
         setActiveTournamentId(snap.data().activeTournamentId || null);
@@ -47,10 +42,7 @@ export default function TrackerView() {
       }
     });
 
-    return () => {
-      unsubscribeAuth();
-      unsubSettings();
-    };
+    return unsubSettings;
   }, []);
 
   useEffect(() => {
@@ -263,7 +255,6 @@ export default function TrackerView() {
               </button>
             )}
           </div>
-          <Login user={user} setUser={setUser} />
         </header>
 
         {page === 'admin' && admin && (
