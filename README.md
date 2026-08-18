@@ -119,12 +119,26 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 Redeploy after adding them — env vars are read at invocation, but the deploy must
 exist for the function to pick up the new configuration.
 
-Firestore needs **both** halves published, and neither implies the other:
+Firestore needs **both** halves published, and neither implies the other. Run these on
+your own machine, **from the repository root** — `firebase.json` and `.firebaserc` there
+tell the CLI which files to publish and which project to publish them to:
 
 ```bash
+npm install -g firebase-tools   # once
+firebase login                  # once, opens a browser
+cd /path/to/volleyball-score-tracker
+
 firebase deploy --only firestore:rules
 firebase deploy --only firestore:indexes
 ```
+
+This is a Firebase deploy, not a Vercel one — it publishes `firestore.rules` and
+`firestore.indexes.json` to the `volleyball-score-tracker` Firebase project. It is
+entirely separate from deploying the app itself, which Vercel does from git.
+
+Index builds are asynchronous: `firestore:indexes` returns before the indexes are ready,
+and the collection-group queries keep failing until they finish. Watch
+**Firebase Console → Firestore → Indexes** for them to go from *Building* to *Enabled*.
 
 Without the indexes the club-scoped queries fail at runtime with a "requires an index"
 error; without the rules the writes are refused.
