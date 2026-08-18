@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { onSnapshot, setDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
-import { db } from './firebase';
 import { useAuth } from './AuthContext';
+import { useClub } from './ClubContext';
+import { tournamentDoc } from './clubPaths';
 import AdminPage from './AdminPage';
 import ScheduleTable from './ScheduleTable';
 import FinalsView from './FinalsView';
 import MatchScoreDialog from './MatchScoreDialog';
 import { Card, CardContent } from './components/ui/card';
 import { isTournamentComplete } from './CompletedTournamentsView';
-import { isAdmin } from './roles';
 import {
   buildDefaultScheduleSlots,
   calculateLeaderboard,
@@ -19,51 +19,49 @@ import {
   orderScoresBySchedule,
 } from './tournamentUtils';
 
-const SETTINGS_REF = doc(db, 'settings', 'app');
-
 export default function TrackerView() {
-  const { user } = useAuth();
+  // Three different questions, three different answers: `user` is "is anyone signed in",
+  // `canScore` is "may this account enter scores in THIS club", `isClubAdmin` is
+  // "may it administer this club". They used to be the same thing.
+  const { user, loading: authLoading } = useAuth();
+  const { clubId, slug, club, canScore, isClubAdmin } = useClub();
+  const activeTournamentId = club?.activeTournamentId || null;
+
   const [page, setPage] = useState('scores');
   const [scoresTab, setScoresTab] = useState('schedule');
-  const [activeTournamentId, setActiveTournamentId] = useState(null);
   const [tournament, setTournament] = useState(null);
   const [scores, setScores] = useState([]);
   const [teams, setTeams] = useState([]);
   const [finalsMatches, setFinalsMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Only the tournament document's own load state. Auth readiness (authLoading) and
+  // club readiness (ClubLayout's gate) are separate signals; keeping the names distinct
+  // is what stops them being conflated again.
+  const [tournamentLoading, setTournamentLoading] = useState(true);
   const [openGame, setOpenGame] = useState(null);
+  // Which (club, tournament) the data currently in `scores`/`finalsMatches` came from.
+  // Set in the same snapshot callback that sets them, so the three can never disagree.
+  const [loadedFrom, setLoadedFrom] = useState({ clubId: null, tournamentId: null });
 
   useEffect(() => {
-    const unsubSettings = onSnapshot(SETTINGS_REF, (snap) => {
-      if (snap.exists()) {
-        setActiveTournamentId(snap.data().activeTournamentId || null);
-      } else {
-        setActiveTournamentId(null);
-      }
-    });
-
-    return unsubSettings;
-  }, []);
-
-  useEffect(() => {
-    if (!activeTournamentId) {
+    if (!clubId || !activeTournamentId) {
       setTournament(null);
       setScores([]);
       setTeams([]);
       setFinalsMatches([]);
-      setLoading(false);
+      setLoadedFrom({ clubId: null, tournamentId: null });
+      setTournamentLoading(false);
       return undefined;
     }
 
-    setLoading(true);
-    const ref = doc(db, 'tournaments', activeTournamentId);
-    const unsub = onSnapshot(ref, (snap) => {
+    setTournamentLoading(true);
+    const unsub = onSnapshot(tournamentDoc(clubId, activeTournamentId), (snap) => {
       if (!snap.exists()) {
         setTournament(null);
         setScores([]);
         setTeams([]);
         setFinalsMatches([]);
-        setLoading(false);
+        setLoadedFrom({ clubId: null, tournamentId: null });
+        setTournamentLoading(false);
         return;
       }
       const data = snap.data();
@@ -71,46 +69,45 @@ export default function TrackerView() {
       setScores(data.scores || []);
       setTeams(data.teams || []);
       setFinalsMatches(data.finalsMatches || []);
-      setLoading(false);
+      setLoadedFrom({ clubId, tournamentId: snap.id });
+      setTournamentLoading(false);
     }, () => {
-      setLoading(false);
+      setTournamentLoading(false);
     });
 
     return () => unsub();
-  }, [activeTournamentId]);
+  }, [clubId, activeTournamentId]);
 
-  // `scores` and `finalsMatches` are component state that outlives a tournament switch.
-  // When activeTournamentId changes, these effects re-run before the new document's
-  // snapshot has replaced that state — and `loading` is still false in this render, since
-  // the subscribe effect's setLoading(true) only takes effect on the next one. Writing
-  // here would copy the previous tournament's results into the newly activated one, so
-  // hold off until the loaded document is actually the active tournament.
+  // `scores` and `finalsMatches` are component state that outlives both a tournament
+  // switch and a club switch. When activeTournamentId or clubId changes, these effects
+  // re-run before the new document's snapshot has replaced that state — and
+  // `tournamentLoading` is still false in this render, since the subscribe effect's
+  // setTournamentLoading(true) only takes effect on the next one. Writing here would
+  // copy one tournament's results into another — across clubs, one club's results into
+  // a different club's tournament — so hold off until the data in state provably came
+  // from the club and tournament we are about to write to.
   const loadedTournamentIsActive =
-    Boolean(activeTournamentId) && tournament?.id === activeTournamentId;
+    Boolean(clubId) &&
+    Boolean(activeTournamentId) &&
+    loadedFrom.clubId === clubId &&
+    loadedFrom.tournamentId === activeTournamentId &&
+    tournament?.id === activeTournamentId;
 
   useEffect(() => {
-    if (!user || loading || !loadedTournamentIsActive) return undefined;
+    if (!canScore || tournamentLoading || !loadedTournamentIsActive) return undefined;
     const saveScores = async () => {
-      await setDoc(
-        doc(db, 'tournaments', activeTournamentId),
-        { scores },
-        { merge: true }
-      );
+      await setDoc(tournamentDoc(clubId, activeTournamentId), { scores }, { merge: true });
     };
     saveScores();
-  }, [scores, user, loading, activeTournamentId, loadedTournamentIsActive]);
+  }, [scores, canScore, tournamentLoading, clubId, activeTournamentId, loadedTournamentIsActive]);
 
   useEffect(() => {
-    if (!user || loading || !loadedTournamentIsActive) return undefined;
+    if (!canScore || tournamentLoading || !loadedTournamentIsActive) return undefined;
     const saveFinalsMatches = async () => {
-      await setDoc(
-        doc(db, 'tournaments', activeTournamentId),
-        { finalsMatches },
-        { merge: true }
-      );
+      await setDoc(tournamentDoc(clubId, activeTournamentId), { finalsMatches }, { merge: true });
     };
     saveFinalsMatches();
-  }, [finalsMatches, user, loading, activeTournamentId, loadedTournamentIsActive]);
+  }, [finalsMatches, canScore, tournamentLoading, clubId, activeTournamentId, loadedTournamentIsActive]);
 
   const scheduleSlots =
     tournament?.scheduleSlots?.length > 0
@@ -170,7 +167,7 @@ export default function TrackerView() {
   // whether to close or to stay open on a dismissed confirm.
   const markMatchComplete = useCallback(
     (game) => {
-      if (!user) return false;
+      if (!canScore) return false;
       if (
         !window.confirm(
           'Mark this game complete? Scores will be locked until an admin unlocks them under Admin → Locks.'
@@ -183,18 +180,18 @@ export default function TrackerView() {
       );
       return true;
     },
-    [user]
+    [canScore]
   );
 
   const toggleMatchPhase = useCallback((game) => {
-    if (!user) return;
+    if (!canScore) return;
     setScores((prev) =>
       prev.map((m) => {
         if (m.game !== game || m.completed) return m;
         return { ...m, phase: m.phase === 'finals' ? 'pool' : 'finals' };
       })
     );
-  }, [user]);
+  }, [canScore]);
 
   const leaderboard = calculateLeaderboard(
     scores,
@@ -222,12 +219,23 @@ export default function TrackerView() {
     if (openGame && !openMatch) setOpenGame(null);
   }, [openGame, openMatch]);
 
-  // Admin is for admin accounts only. Falling back to Scores when that stops being
-  // true covers both logging out and signing back in as a scorer.
-  const admin = isAdmin(user);
+  // Admin is for admins of THIS club only. Falling back to Scores when that stops being
+  // true covers logging out, signing back in as a scorer, and moving to a club where
+  // this account is not an admin.
+  const admin = isClubAdmin;
   useEffect(() => {
     if (!admin) setPage('scores');
   }, [admin]);
+
+  // Until Firebase has replied once, `user` is null and so is every role derived from
+  // it. Rendering the signed-out view here would show an admin "log in to score" and
+  // no Admin tab for a few hundred milliseconds, then flip. (Club readiness needs no
+  // check: ClubLayout's gate withholds this route until the club has resolved.)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50/80 p-6 text-center text-gray-600">Loading…</div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/80 pb-8 sm:pb-6">
@@ -258,16 +266,20 @@ export default function TrackerView() {
         </header>
 
         {page === 'admin' && admin && (
-          <AdminPage user={user} onNavigateScores={() => setPage('scores')} />
+          <AdminPage
+            user={user}
+            clubId={clubId}
+            onNavigateScores={() => setPage('scores')}
+          />
         )}
 
         {page === 'scores' && (
           <>
-            {loading && (
+            {tournamentLoading && (
               <div className="p-6 text-center text-gray-600">Loading tournament…</div>
             )}
 
-            {!loading && !activeTournamentId && (
+            {!tournamentLoading && !activeTournamentId && (
               <Card>
                 <CardContent className="p-6 text-center text-gray-700">
                   <p className="mb-3">
@@ -288,7 +300,7 @@ export default function TrackerView() {
               </Card>
             )}
 
-            {!loading && activeTournamentId && !tournament && (
+            {!tournamentLoading && activeTournamentId && !tournament && (
               <Card>
                 <CardContent className="p-6 text-center text-amber-800">
                   Active tournament was removed. Choose another in Admin.
@@ -296,7 +308,7 @@ export default function TrackerView() {
               </Card>
             )}
 
-            {!loading && tournament && isTournamentComplete(tournament) && (
+            {!tournamentLoading && tournament && isTournamentComplete(tournament) && (
               <div className="grid gap-4">
                 <div className="rounded-2xl border-2 border-gray-200 bg-white p-8 text-center shadow-sm">
                   <div className="text-5xl mb-4">🏐</div>
@@ -305,7 +317,7 @@ export default function TrackerView() {
                     <span className="font-medium text-gray-700">{tournament.name}</span> has concluded.
                   </p>
                   <Link
-                    to="/completed"
+                    to={`/c/${slug}/completed`}
                     className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-colors"
                   >
                     View completed tournaments →
@@ -314,7 +326,7 @@ export default function TrackerView() {
               </div>
             )}
 
-            {!loading && tournament && !isTournamentComplete(tournament) && (
+            {!tournamentLoading && tournament && !isTournamentComplete(tournament) && (
               <>
                 <div className="text-center px-1">
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.name}</h1>
@@ -469,12 +481,14 @@ export default function TrackerView() {
                   </Card>
                 )}
 
+                {/* FinalsView's `user` prop is only ever read as "may edit scores",
+                    which is now membership in this club rather than being signed in. */}
                 {scoresTab === 'finals' && (
                   <FinalsView
                     teams={teams}
                     finalsMatches={finalsMatches}
                     setFinalsMatches={setFinalsMatches}
-                    user={user}
+                    user={canScore}
                     setsPerMatch={tournament?.setsPerMatch ?? 3}
                   />
                 )}
@@ -482,9 +496,11 @@ export default function TrackerView() {
                 {scoresTab === 'scores' && (
                   <div className="grid gap-4">
                     <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-3 text-center">
-                      {user
+                      {canScore
                         ? 'Tap a game to open it and enter the score. It reopens wherever you left off, so you can close it mid-game.'
-                        : 'Tap a game to see its score. Log in to enter or adjust scores.'}
+                        : user
+                          ? 'Tap a game to see its score. Your account has no scoring access to this club — ask a club admin for an invite.'
+                          : 'Tap a game to see its score. Log in to enter or adjust scores.'}
                     </p>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {orderedScores.map((match) => {
@@ -573,11 +589,12 @@ export default function TrackerView() {
         )}
       </div>
 
+      {/* The dialog's `user` prop enables the score inputs, so it means "may score". */}
       {openMatch && (
         <MatchScoreDialog
           match={openMatch}
           scheduleSlots={scheduleSlots}
-          user={user}
+          user={canScore}
           onClose={() => setOpenGame(null)}
           onAdjust={adjustScoreDelta}
           onInput={updateScoreInput}

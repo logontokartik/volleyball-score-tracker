@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from './firebase';
+import { onSnapshot } from 'firebase/firestore';
+import { useClub } from './ClubContext';
+import { tournamentsCol } from './clubPaths';
 import { calculateLeaderboard, setsNeededToWin } from './tournamentUtils';
 import { Card, CardContent } from './components/ui/card';
 
@@ -266,13 +267,20 @@ function TournamentCard({ tournament, onClick }) {
 }
 
 export default function CompletedTournamentsView() {
+  const { clubId } = useClub();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
+    if (!clubId) return undefined;
+    // A club switch must not leave the previous club's history on screen while the
+    // new subscription's first snapshot is in flight.
+    setTournaments([]);
+    setSelected(null);
+    setLoading(true);
     const unsub = onSnapshot(
-      collection(db, 'tournaments'),
+      tournamentsCol(clubId),
       (snap) => {
         const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         const completed = all
@@ -284,7 +292,7 @@ export default function CompletedTournamentsView() {
       () => setLoading(false)
     );
     return unsub;
-  }, []);
+  }, [clubId]);
 
   return (
     <div className="min-h-screen bg-gray-50/80 pb-8">
