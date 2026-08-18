@@ -5,6 +5,25 @@ import { auth, db, signInWithGoogle, signOutUser } from './firebase';
 
 const AuthContext = createContext(null);
 
+/**
+ * Sign-in failures worth naming. The three configuration ones are the whole reason this
+ * map exists: they look identical to a transient error in the UI, but retrying can never
+ * fix them — each needs a change in the Firebase console.
+ */
+const SIGN_IN_ERRORS = {
+  'auth/popup-blocked':
+    'Your browser blocked the sign-in popup. Allow popups for this site and try again.',
+  'auth/unauthorized-domain':
+    'This site\u2019s domain is not authorised for sign-in. Add it under Firebase Console \u2192 Authentication \u2192 Settings \u2192 Authorized domains.',
+  'auth/operation-not-allowed':
+    'Google sign-in is not enabled for this Firebase project. Enable it under Authentication \u2192 Sign-in method.',
+  'auth/configuration-not-found':
+    'Google sign-in is not configured for this Firebase project. Enable it under Authentication \u2192 Sign-in method.',
+  'auth/network-request-failed':
+    'Could not reach Google. Check your connection and try again.',
+  'auth/internal-error': 'Google sign-in returned an internal error. Try again.',
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   // `loading` is true until Firebase has replied once. Without it every page would
@@ -28,14 +47,18 @@ export function AuthProvider({ children }) {
     try {
       await signInWithGoogle();
     } catch (err) {
+      // Every branch below keeps err.code, because the generic "try again" wording is
+      // useless for the failures that are actually configuration: they will never come
+      // right by retrying, and without the code there is nothing to search for.
+      const code = err?.code || 'unknown';
+      console.error('[auth] sign-in failed:', code, err);
+
       // Closing or blocking the popup is a normal thing to do, not a failure worth
       // shouting about.
-      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         setError(null);
-      } else if (err?.code === 'auth/popup-blocked') {
-        setError('Your browser blocked the sign-in popup. Allow popups for this site and try again.');
       } else {
-        setError('Sign-in failed. Please try again.');
+        setError(`${SIGN_IN_ERRORS[code] || 'Sign-in failed.'} (${code})`);
       }
     }
   }, []);

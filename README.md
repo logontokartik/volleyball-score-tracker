@@ -72,6 +72,18 @@ creation and slug squatting — is covered by tests that run against the Firesto
 emulator. See [`firestore-tests/`](firestore-tests/), and re-run them after touching
 `firestore.rules`.
 
+### If Google sign-in fails
+
+The error now carries Firebase's own code in brackets, and the raw error is logged to the
+browser console as `[auth] sign-in failed:`. The three that look like transient failures
+but are actually configuration — retrying will never fix them:
+
+| Code | Fix |
+| --- | --- |
+| `auth/unauthorized-domain` | The site's domain is not on Firebase's allow-list. **Firebase Console → Authentication → Settings → Authorized domains → Add domain**, and add the Vercel domain. Only `localhost`, `<project>.firebaseapp.com` and `<project>.web.app` are there by default, so a Vercel deployment always needs adding. Preview deployments get their own domains too — add the stable production one, and `vercel.app` will not cover the rest. |
+| `auth/operation-not-allowed` | Google is not enabled as a provider. **Authentication → Sign-in method → Google → Enable.** |
+| `auth/configuration-not-found` | Same fix as above; usually means the provider was never configured. |
+
 ## Claude-powered features
 
 Two Vercel Functions call Claude, both using the same server-side key:
