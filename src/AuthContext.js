@@ -42,7 +42,13 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     setError(null);
-    await signOutUser();
+    try {
+      await signOutUser();
+    } catch {
+      // Signing out is a network call and can fail offline. Say so, rather than
+      // leaving the badge up with no explanation for why nothing happened.
+      setError('Could not sign out. Check your connection and try again.');
+    }
   }, []);
 
   const value = useMemo(
