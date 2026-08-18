@@ -29,7 +29,7 @@ The rules file is tested as-is — the super admin is hardcoded in `superAdmins(
 there is nothing to substitute in first (older revisions `sed`-ed an admin email list
 into a throwaway copy; that no longer applies).
 
-Expect `51 passed, 0 failed`.
+Expect `59 passed, 0 failed`.
 
 ## Indexes
 

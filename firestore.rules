@@ -48,6 +48,24 @@ service cloud.firestore {
         .affectedKeys().hasOnly(['scores', 'finalsMatches']);
     }
 
+    // ---- Legacy single-tenant paths, readable by super admins only ----
+    //
+    // These are the pre-multi-tenant `tournaments/{id}` and `settings/app` +
+    // `settings/archiveSnapshot` documents. The in-app migration runs in the browser as
+    // a super admin and has to READ them in order to copy them under a club — with no
+    // rule at all they are default-deny and the migration cannot see its own source
+    // data. Read-only and super-admin-only: nothing may write them again, and no
+    // ordinary visitor can reach them even though they were once world-readable.
+    //
+    // DELETE THIS BLOCK once the migration has run and the old documents have been
+    // removed. It is scaffolding, not part of the model.
+    match /tournaments/{tournamentId} {
+      allow read: if isSuper();
+    }
+    match /settings/{docId} {
+      allow read: if isSuper();
+    }
+
     // Sign-in upserts { email, displayName, photoURL, lastSeenAt } here. Only the
     // account itself may write it, so a uid can never be impersonated or scraped.
     match /users/{uid} {

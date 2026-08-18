@@ -120,6 +120,23 @@ await t('cannot list other peoples memberships', ()=>assertFails(getDocs(query(c
 await t('my invites: collectionGroup invites where email==mine', ()=>assertSucceeds(getDocs(query(collectionGroup(invited,'invites'), where('email','==','invited@example.com')))));
 await t('cannot list other peoples invites', ()=>assertFails(getDocs(query(collectionGroup(outsid,'invites'), where('email','==','invited@example.com')))));
 
+
+console.log('\n--- legacy paths: readable by super admin only, never writable ---');
+await env.withSecurityRulesDisabled(async (c) => {
+  const d = c.firestore();
+  await setDoc(doc(d,'tournaments/legacy1'), { name:'Old Summer', scores:[] });
+  await setDoc(doc(d,'settings/app'), { activeTournamentId:'legacy1' });
+  await setDoc(doc(d,'settings/archiveSnapshot'), { masterList:[] });
+});
+await t('super reads a legacy tournament (migration source)', ()=>assertSucceeds(getDoc(doc(superA,'tournaments/legacy1'))));
+await t('super reads legacy settings/app',                    ()=>assertSucceeds(getDoc(doc(superA,'settings/app'))));
+await t('super reads the legacy archive snapshot',            ()=>assertSucceeds(getDoc(doc(superA,'settings/archiveSnapshot'))));
+await t('a club admin CANNOT read legacy data',               ()=>assertFails(getDoc(doc(gAdmin,'tournaments/legacy1'))));
+await t('the public CANNOT read legacy data any more',        ()=>assertFails(getDoc(doc(anon,'tournaments/legacy1'))));
+await t('super CANNOT write a legacy tournament',             ()=>assertFails(updateDoc(doc(superA,'tournaments/legacy1'), { name:'x' })));
+await t('super CANNOT write legacy settings',                 ()=>assertFails(updateDoc(doc(superA,'settings/app'), { activeTournamentId:'x' })));
+await t('super CANNOT delete a legacy tournament',            ()=>assertFails(deleteDoc(doc(superA,'tournaments/legacy1'))));
+
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);
