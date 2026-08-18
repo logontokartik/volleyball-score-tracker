@@ -4,6 +4,7 @@ import TrackerView from './TrackerView';
 import ArchiveHub from './ArchiveHub';
 import CompletedTournamentsView from './CompletedTournamentsView';
 import Login from './Login';
+import MyClubsPage from './MyClubsPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ClubProvider, useClub, useClubOptional } from './ClubContext';
 import { isSuperAdmin } from './roles';
@@ -136,11 +137,7 @@ function PlainLayout() {
   );
 }
 
-// Placeholders — Task 6 fills in club listing, Task 7 the super-admin console.
-function MyClubsPage() {
-  return <PageMessage title="My clubs">Your clubs will be listed here.</PageMessage>;
-}
-
+// Placeholder — a later task fills in the super-admin console.
 function SuperAdminPage() {
   return <PageMessage title="Super admin">Club administration will live here.</PageMessage>;
 }

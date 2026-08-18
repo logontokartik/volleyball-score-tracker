@@ -14,6 +14,7 @@ import ScheduleEditor from './ScheduleEditor';
 import AdminMatchLocks from './AdminMatchLocks';
 import AdminTeamsEditor from './AdminTeamsEditor';
 import ConfirmDialog from './components/ConfirmDialog';
+import ClubMembersAdmin from './ClubMembersAdmin';
 
 function firestoreRulesHint(err) {
   const code = err?.code;
@@ -60,6 +61,7 @@ export default function AdminPage({ onNavigateScores }) {
   const [editingTeamsForId, setEditingTeamsForId] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     if (!clubId) return undefined;
@@ -463,6 +465,27 @@ export default function AdminPage({ onNavigateScores }) {
           </ul>
         )}
       </div>
+
+      {/* Membership is club-wide rather than per-tournament, so it sits alongside the
+          tournament list rather than inside it. Collapsed by default — it is the one
+          screen here an admin only visits when someone joins or leaves. */}
+      {showMembers ? (
+        <ClubMembersAdmin onClose={() => setShowMembers(false)} />
+      ) : (
+        <div className="p-4 border rounded-lg bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-bold">Members</h3>
+            <p className="text-sm text-gray-600">Invite scorers and admins, or change roles.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMembers(true)}
+            className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-50"
+          >
+            Manage members
+          </button>
+        </div>
+      )}
     </div>
   );
 }
