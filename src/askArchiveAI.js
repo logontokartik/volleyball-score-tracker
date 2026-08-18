@@ -1,9 +1,11 @@
 /**
  * Client for the /api/ask-archive Vercel Function.
  *
- * No API key lives here — the browser only posts the question string. If the endpoint
- * is unavailable (running `npm start` without `vercel dev`, missing key, network
- * failure), callers fall back to the local pattern matcher in archiveInsights.js.
+ * No API key lives here — the browser only posts the question and the club id. The
+ * spreadsheet is resolved from the club document server-side, so this client cannot
+ * point the function at a sheet the club does not own. If the endpoint is unavailable
+ * (running `npm start` without `vercel dev`, missing key, network failure), callers
+ * fall back to the local pattern matcher in archiveInsights.js.
  */
 
 import { answerArchiveQuestion } from './archiveInsights';
@@ -21,17 +23,21 @@ export class ArchiveAskError extends Error {
 }
 
 /**
- * Ask Claude a question about the archive.
+ * Ask Claude a question about a club's archive.
  *
  * @param {string} question
- * @param {{ signal?: AbortSignal }} [options]
+ * @param {{ clubId: string, signal?: AbortSignal }} options
  * @returns {Promise<{ title: string, body: string, source: 'ai' }>}
  */
-export async function askArchiveAI(question, { signal } = {}) {
+export async function askArchiveAI(question, { clubId, signal } = {}) {
+  if (!clubId) {
+    throw new ArchiveAskError('No club in scope for this question.', { fallbackAvailable: false });
+  }
+
   const res = await fetch(ASK_ENDPOINT, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, clubId }),
     signal,
   });
 
@@ -61,14 +67,19 @@ export async function askArchiveAI(question, { signal } = {}) {
 
 /**
  * Ask Claude, falling back to the local pattern matcher on any failure so the panel
- * always produces something. The returned `source` says which path answered, and
+ * usually produces something. The returned `source` says which path answered, and
  * `notice` carries the reason the AI path was skipped (if any).
+ *
+ * `archiveData` must be the calling club's own data — the caller passes null when all
+ * it has is another club's bundled snapshot, and then the failure is surfaced instead
+ * of answered from the wrong history.
  */
-export async function askArchive(question, archiveData, stats, { signal } = {}) {
+export async function askArchive(question, { clubId, archiveData, stats, signal } = {}) {
   try {
-    return await askArchiveAI(question, { signal });
+    return await askArchiveAI(question, { clubId, signal });
   } catch (err) {
     if (err.name === 'AbortError') throw err;
+    if (!archiveData) throw err;
 
     const local = answerArchiveQuestion(question, archiveData, stats);
     return {

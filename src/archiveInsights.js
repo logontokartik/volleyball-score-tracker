@@ -2,8 +2,14 @@
  * Derived stats and simple natural-language answers from archive JSON (no server / no AI).
  */
 
-export const GOOGLE_SHEETS_ARCHIVE_URL =
-  'https://docs.google.com/spreadsheets/d/19YcFZs8Q-FleLOjePIgHEFFJKnWstb0xBx8zsVpC-OE/edit?gid=312171328#gid=312171328';
+/**
+ * Editing link for a club's archive spreadsheet. Returns null when the club has no
+ * `archiveSheetId` so callers render nothing rather than a link that goes nowhere.
+ */
+export function googleSheetsArchiveUrl(sheetId) {
+  if (!sheetId) return null;
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+}
 
 function normName(s) {
   return String(s || '')

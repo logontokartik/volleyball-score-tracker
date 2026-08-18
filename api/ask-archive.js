@@ -1,30 +1,41 @@
 /**
- * Vercel Function: answer free-form questions about the GVBL archive using Claude.
+ * Vercel Function: answer free-form questions about a club's archive using Claude.
  *
  * The Anthropic API key is read from the ANTHROPIC_API_KEY environment variable and
- * never leaves the server — the browser only ever posts a question string.
+ * never leaves the server — the browser only ever posts a question and a club id.
  *
- * The archive is fetched from Google Sheets here rather than accepted from the client,
- * so the prompt prefix stays byte-stable (prompt caching) and the endpoint can't be
- * used to push arbitrary context through the key.
+ * The client posts a *club id*, never a spreadsheet id: the sheet is resolved from
+ * `clubs/{clubId}.archiveSheetId` here. Accepting a sheet id would make this an open
+ * fetch proxy and let anyone spend the project's Anthropic credits summarising an
+ * arbitrary spreadsheet. The club document is world-readable, so the lookup goes
+ * through the Firestore REST API and needs no service-account credentials.
+ *
+ * The archive itself is likewise fetched here rather than accepted from the client, so
+ * the prompt prefix stays byte-stable (prompt caching) and the endpoint can't be used
+ * to push arbitrary context through the key.
  */
 
-const SHEET_ID = '19YcFZs8Q-FleLOjePIgHEFFJKnWstb0xBx8zsVpC-OE';
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'volleyball-score-tracker';
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
 const EFFORT = process.env.ANTHROPIC_EFFORT || 'medium';
 
 const ARCHIVE_TTL_MS = 10 * 60 * 1000; // re-pull the sheet at most every 10 minutes
+const CLUB_TTL_MS = 5 * 60 * 1000; // a club's archiveSheetId changes about never
 const MAX_QUESTION_CHARS = 500;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 10; // per IP per window
+
+// Firestore auto-ids are 20 chars, but ids can be chosen; this is deliberately narrow so
+// nothing that could traverse or escape the REST path ever reaches the URL.
+const CLUB_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 /* ------------------------------------------------------------------ */
 /* Google Sheets → archive shape                                       */
 /* ------------------------------------------------------------------ */
 
-function csvUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+function csvUrl(sheetId, sheetName) {
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
 /** Minimal but correct RFC-4180 CSV parser. */
@@ -63,8 +74,8 @@ function parseCsv(text) {
   return rows;
 }
 
-async function fetchSheet(sheetName) {
-  const res = await fetch(csvUrl(sheetName));
+async function fetchSheet(sheetId, sheetName) {
+  const res = await fetch(csvUrl(sheetId, sheetName));
   if (!res.ok) {
     throw new Error(`Could not fetch sheet "${sheetName}" (${res.status}). Make sure the spreadsheet is shared as "Anyone with the link can view".`);
   }
@@ -85,12 +96,12 @@ function cleanName(s) {
  * WINNERS/RUNNERS block, so the values are other players' names — feeding that to a
  * model produces confidently wrong answers.
  */
-async function fetchArchiveFromSheets() {
+async function fetchArchiveFromSheets(sheetId) {
   const [masterRows, allT, vl, mr] = await Promise.all([
-    fetchSheet('Master List'),
-    fetchSheet('All Tournaments'),
-    fetchSheet('VLookups'),
-    fetchSheet('Master Rules').catch(() => []),
+    fetchSheet(sheetId, 'Master List'),
+    fetchSheet(sheetId, 'All Tournaments'),
+    fetchSheet(sheetId, 'VLookups'),
+    fetchSheet(sheetId, 'Master Rules').catch(() => []),
   ]);
 
   /* ---------- Master List ---------- */
@@ -232,15 +243,64 @@ function computeStats(data) {
 /* Caches                                                              */
 /* ------------------------------------------------------------------ */
 
-let archiveCache = { at: 0, payload: null };
-
-async function getArchive() {
-  if (archiveCache.payload && Date.now() - archiveCache.at < ARCHIVE_TTL_MS) {
-    return archiveCache.payload;
+/** Errors whose message is safe to hand back to the caller verbatim. */
+class ClubLookupError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
   }
-  const archive = await fetchArchiveFromSheets();
+}
+
+// Both caches are keyed — one process serves every club, so a single-slot cache would
+// hand club B the sheet or the archive belonging to club A.
+const clubCache = new Map(); // clubId -> { at, sheetId, name }
+const archiveCache = new Map(); // sheetId -> { at, payload }
+
+/**
+ * Read `archiveSheetId` off the club document via the Firestore REST API. `clubs/{id}`
+ * is publicly readable, so this needs no credentials and no firebase-admin dependency.
+ */
+async function getClub(clubId) {
+  const cached = clubCache.get(clubId);
+  if (cached && Date.now() - cached.at < CLUB_TTL_MS) return cached;
+
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/clubs/${encodeURIComponent(
+    clubId
+  )}`;
+
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (err) {
+    console.error('[ask-archive] club lookup network error:', err);
+    throw new ClubLookupError('Could not look up this club right now.', 502);
+  }
+
+  if (res.status === 404) throw new ClubLookupError('That club does not exist.', 404);
+  if (!res.ok) {
+    console.error('[ask-archive] club lookup failed', res.status, await res.text());
+    throw new ClubLookupError('Could not look up this club right now.', 502);
+  }
+
+  const body = await res.json();
+  const sheetId = body.fields?.archiveSheetId?.stringValue || '';
+  const name = body.fields?.name?.stringValue || 'the club';
+  if (!sheetId) {
+    throw new ClubLookupError('This club has no archive spreadsheet configured.', 404);
+  }
+
+  const entry = { at: Date.now(), sheetId, name };
+  clubCache.set(clubId, entry);
+  return entry;
+}
+
+async function getArchive(sheetId) {
+  const cached = archiveCache.get(sheetId);
+  if (cached && Date.now() - cached.at < ARCHIVE_TTL_MS) return cached.payload;
+
+  const archive = await fetchArchiveFromSheets(sheetId);
   const payload = { archive, stats: computeStats(archive) };
-  archiveCache = { at: Date.now(), payload };
+  archiveCache.set(sheetId, { at: Date.now(), payload });
   return payload;
 }
 
@@ -264,7 +324,7 @@ function rateLimited(ip) {
 /* Prompt                                                              */
 /* ------------------------------------------------------------------ */
 
-const INSTRUCTIONS = `You answer questions about the GVBL (volleyball club) tournament archive using only the data below.
+const instructions = (clubName) => `You answer questions about the ${clubName} (volleyball club) tournament archive using only the data below.
 
 ## The data
 
@@ -331,10 +391,16 @@ export default {
     }
 
     let question;
+    let clubId;
     try {
-      ({ question } = await request.json());
+      ({ question, clubId } = await request.json());
     } catch {
       return json({ error: 'Malformed request body.' }, 400);
+    }
+
+    clubId = String(clubId ?? '').trim();
+    if (!CLUB_ID_RE.test(clubId)) {
+      return json({ error: 'Missing or malformed club id.' }, 400);
     }
 
     question = String(question ?? '').trim();
@@ -345,15 +411,24 @@ export default {
       return json({ error: `Keep questions under ${MAX_QUESTION_CHARS} characters.` }, 400);
     }
 
+    let club;
+    try {
+      club = await getClub(clubId);
+    } catch (err) {
+      if (err instanceof ClubLookupError) return json({ error: err.message }, err.status);
+      console.error('[ask-archive] club lookup failed:', err);
+      return json({ error: 'Could not look up this club right now.' }, 502);
+    }
+
     let payload;
     try {
-      payload = await getArchive();
+      payload = await getArchive(club.sheetId);
     } catch (err) {
       console.error('[ask-archive] sheet fetch failed:', err);
       return json({ error: 'Could not read the archive spreadsheet right now.' }, 502);
     }
 
-    const context = `${INSTRUCTIONS}\n\n## Archive data\n\n<archive>\n${JSON.stringify(
+    const context = `${instructions(club.name)}\n\n## Archive data\n\n<archive>\n${JSON.stringify(
       payload.archive
     )}\n</archive>\n\n<stats>\n${JSON.stringify(payload.stats)}\n</stats>`;
 

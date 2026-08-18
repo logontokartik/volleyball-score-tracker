@@ -1,13 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
-import { useAuth } from './AuthContext';
-import { isAdmin } from './roles';
+import { onSnapshot, setDoc } from 'firebase/firestore';
+import { useClub } from './ClubContext';
+import { archiveSnapshotDoc } from './clubPaths';
 import archiveDataBundled from './data/archiveData.json';
-import { fetchArchiveFromSheets } from './archiveRefreshUtils';
+import { fetchArchiveFromSheets, GVBL_ARCHIVE_SHEET_ID } from './archiveRefreshUtils';
 import {
-  GOOGLE_SHEETS_ARCHIVE_URL,
+  googleSheetsArchiveUrl,
   computeArchiveStats,
 } from './archiveInsights';
 import { askArchive } from './askArchiveAI';
@@ -17,15 +16,27 @@ import {
   GVW_MEDIA_GALLERIES,
 } from './archiveGvwMedia';
 
-const ARCHIVE_SNAPSHOT_REF = doc(db, 'settings', 'archiveSnapshot');
-
-const TABS = [
+const BASE_TABS = [
   { id: 'master', label: 'Master stats' },
   { id: 'signups', label: 'Signups by tournament' },
   { id: 'directory', label: 'Player directory' },
   { id: 'champions', label: 'Winners & runners' },
-  { id: 'media', label: 'Photos & video' },
 ];
+
+// Everything bundled in the repo — the JSON snapshot, the champion photos, the video —
+// is one club's history. It may only ever render for the club that spreadsheet belongs
+// to, otherwise club B's archive page shows club A's players.
+const ownsBundledArchive = (sheetId) => sheetId === GVBL_ARCHIVE_SHEET_ID;
+
+const EMPTY_ARCHIVE = {
+  generatedAt: '',
+  masterList: [],
+  tournamentSignups: [],
+  directory: [],
+  tournamentNames: [],
+  champions: { winners: {}, runnersUp: {} },
+  rules: [],
+};
 
 const EXAMPLE_QUESTIONS = [
   'Which pairs won together on a championship team?',
@@ -130,28 +141,34 @@ export default function ArchiveHub() {
   const [asking, setAsking] = useState(false);
   const askAbortRef = useRef(null);
 
-  const { user } = useAuth();
+  const { club, clubId, slug, isClubAdmin } = useClub();
+  const sheetId = club?.archiveSheetId || '';
+  const sheetUrl = googleSheetsArchiveUrl(sheetId);
+  const bundledIsOurs = ownsBundledArchive(sheetId);
 
-  // Live archive data from Firestore (falls back to bundled JSON if not yet refreshed)
+  // Live archive data from Firestore for this club.
   const [firestoreArchive, setFirestoreArchive] = useState(null);
   useEffect(() => {
-    const unsub = onSnapshot(ARCHIVE_SNAPSHOT_REF, (snap) => {
-      if (snap.exists()) setFirestoreArchive(snap.data());
-      else setFirestoreArchive(null);
+    if (!clubId) return undefined;
+    setFirestoreArchive(null);
+    const unsub = onSnapshot(archiveSnapshotDoc(clubId), (snap) => {
+      setFirestoreArchive(snap.exists() ? snap.data() : null);
     });
     return unsub;
-  }, []);
+  }, [clubId]);
 
-  // Use Firestore snapshot if it's newer than the bundled JSON
+  // The bundled JSON is only a legitimate fallback for the club it was exported from;
+  // any other club shows what Firestore has for it, or nothing.
   const archiveData = useMemo(() => {
+    const fallback = bundledIsOurs ? archiveDataBundled : EMPTY_ARCHIVE;
     if (
       firestoreArchive?.generatedAt &&
-      firestoreArchive.generatedAt > archiveDataBundled.generatedAt
+      firestoreArchive.generatedAt > (fallback.generatedAt || '')
     ) {
       return firestoreArchive;
     }
-    return archiveDataBundled;
-  }, [firestoreArchive]);
+    return fallback;
+  }, [firestoreArchive, bundledIsOurs]);
 
   // Refresh state
   const [refreshing, setRefreshing] = useState(false);
@@ -163,8 +180,8 @@ export default function ArchiveHub() {
     setRefreshError('');
     setRefreshSuccess('');
     try {
-      const parsed = await fetchArchiveFromSheets();
-      await setDoc(ARCHIVE_SNAPSHOT_REF, parsed);
+      const parsed = await fetchArchiveFromSheets(sheetId);
+      await setDoc(archiveSnapshotDoc(clubId), parsed);
       setRefreshSuccess(
         `Archive refreshed — ${parsed.masterList.length} players, ${parsed.tournamentSignups.length} seasons.`
       );
@@ -179,7 +196,12 @@ export default function ArchiveHub() {
   const { masterList, tournamentSignups, directory, champions, tournamentNames, generatedAt } =
     archiveData;
 
-  const stats = useMemo(() => computeArchiveStats(archiveData), []);
+  const stats = useMemo(() => computeArchiveStats(archiveData), [archiveData]);
+
+  const tabs = useMemo(
+    () => (bundledIsOurs ? [...BASE_TABS, { id: 'media', label: 'Photos & video' }] : BASE_TABS),
+    [bundledIsOurs]
+  );
 
   const filteredMaster = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -237,7 +259,11 @@ export default function ArchiveHub() {
     setAsking(true);
     setAskResult(null);
     try {
-      const result = await askArchive(trimmed, archiveData, stats, {
+      const result = await askArchive(trimmed, {
+        clubId,
+        // Only data this club owns may back the offline answer.
+        archiveData: bundledIsOurs || firestoreArchive ? archiveData : null,
+        stats,
         signal: controller.signal,
       });
       if (!controller.signal.aborted) setAskResult(result);
@@ -255,6 +281,47 @@ export default function ArchiveHub() {
 
   useEffect(() => () => askAbortRef.current?.abort(), []);
 
+  const clubName = club?.name || 'This club';
+  const trackerLink = slug ? `/c/${slug}` : '/';
+
+  // No spreadsheet on the club document means there is no archive to show. Rendering the
+  // tabs anyway would be a page full of zeroes next to a link to nothing.
+  if (!sheetId) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 pb-12">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 pt-10">
+          <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-6 sm:p-10">
+            <p className="text-amber-400/90 text-sm font-semibold uppercase tracking-widest mb-2">
+              Historical records
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-3">
+              {clubName} has no archive yet
+            </h1>
+            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+              The archive is built from a club-owned Google Sheet, and this club does not have one
+              configured.
+            </p>
+            {isClubAdmin && (
+              <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                Set <code className="text-amber-300">archiveSheetId</code> on the club to the id of
+                a spreadsheet shared as &ldquo;Anyone with the link can view&rdquo;, then come back
+                here and refresh it.
+              </p>
+            )}
+            <div className="mt-6">
+              <Link
+                to={trackerLink}
+                className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-white text-slate-900 font-bold text-sm hover:bg-amber-100 transition-colors"
+              >
+                ← Open live score tracker
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 pb-12">
       <div className="max-w-6xl mx-auto px-3 sm:px-4 pt-6 sm:pt-10">
@@ -263,16 +330,18 @@ export default function ArchiveHub() {
             Historical records
           </p>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3">
-            GVBL tournament archive
+            {clubName} tournament archive
           </h1>
           <p className="text-slate-300 max-w-2xl text-sm sm:text-base leading-relaxed">
             Career stats, every signup roster, normalized player names, and champions across all
             seasons — synced from the club spreadsheet.
           </p>
           <p className="text-slate-500 text-xs mt-4">
-            Snapshot generated {new Date(generatedAt).toLocaleString()} ·{' '}
+            {generatedAt
+              ? `Snapshot generated ${new Date(generatedAt).toLocaleString()} · `
+              : 'No snapshot imported yet · '}
             <a
-              href={GOOGLE_SHEETS_ARCHIVE_URL}
+              href={sheetUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-amber-400 hover:text-amber-300 font-medium underline underline-offset-2"
@@ -282,13 +351,13 @@ export default function ArchiveHub() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              to="/"
+              to={trackerLink}
               className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-white text-slate-900 font-bold text-sm hover:bg-amber-100 transition-colors"
             >
               ← Open live score tracker
             </Link>
             <a
-              href={GOOGLE_SHEETS_ARCHIVE_URL}
+              href={sheetUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl border-2 border-amber-400/60 text-amber-300 font-bold text-sm hover:bg-amber-500/10 transition-colors"
@@ -301,14 +370,14 @@ export default function ArchiveHub() {
         {/* Admin refresh panel. This writes settings/archiveSnapshot, which
             firestore.rules restricts to admins — a scorer must not be shown a
             button that can only fail. */}
-        {isAdmin(user) && (
+        {isClubAdmin && (
           <div className="rounded-2xl border border-slate-700 bg-slate-800/60 px-5 py-4 mb-2 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white">Refresh archive from Google Sheets</p>
               <p className="text-xs text-slate-400 mt-0.5">
                 Pulls live data from the{' '}
-                <a href={GOOGLE_SHEETS_ARCHIVE_URL} target="_blank" rel="noopener noreferrer" className="text-amber-400 underline">
-                  GVBL spreadsheet
+                <a href={sheetUrl} target="_blank" rel="noopener noreferrer" className="text-amber-400 underline">
+                  club spreadsheet
                 </a>
                 {archiveData.generatedAt && (
                   <> · Last updated {new Date(archiveData.generatedAt).toLocaleString()}{archiveData.sourceFile === 'Google Sheets (live)' ? ' (live)' : ' (bundled)'}</>
@@ -339,7 +408,7 @@ export default function ArchiveHub() {
         )}
 
         <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-1">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <TabButton key={t.id} {...t} active={tab === t.id} onClick={setTab} />
           ))}
         </div>
@@ -589,7 +658,7 @@ export default function ArchiveHub() {
             <p className="text-xs text-slate-500">
               Source:{' '}
               <a
-                href={GOOGLE_SHEETS_ARCHIVE_URL}
+                href={sheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-amber-400 underline"
@@ -630,7 +699,7 @@ export default function ArchiveHub() {
             <p className="text-xs text-slate-500 mb-3">
               Normalized names from the{' '}
               <a
-                href={GOOGLE_SHEETS_ARCHIVE_URL}
+                href={sheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-amber-400 underline"
@@ -662,11 +731,11 @@ export default function ArchiveHub() {
                         </td>
                         <td className="p-3 text-right tabular-nums">{d.tournamentsPlayed}</td>
                         <td className="p-3 text-xs text-slate-500 hidden lg:table-cell max-w-md">
-                          {Object.entries(d.appearances)
+                          {Object.entries(d.appearances || {})
                             .slice(0, 4)
                             .map(([tn, nm]) => `${tn}: ${nm}`)
                             .join(' · ')}
-                          {Object.keys(d.appearances).length > 4 ? ' …' : ''}
+                          {Object.keys(d.appearances || {}).length > 4 ? ' …' : ''}
                         </td>
                       </tr>
                     ))}
@@ -682,7 +751,7 @@ export default function ArchiveHub() {
             <p className="text-xs text-slate-500">
               Winner / runner rows from{' '}
               <a
-                href={GOOGLE_SHEETS_ARCHIVE_URL}
+                href={sheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-amber-400 underline"
@@ -695,7 +764,7 @@ export default function ArchiveHub() {
               const w = champions.winners[tn] || [];
               const r = champions.runnersUp[tn] || [];
               if (!w.length && !r.length) return null;
-              const pics = CHAMPION_PHOTOS_BY_TOURNAMENT[tn];
+              const pics = bundledIsOurs ? CHAMPION_PHOTOS_BY_TOURNAMENT[tn] : null;
               return (
                 <div
                   key={tn}
@@ -744,7 +813,7 @@ export default function ArchiveHub() {
           </div>
         )}
 
-        {tab === 'media' && (
+        {tab === 'media' && bundledIsOurs && (
           <div className="max-w-5xl">
             <h2 className="text-2xl font-black text-white mb-2">Photos &amp; video</h2>
             <p className="text-sm text-slate-400 leading-relaxed mb-8">

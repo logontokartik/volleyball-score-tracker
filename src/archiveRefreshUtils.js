@@ -1,15 +1,21 @@
 /**
- * Fetches the GVBL archive spreadsheet tabs directly from Google Sheets
+ * Fetches a club's archive spreadsheet tabs directly from Google Sheets
  * and returns an archiveData-shaped object ready to save to Firestore.
  *
  * The sheet must be shared as "Anyone with the link can view".
  * Google's gviz/tq endpoint supports CORS for publicly shared sheets.
  */
 
-const SHEET_ID = '19YcFZs8Q-FleLOjePIgHEFFJKnWstb0xBx8zsVpC-OE';
+/**
+ * The original single-tenant spreadsheet. It is kept only so the migration can seed it
+ * onto the GVBL club document as `archiveSheetId`, and so the bundled snapshot in
+ * src/data/ can be recognised as belonging to that one club. Nothing defaults to it:
+ * a club without an `archiveSheetId` simply has no archive.
+ */
+export const GVBL_ARCHIVE_SHEET_ID = '19YcFZs8Q-FleLOjePIgHEFFJKnWstb0xBx8zsVpC-OE';
 
-function csvUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+function csvUrl(sheetId, sheetName) {
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
 /** Minimal but correct RFC-4180 CSV parser. */
@@ -48,8 +54,8 @@ function parseCsv(text) {
   return rows;
 }
 
-async function fetchSheet(sheetName) {
-  const res = await fetch(csvUrl(sheetName));
+async function fetchSheet(sheetId, sheetName) {
+  const res = await fetch(csvUrl(sheetId, sheetName));
   if (!res.ok) throw new Error(`Could not fetch sheet "${sheetName}" (${res.status}). Make sure the spreadsheet is shared as "Anyone with the link can view".`);
   const text = await res.text();
   return parseCsv(text);
@@ -68,16 +74,19 @@ function rowHasAny(row, startCol = 0) {
 }
 
 /**
- * Fetch all tabs from Google Sheets and parse into archiveData shape.
+ * Fetch all tabs from a club's Google Sheet and parse into archiveData shape.
+ * @param {string} sheetId the club's `archiveSheetId`
  * @returns {Promise<object>} archiveData-shaped object
  */
-export async function fetchArchiveFromSheets() {
+export async function fetchArchiveFromSheets(sheetId) {
+  if (!sheetId) throw new Error('This club has no archive spreadsheet configured.');
+
   // Fetch all tabs in parallel
   const [masterRows, allT, vl, mr] = await Promise.all([
-    fetchSheet('Master List'),
-    fetchSheet('All Tournaments'),
-    fetchSheet('VLookups'),
-    fetchSheet('Master Rules').catch(() => []), // optional tab
+    fetchSheet(sheetId, 'Master List'),
+    fetchSheet(sheetId, 'All Tournaments'),
+    fetchSheet(sheetId, 'VLookups'),
+    fetchSheet(sheetId, 'Master Rules').catch(() => []), // optional tab
   ]);
 
   /* ---------- Master List ---------- */
