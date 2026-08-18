@@ -266,11 +266,7 @@ export default function TrackerView() {
         </header>
 
         {page === 'admin' && admin && (
-          <AdminPage
-            user={user}
-            clubId={clubId}
-            onNavigateScores={() => setPage('scores')}
-          />
+          <AdminPage onNavigateScores={() => setPage('scores')} />
         )}
 
         {page === 'scores' && (
