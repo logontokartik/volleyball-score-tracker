@@ -13,47 +13,47 @@ club + slug + founding-admin write, and the slug-squatting attempts that must fa
 super-admin reach; the `users/{uid}` sign-in profile upsert; and the two
 collection-group queries the UI depends on.
 
+`rest-auth.test.mjs` covers the assumption `api/send-invite.js` is built on: that a
+Firebase ID token passed as a Bearer to the Firestore REST API is evaluated against these
+rules. A club admin's token can read an invite; a scorer's cannot; an anonymous request
+cannot; and the public club document is readable with no token at all.
+
 ## Running
 
-Needs Java (for the emulator). From this directory:
+Needs Java (for the emulator). Run from the **repository root** — the emulator reads
+`firebase.json` there, which is the same config used for deploys, so the rules under test
+are the rules that ship:
 
 ```bash
-npm init -y && npm pkg set type=module
-npm i @firebase/rules-unit-testing firebase firebase-tools
+cd firestore-tests && npm init -y && npm pkg set type=module \
+  && npm i @firebase/rules-unit-testing firebase firebase-tools && cd ..
 
-./node_modules/.bin/firebase emulators:exec --only firestore --project demo-clubs \
-  "RULES_FILE=$PWD/../firestore.rules node rules.test.mjs"
-```
+E=./firestore-tests/node_modules/.bin/firebase
 
-Expect `59 passed, 0 failed`.
+# Rules — 67 tests
+$E emulators:exec --only firestore --project demo-clubs \
+  "RULES_FILE=$PWD/firestore.rules node firestore-tests/rules.test.mjs"
 
-`migration.test.mjs` is the end-to-end test of the legacy → clubs migration. It seeds an
-emulator with realistic pre-multi-tenant data (three `tournaments/*` documents,
-`settings/app` pointing at one of them, `settings/archiveSnapshot`), then runs
-`src/migrateToClubs.js` — the same module the `/super` console calls, not a copy —
-as the super admin against the real rules. It asserts that the club, slug and founding
-admin documents are written in one batch; that every tournament lands under the club at
-its original id with identical content; that `activeTournamentId` survives and still
-resolves; that the archive snapshot moved; that the legacy documents are untouched; that
-a second run changes nothing (idempotency); and that a non-super-admin is rejected by the
-rules.
+# REST + ID-token authorisation — 4 tests
+$E emulators:exec --only firestore --project demo-rest \
+  "node firestore-tests/rest-auth.test.mjs"
 
-```bash
-./node_modules/.bin/firebase emulators:exec --only firestore --project demo-clubs \
+# Migration — 50 tests (needs the resolution hook, so run from this directory)
+cd firestore-tests && ./node_modules/.bin/firebase emulators:exec --only firestore \
+  --project demo-migration --config ../firebase.json \
   "RULES_FILE=$PWD/../firestore.rules node --import ./register-hooks.mjs migration.test.mjs"
 ```
 
-Expect `37 passed, 0 failed`.
+`rules.test.mjs` and `migration.test.mjs` load the rules themselves via `RULES_FILE`.
+`rest-auth.test.mjs` does not — it talks to the emulator's REST endpoint directly, so it
+depends on the emulator having loaded them from `firebase.json`.
 
-The `--import ./register-hooks.mjs` is not optional: it installs `cra-resolve-hook.mjs`,
-which lets plain node import the app's own `src/*.js` (extensionless relative imports,
-and one shared copy of `firebase` — the repo root has v9, this directory has v12, and a
-v12 Firestore handed to v9's `doc()` is rejected). The hook is a test-harness concern
-only and has no effect on the app build.
-
-The rules file is tested as-is — the super admin is hardcoded in `superAdmins()`, so
-there is nothing to substitute in first (older revisions `sed`-ed an admin email list
-into a throwaway copy; that no longer applies).
+> **This bit once bit us.** `firestore-tests/firebase.json` used to point at a generated
+> copy of the rules in this directory. When that generation step was removed the path
+> resolved to nothing, and the emulator started with rules **wide open** — which silently
+> passes any test asserting a denial. The two programmatic suites were unaffected, which
+> is exactly why nobody noticed. There is now one `firebase.json`, at the repo root,
+> shared by the emulator and `firebase deploy`.
 
 ## Indexes
 
