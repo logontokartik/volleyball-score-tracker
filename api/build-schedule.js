@@ -20,6 +20,10 @@ const EFFORT =
 const MAX_TEXT_CHARS = 8000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Anthropic's per-image ceiling
 const MAX_GAMES = 200;
+// Mirrors MAX_COURT_COUNT in src/tournamentUtils.js — the client sends how many courts
+// the tournament runs, and this is the ceiling it is clamped to here as well.
+const MAX_COURTS = 8;
+const DEFAULT_COURTS = 2;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 6;
 
@@ -41,19 +45,21 @@ function rateLimited(ip) {
   return false;
 }
 
-const INSTRUCTIONS = `You convert a volleyball tournament schedule into structured rows.
+const instructions = (courtCount) => `You convert a volleyball tournament schedule into structured rows.
 
 The input is a screenshot of a schedule, a typed description, or both. Reproduce it faithfully — do not invent rows, times, or games that are not there.
 
+This tournament runs on ${courtCount} court${courtCount === 1 ? '' : 's'}. Every row's \`courts\` array has exactly ${courtCount} entries, in court order: the first entry is court 1, the last is court ${courtCount}. A court that is idle for a slot is still present, with empty strings.
+
 ## Row kinds
 
-- \`double\` — a normal time slot with a game on court 1 and/or court 2.
-- \`break\` — a break or lunch row. Put the wording in \`timeLabel\` (e.g. "Break (1:00 – 2:00 pm)") and leave everything else empty.
-- \`note\` — a row of free text rather than scheduled league games, such as semifinals and finals. Put the time in \`timeLabel\` and the wording in \`noteCourt1\` (e.g. "Semifinal 1 (Seed 1 vs Seed 4)"). Use \`noteCourt2\` only when the row genuinely has different text for the second court.
+- \`double\` — a normal time slot with a game on one or more courts.
+- \`break\` — a break or lunch row. Put the wording in \`timeLabel\` (e.g. "Break (1:00 – 2:00 pm)") and leave every court empty.
+- \`note\` — a row of free text rather than scheduled league games, such as semifinals and finals. Put the time in \`timeLabel\` and the wording in the first court's \`note\` (e.g. "Semifinal 1 (Seed 1 vs Seed 4)"). Use a later court's \`note\` only when the row genuinely has different text for that court.
 
 ## Assigning games
 
-\`gameCourt1\` and \`gameCourt2\` must be a game id copied exactly from the available games list, or an empty string when that court is idle for that slot.
+Each court's \`game\` must be a game id copied exactly from the available games list, or an empty string when that court is idle for that slot.
 
 Match games by the pair of teams, not by the game number printed in the source — the source's own numbering (G1, G2…) usually will not line up with the ids in the list. "Black v Yellow" means the game in the list whose two teams are Black and Yellow, in either order. Team names may be shortened or differently cased in the source; map them to the closest team in the list. If a listed pairing genuinely has no match, leave the court empty and mention it in \`warnings\`.
 
@@ -61,13 +67,15 @@ Never use the same game id twice.
 
 ## Umpires
 
-\`umpireCourt1\` and \`umpireCourt2\` are the umpiring teams for each court. Schedules often print a single umpire column per court, but some print one umpire for the whole row — in that case use the same team for both courts. Empty string when none is given.
+Each court's \`umpire\` is the umpiring team for that court. Schedules often print an umpire column per court, but some print one umpire for the whole row — in that case use the same team for every court on the row. Empty string when none is given.
 
 ## Output
 
 Return every row in the order it appears, top to bottom. Put anything you could not represent — an unmatched pairing, an ambiguous team name, an unreadable cell — in \`warnings\`, one short sentence each. Return an empty \`warnings\` array when everything mapped cleanly.`;
 
-const SCHEDULE_SCHEMA = {
+// Court-count driven: the row shape follows whatever the tournament is set up for,
+// rather than naming court 1 and court 2 in the schema.
+const scheduleSchema = (courtCount) => ({
   type: 'object',
   properties: {
     slots: {
@@ -77,23 +85,24 @@ const SCHEDULE_SCHEMA = {
         properties: {
           timeLabel: { type: 'string', description: 'Time or label for the row, e.g. "8am".' },
           rowKind: { type: 'string', enum: ['double', 'break', 'note'] },
-          gameCourt1: { type: 'string', description: 'Game id for court 1, or "" if none.' },
-          gameCourt2: { type: 'string', description: 'Game id for court 2, or "" if none.' },
-          umpireCourt1: { type: 'string' },
-          umpireCourt2: { type: 'string' },
-          noteCourt1: { type: 'string', description: 'Free text for note rows, else "".' },
-          noteCourt2: { type: 'string' },
+          courts: {
+            type: 'array',
+            description: `Exactly ${courtCount} entries, court 1 first.`,
+            minItems: courtCount,
+            maxItems: courtCount,
+            items: {
+              type: 'object',
+              properties: {
+                game: { type: 'string', description: 'Game id for this court, or "" if none.' },
+                umpire: { type: 'string', description: 'Umpiring team, or "".' },
+                note: { type: 'string', description: 'Free text for note rows, else "".' },
+              },
+              required: ['game', 'umpire', 'note'],
+              additionalProperties: false,
+            },
+          },
         },
-        required: [
-          'timeLabel',
-          'rowKind',
-          'gameCourt1',
-          'gameCourt2',
-          'umpireCourt1',
-          'umpireCourt2',
-          'noteCourt1',
-          'noteCourt2',
-        ],
+        required: ['timeLabel', 'rowKind', 'courts'],
         additionalProperties: false,
       },
     },
@@ -101,7 +110,7 @@ const SCHEDULE_SCHEMA = {
   },
   required: ['slots', 'warnings'],
   additionalProperties: false,
-};
+});
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -136,6 +145,11 @@ export default {
     const image = body.image || null;
     const games = Array.isArray(body.games) ? body.games.slice(0, MAX_GAMES) : [];
     const teams = Array.isArray(body.teams) ? body.teams.slice(0, 64) : [];
+    const requestedCourts = Math.floor(Number(body.courtCount));
+    const courtCount =
+      Number.isFinite(requestedCourts) && requestedCourts >= 1
+        ? Math.min(MAX_COURTS, requestedCourts)
+        : DEFAULT_COURTS;
 
     if (!text && !image) {
       return json({ error: 'Paste a screenshot or describe the schedule first.' }, 400);
@@ -191,10 +205,10 @@ export default {
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 8000,
-          system: INSTRUCTIONS,
+          system: instructions(courtCount),
           output_config: {
             effort: EFFORT,
-            format: { type: 'json_schema', schema: SCHEDULE_SCHEMA },
+            format: { type: 'json_schema', schema: scheduleSchema(courtCount) },
           },
           messages: [{ role: 'user', content }],
         }),
@@ -275,16 +289,18 @@ export default {
       const rowKind = ['double', 'break', 'note'].includes(slot.rowKind) ? slot.rowKind : 'double';
       const timeLabel = String(slot.timeLabel ?? '').trim();
       const label = timeLabel || 'a row';
-      return {
-        timeLabel,
-        rowKind,
-        gameCourt1: rowKind === 'double' ? takeGame(slot.gameCourt1, label, 1) : null,
-        gameCourt2: rowKind === 'double' ? takeGame(slot.gameCourt2, label, 2) : null,
-        umpireCourt1: rowKind === 'double' ? String(slot.umpireCourt1 ?? '').trim() : '',
-        umpireCourt2: rowKind === 'double' ? String(slot.umpireCourt2 ?? '').trim() : '',
-        noteCourt1: String(slot.noteCourt1 ?? '').trim(),
-        noteCourt2: String(slot.noteCourt2 ?? '').trim(),
-      };
+      // Padded and trimmed to the tournament's court count regardless of what came
+      // back, so a short or long `courts` array cannot reshape the saved schedule.
+      const returned = Array.isArray(slot.courts) ? slot.courts : [];
+      const courts = Array.from({ length: courtCount }, (_, i) => {
+        const court = returned[i] || {};
+        return {
+          game: rowKind === 'double' ? takeGame(court.game, label, i + 1) : null,
+          umpire: rowKind === 'double' ? String(court.umpire ?? '').trim() : '',
+          note: String(court.note ?? '').trim(),
+        };
+      });
+      return { timeLabel, rowKind, courts };
     });
 
     if (!slots.length) {

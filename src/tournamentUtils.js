@@ -159,7 +159,7 @@ export function matchHasResults(match) {
  * Rows pointing at a pairing that no longer exists are blanked rather than removed,
  * so the time slots and umpire assignments survive.
  */
-export function remapScheduleSlots(slots, oldScores, newScores) {
+export function remapScheduleSlots(slots, oldScores, newScores, courtCount) {
   const oldById = new Map((oldScores || []).map((m) => [m.game, m]));
   const available = new Map();
   for (const match of newScores || []) {
@@ -180,11 +180,12 @@ export function remapScheduleSlots(slots, oldScores, newScores) {
     return next;
   };
 
-  return (slots || []).map((slot) => ({
-    ...slot,
-    gameCourt1: translate(slot.gameCourt1),
-    gameCourt2: translate(slot.gameCourt2),
-  }));
+  return (slots || []).map((slot) =>
+    withCourts(
+      slot,
+      slotCourts(slot, courtCount).map((court) => ({ ...court, game: translate(court.game) }))
+    )
+  );
 }
 
 export function matchesWithEmptySets(scheduledMatches, setsPerMatch) {
@@ -195,77 +196,154 @@ export function matchesWithEmptySets(scheduledMatches, setsPerMatch) {
   }));
 }
 
-/** One row on the day schedule (two courts + shared umpire, break, or note row). */
-export function buildDefaultScheduleSlots(scores) {
+/* ------------------------------------------------------------------ */
+/* Schedule rows: courts                                               */
+/* ------------------------------------------------------------------ */
+
+export const DEFAULT_COURT_COUNT = 2;
+
+// Eight is past any hall this is used in; the cap exists so a typo in the admin form
+// cannot produce a hundred-column schedule that nothing can render.
+export const MAX_COURT_COUNT = 8;
+
+export function normalizeCourtCount(value) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_COURT_COUNT;
+  return Math.min(MAX_COURT_COUNT, n);
+}
+
+const trimmed = (value) => String(value ?? '').trim();
+
+/** Legacy per-court field names, only ever read through slotCourts below. */
+const LEGACY_COURT_KEYS = ['gameCourt1', 'gameCourt2', 'umpireCourt1', 'umpireCourt2', 'noteCourt1', 'noteCourt2', 'umpire'];
+
+/**
+ * Courts on one schedule row, as `[{ game, umpire, note }, …]`.
+ *
+ * Rows saved before the schedule supported more than two courts carry fixed
+ * `gameCourt1`/`gameCourt2` fields (and their umpire/note siblings) instead of a
+ * `courts` array; those are read here as courts 1 and 2, in order. Clubs are mid-season
+ * on that shape, so this is the path most saved schedules still take — every consumer
+ * goes through this function so none of them has to know two shapes exist.
+ *
+ * The even older pre-split single `umpire` field is honoured for the same reason the
+ * old `slotUmpires` honoured it: it meant one team umpiring the whole row. That reader
+ * is gone — this is now the only place either legacy shape is understood.
+ */
+export function slotCourts(slot, courtCount) {
+  const legacyUmpire = trimmed(slot?.umpire);
+  const count =
+    courtCount == null
+      ? (Array.isArray(slot?.courts) ? Math.max(1, slot.courts.length) : DEFAULT_COURT_COUNT)
+      : normalizeCourtCount(courtCount);
+  const courts = [];
+  for (let i = 0; i < count; i++) {
+    const source = Array.isArray(slot?.courts)
+      ? slot.courts[i] || {}
+      : {
+          game: slot?.[`gameCourt${i + 1}`],
+          umpire: slot?.[`umpireCourt${i + 1}`],
+          note: slot?.[`noteCourt${i + 1}`],
+        };
+    courts.push({
+      game: trimmed(source.game) || null,
+      umpire: trimmed(source.umpire) || legacyUmpire,
+      note: trimmed(source.note),
+    });
+  }
+  return courts;
+}
+
+/** A row in the current shape: legacy court fields dropped, `courts` replaced. */
+function withCourts(slot, courts) {
+  const next = { ...slot, courts };
+  for (const key of LEGACY_COURT_KEYS) delete next[key];
+  return next;
+}
+
+/**
+ * How many courts a saved schedule uses.
+ *
+ * An explicit `courtCount` on the tournament wins, so adding a court shows up on rows
+ * that were saved before it existed. Otherwise it is read off the rows themselves,
+ * and rows with no `courts` array are legacy rows, which always had exactly two.
+ */
+export function scheduleCourtCount(scheduleSlots, courtCount) {
+  const explicit = Math.floor(Number(courtCount));
+  if (Number.isFinite(explicit) && explicit >= 1) return normalizeCourtCount(explicit);
+  let widest = 0;
+  for (const slot of scheduleSlots || []) {
+    if (Array.isArray(slot?.courts)) widest = Math.max(widest, slot.courts.length);
+  }
+  return widest > 0 ? normalizeCourtCount(widest) : DEFAULT_COURT_COUNT;
+}
+
+/** Rewrite rows into the current shape — what gets written back to Firestore. */
+export function normalizeScheduleSlots(slots, courtCount) {
+  const count = normalizeCourtCount(courtCount);
+  return (slots || []).map((slot) => withCourts(slot, slotCourts(slot, count)));
+}
+
+/** One row on the day schedule (a game per court, or a break / note row). */
+export function buildDefaultScheduleSlots(scores, courtCount) {
+  const count = normalizeCourtCount(courtCount);
   const list = scores || [];
   const slots = [];
-  for (let i = 0; i < list.length; i += 2) {
-    const m1 = list[i];
-    const m2 = list[i + 1];
+  for (let i = 0; i < list.length; i += count) {
     slots.push(
-      blankSlot({
-        timeLabel: `Round ${slots.length + 1}`,
-        gameCourt1: m1?.game ?? null,
-        gameCourt2: m2?.game ?? null,
-      })
+      blankSlot(
+        {
+          timeLabel: `Round ${slots.length + 1}`,
+          courts: Array.from({ length: count }, (_, c) => ({
+            game: list[i + c]?.game ?? null,
+            umpire: '',
+            note: '',
+          })),
+        },
+        count
+      )
     );
   }
   return slots;
 }
 
-export function blankSlot(overrides) {
-  return {
+/**
+ * A fresh row. Overrides may still name the legacy court fields — the AI builder and
+ * older callers do — so they are read through the adapter rather than copied across.
+ */
+export function blankSlot(overrides, courtCount) {
+  const merged = {
     id: crypto.randomUUID(),
     timeLabel: '',
     rowKind: 'double',
-    gameCourt1: null,
-    gameCourt2: null,
-    umpireCourt1: '',
-    umpireCourt2: '',
-    noteCourt1: '',
-    noteCourt2: '',
     ...overrides,
   };
+  const count = Array.isArray(overrides?.courts) ? overrides.courts.length : courtCount;
+  return withCourts(merged, slotCourts(merged, count));
 }
 
-/**
- * Umpiring team per court.
- *
- * Schedules saved before umpires were split per court carry a single `umpire` field
- * that applied to both courts; those rows are read as the same team umpiring both,
- * which is what they meant.
- */
-export function slotUmpires(slot) {
-  const legacy = String(slot?.umpire ?? '').trim();
-  return {
-    court1: String(slot?.umpireCourt1 ?? '').trim() || legacy,
-    court2: String(slot?.umpireCourt2 ?? '').trim() || legacy,
-  };
+/** A court with nothing on it, for the editor's "add court" control. */
+export function blankCourt() {
+  return { game: null, umpire: '', note: '' };
 }
 
 /**
  * Playoff rows for a top-4 knockout: two semifinals seeded 1v4 / 2v3, then the final.
  * Times match the club's usual day plan and are editable once added.
  */
-export function buildFinalsSlots() {
+export function buildFinalsSlots(courtCount) {
+  const count = normalizeCourtCount(courtCount);
+  const noteRow = (timeLabel, text) => {
+    const slot = blankSlot({ rowKind: 'note', timeLabel }, count);
+    slot.courts[0].note = text;
+    return slot;
+  };
   return [
-    blankSlot({ rowKind: 'break', timeLabel: 'Break (1:00 – 2:00 pm)' }),
-    blankSlot({
-      rowKind: 'note',
-      timeLabel: '2:00 – 3:15 pm',
-      noteCourt1: 'Semifinal 1 (Seed 1 vs Seed 4)',
-    }),
-    blankSlot({
-      rowKind: 'note',
-      timeLabel: '3:15 – 4:30 pm',
-      noteCourt1: 'Semifinal 2 (Seed 2 vs Seed 3)',
-    }),
-    blankSlot({ rowKind: 'break', timeLabel: 'Break (4:30 – 5:00 pm)' }),
-    blankSlot({
-      rowKind: 'note',
-      timeLabel: '5:00 – 6:30 pm',
-      noteCourt1: 'Final (Semis Winners)',
-    }),
+    blankSlot({ rowKind: 'break', timeLabel: 'Break (1:00 – 2:00 pm)' }, count),
+    noteRow('2:00 – 3:15 pm', 'Semifinal 1 (Seed 1 vs Seed 4)'),
+    noteRow('3:15 – 4:30 pm', 'Semifinal 2 (Seed 2 vs Seed 3)'),
+    blankSlot({ rowKind: 'break', timeLabel: 'Break (4:30 – 5:00 pm)' }, count),
+    noteRow('5:00 – 6:30 pm', 'Final (Semis Winners)'),
   ];
 }
 
@@ -274,8 +352,9 @@ export function orderScoresBySchedule(scores, scheduleSlots) {
   if (!scheduleSlots?.length || !scores?.length) return scores || [];
   const order = [];
   scheduleSlots.forEach((s) => {
-    if (s.gameCourt1) order.push(s.gameCourt1);
-    if (s.gameCourt2) order.push(s.gameCourt2);
+    slotCourts(s).forEach((court) => {
+      if (court.game) order.push(court.game);
+    });
   });
   const seen = new Set(order);
   const byGame = Object.fromEntries(scores.map((m) => [m.game, m]));
@@ -296,8 +375,10 @@ export function matchSlotInfo(match, scheduleSlots) {
     const kind = slot.rowKind || 'double';
     if (kind !== 'double') continue;
     const when = (slot.timeLabel && String(slot.timeLabel).trim()) || 'Scheduled';
-    if (slot.gameCourt1 === match.game) return { when, court: 1 };
-    if (slot.gameCourt2 === match.game) return { when, court: 2 };
+    const courts = slotCourts(slot);
+    for (let i = 0; i < courts.length; i++) {
+      if (courts[i].game === match.game) return { when, court: i + 1 };
+    }
   }
   return null;
 }

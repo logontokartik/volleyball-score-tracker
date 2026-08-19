@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatMatchLabel, slotUmpires } from './tournamentUtils';
+import { formatMatchLabel, scheduleCourtCount, slotCourts } from './tournamentUtils';
 
 function matchByGame(scores, gameId) {
   if (!gameId) return null;
@@ -27,17 +27,45 @@ function formatScoreSummary(match) {
   return parts.join(', ');
 }
 
+// Per-court colours, cycled. Written out in full because Tailwind only sees class names
+// that appear literally in the source — a computed `bg-${colour}-200` is not built.
+const COURT_STYLES = [
+  { head: 'bg-sky-200', cell: 'bg-sky-50/80', card: 'bg-sky-50/90', note: 'bg-sky-50', label: 'text-sky-800', divider: 'border-sky-100', hover: 'hover:bg-sky-100 active:bg-sky-200' },
+  { head: 'bg-orange-200', cell: 'bg-orange-50/80', card: 'bg-orange-50/90', note: 'bg-orange-50', label: 'text-orange-900', divider: 'border-orange-100', hover: 'hover:bg-orange-100 active:bg-orange-200' },
+  { head: 'bg-violet-200', cell: 'bg-violet-50/80', card: 'bg-violet-50/90', note: 'bg-violet-50', label: 'text-violet-800', divider: 'border-violet-100', hover: 'hover:bg-violet-100 active:bg-violet-200' },
+  { head: 'bg-teal-200', cell: 'bg-teal-50/80', card: 'bg-teal-50/90', note: 'bg-teal-50', label: 'text-teal-800', divider: 'border-teal-100', hover: 'hover:bg-teal-100 active:bg-teal-200' },
+];
+
+const courtStyle = (index) => COURT_STYLES[index % COURT_STYLES.length];
+
 /**
- * Day-of schedule: two courts, optional shared umpire — responsive like GVBL-style sheet.
+ * Widest court count the side-by-side table stays readable at.
+ *
+ * Past this the columns either go off-screen or squeeze the team names into two
+ * characters each, so every width falls back to the stacked cards instead. The
+ * leaderboard learned the same lesson: a table that scrolls sideways gets half-read.
+ */
+const MAX_TABLE_COURTS = 3;
+
+/**
+ * Day-of schedule. Side by side for a couple of courts, stacked cards on a phone —
+ * and stacked at every width once there are more courts than fit across.
  */
 export default function ScheduleTable({
   title,
   subtitle,
   scores,
   scheduleSlots,
+  courtCount,
   onMatchClick,
 }) {
   const slots = scheduleSlots?.length ? scheduleSlots : [];
+  const courts = scheduleCourtCount(slots, courtCount);
+  const showTable = courts <= MAX_TABLE_COURTS;
+
+  // A named grid template per court count is not expressible in Tailwind's static
+  // classes, so the one dynamic value on the page is set inline.
+  const rowGrid = { gridTemplateColumns: `minmax(5rem,7rem) repeat(${courts}, minmax(0,1fr))` };
 
   if (!slots.length) {
     return (
@@ -47,146 +75,155 @@ export default function ScheduleTable({
     );
   }
 
+  const readRow = (slot) => {
+    const list = slotCourts(slot, courts).map((court) => {
+      const match = matchByGame(scores, court.game);
+      return {
+        ...court,
+        match,
+        live: isInProgress(match),
+        score: formatScoreSummary(match),
+      };
+    });
+    return { list, live: list.some((c) => c.live) };
+  };
+
+  const clickable = typeof onMatchClick === 'function';
+
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="hidden md:block rounded-lg border border-gray-300 overflow-hidden shadow-sm">
-        <div className="grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] bg-emerald-200 text-center text-sm font-bold py-2 px-2">
-          <div className="col-span-3">{title || 'Tournament schedule'}</div>
-        </div>
-        <div className="grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] text-xs sm:text-sm">
-          <div className="bg-amber-200 font-semibold p-2 border-t border-gray-300 flex items-center">
-            {subtitle || ''}
+      {showTable && (
+        <div className="hidden md:block rounded-lg border border-gray-300 overflow-hidden shadow-sm">
+          <div className="grid bg-emerald-200 text-center text-sm font-bold py-2 px-2" style={rowGrid}>
+            <div style={{ gridColumn: `span ${courts + 1}` }}>{title || 'Tournament schedule'}</div>
           </div>
-          <div className="bg-sky-200 font-semibold p-2 text-center border-t border-l border-gray-300">
-            Court 1
-          </div>
-          <div className="bg-orange-200 font-semibold p-2 text-center border-t border-l border-gray-300">
-            Court 2
-          </div>
-        </div>
-        <div className="grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] bg-gray-50 text-[10px] sm:text-xs font-medium border-t border-gray-300">
-          <div className="p-1 border-r border-gray-200" />
-          <div className="grid grid-cols-2 border-r border-gray-200">
-            <span className="p-1 text-center border-r border-gray-200">Playing</span>
-            <span className="p-1 text-center">Umpire</span>
-          </div>
-          <div className="grid grid-cols-2">
-            <span className="p-1 text-center border-r border-gray-200">Playing</span>
-            <span className="p-1 text-center">Umpire</span>
-          </div>
-        </div>
-
-        {slots.map((slot) => {
-          const rowKind = slot.rowKind || 'double';
-          if (rowKind === 'break') {
-            return (
-              <div
-                key={slot.id}
-                className="bg-pink-200 text-center text-sm font-medium py-2 border-t border-gray-300"
-              >
-                {slot.timeLabel || 'Break'}
-              </div>
-            );
-          }
-          if (rowKind === 'note') {
-            return (
-              <div
-                key={slot.id}
-                className="grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] border-t border-gray-300 bg-amber-50"
-              >
-                <div className="p-2 font-medium border-r border-gray-200 bg-gray-50">
-                  {slot.timeLabel}
-                </div>
-                <div className="p-2 text-center border-r border-gray-200 bg-sky-50">
-                  {slot.noteCourt1 || '—'}
-                </div>
-                <div className="p-2 text-center bg-orange-50">{slot.noteCourt2 || ''}</div>
-              </div>
-            );
-          }
-
-          const m1 = matchByGame(scores, slot.gameCourt1);
-          const m2 = matchByGame(scores, slot.gameCourt2);
-          const umps = slotUmpires(slot);
-          const ump1 = umps.court1 || '—';
-          const ump2 = umps.court2 || '—';
-          const clickable = typeof onMatchClick === 'function';
-          const m1Live = isInProgress(m1);
-          const m2Live = isInProgress(m2);
-          const m1Score = formatScoreSummary(m1);
-          const m2Score = formatScoreSummary(m2);
-          const rowLive = m1Live || m2Live;
-
-          return (
-            <div
-              key={slot.id}
-              className={`grid grid-cols-[minmax(5rem,7rem)_1fr_1fr] border-t border-gray-300 text-sm ${
-                rowLive ? 'ring-2 ring-inset ring-green-400' : ''
-              }`}
-            >
-              <div className={`p-2 font-medium border-r border-gray-200 flex items-center ${
-                rowLive ? 'bg-green-50' : 'bg-gray-50'
-              }`}>
-                <span>
-                  {slot.timeLabel}
-                  {rowLive && (
-                    <span className="block text-[10px] font-semibold text-green-700 uppercase tracking-wide mt-0.5">
-                      Live
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div className={`grid grid-cols-2 border-r border-gray-200 ${
-                m1Live ? 'bg-green-50/80' : 'bg-sky-50/80'
-              }`}>
-                <button
-                  type="button"
-                  disabled={!clickable || !m1}
-                  onClick={() => m1 && onMatchClick(m1.game)}
-                  className={`p-2 text-center border-r border-sky-100 ${
-                    clickable && m1 ? 'hover:bg-sky-100 active:bg-sky-200 cursor-pointer' : ''
-                  } disabled:cursor-default disabled:opacity-90`}
-                >
-                  <span>{slot.noteCourt1 || formatMatchLabel(m1)}</span>
-                  {m1Score && (
-                    <span className={`block text-xs font-semibold mt-0.5 ${
-                      m1?.completed ? 'text-gray-500' : 'text-green-700'
-                    }`}>
-                      {m1Score}{m1?.completed ? ' (Final)' : ''}
-                    </span>
-                  )}
-                </button>
-                <div className="p-2 text-center text-xs sm:text-sm">{ump1}</div>
-              </div>
-              <div className={`grid grid-cols-2 ${
-                m2Live ? 'bg-green-50/80' : 'bg-orange-50/80'
-              }`}>
-                <button
-                  type="button"
-                  disabled={!clickable || !m2}
-                  onClick={() => m2 && onMatchClick(m2.game)}
-                  className={`p-2 text-center border-r border-orange-100 ${
-                    clickable && m2 ? 'hover:bg-orange-100 active:bg-orange-200 cursor-pointer' : ''
-                  } disabled:cursor-default disabled:opacity-90`}
-                >
-                  <span>{slot.noteCourt2 || formatMatchLabel(m2)}</span>
-                  {m2Score && (
-                    <span className={`block text-xs font-semibold mt-0.5 ${
-                      m2?.completed ? 'text-gray-500' : 'text-green-700'
-                    }`}>
-                      {m2Score}{m2?.completed ? ' (Final)' : ''}
-                    </span>
-                  )}
-                </button>
-                <div className="p-2 text-center text-xs sm:text-sm">{ump2}</div>
-              </div>
+          <div className="grid text-xs sm:text-sm" style={rowGrid}>
+            <div className="bg-amber-200 font-semibold p-2 border-t border-gray-300 flex items-center">
+              {subtitle || ''}
             </div>
-          );
-        })}
-      </div>
+            {Array.from({ length: courts }, (_, i) => (
+              <div
+                key={i}
+                className={`${courtStyle(i).head} font-semibold p-2 text-center border-t border-l border-gray-300`}
+              >
+                Court {i + 1}
+              </div>
+            ))}
+          </div>
+          <div
+            className="grid bg-gray-50 text-[10px] sm:text-xs font-medium border-t border-gray-300"
+            style={rowGrid}
+          >
+            <div className="p-1 border-r border-gray-200" />
+            {Array.from({ length: courts }, (_, i) => (
+              <div
+                key={i}
+                className={`grid grid-cols-2 ${i < courts - 1 ? 'border-r border-gray-200' : ''}`}
+              >
+                <span className="p-1 text-center border-r border-gray-200">Playing</span>
+                <span className="p-1 text-center">Umpire</span>
+              </div>
+            ))}
+          </div>
 
-      {/* Mobile: stacked cards */}
-      <div className="md:hidden space-y-3">
+          {slots.map((slot) => {
+            const rowKind = slot.rowKind || 'double';
+            if (rowKind === 'break') {
+              return (
+                <div
+                  key={slot.id}
+                  className="bg-pink-200 text-center text-sm font-medium py-2 border-t border-gray-300"
+                >
+                  {slot.timeLabel || 'Break'}
+                </div>
+              );
+            }
+            if (rowKind === 'note') {
+              return (
+                <div
+                  key={slot.id}
+                  className="grid border-t border-gray-300 bg-amber-50"
+                  style={rowGrid}
+                >
+                  <div className="p-2 font-medium border-r border-gray-200 bg-gray-50">
+                    {slot.timeLabel}
+                  </div>
+                  {slotCourts(slot, courts).map((court, i) => (
+                    <div
+                      key={i}
+                      className={`p-2 text-center ${
+                        i < courts - 1 ? 'border-r border-gray-200' : ''
+                      } ${courtStyle(i).note}`}
+                    >
+                      {court.note || (i === 0 ? '—' : '')}
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+
+            const { list, live: rowLive } = readRow(slot);
+
+            return (
+              <div
+                key={slot.id}
+                className={`grid border-t border-gray-300 text-sm ${
+                  rowLive ? 'ring-2 ring-inset ring-green-400' : ''
+                }`}
+                style={rowGrid}
+              >
+                <div
+                  className={`p-2 font-medium border-r border-gray-200 flex items-center ${
+                    rowLive ? 'bg-green-50' : 'bg-gray-50'
+                  }`}
+                >
+                  <span>
+                    {slot.timeLabel}
+                    {rowLive && (
+                      <span className="block text-[10px] font-semibold text-green-700 uppercase tracking-wide mt-0.5">
+                        Live
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {list.map((court, i) => (
+                  <div
+                    key={i}
+                    className={`grid grid-cols-2 ${
+                      i < courts - 1 ? 'border-r border-gray-200' : ''
+                    } ${court.live ? 'bg-green-50/80' : courtStyle(i).cell}`}
+                  >
+                    <button
+                      type="button"
+                      disabled={!clickable || !court.match}
+                      onClick={() => court.match && onMatchClick(court.match.game)}
+                      className={`p-2 text-center border-r ${courtStyle(i).divider} ${
+                        clickable && court.match ? `${courtStyle(i).hover} cursor-pointer` : ''
+                      } disabled:cursor-default disabled:opacity-90`}
+                    >
+                      <span>{court.note || formatMatchLabel(court.match)}</span>
+                      {court.score && (
+                        <span
+                          className={`block text-xs font-semibold mt-0.5 ${
+                            court.match?.completed ? 'text-gray-500' : 'text-green-700'
+                          }`}
+                        >
+                          {court.score}
+                          {court.match?.completed ? ' (Final)' : ''}
+                        </span>
+                      )}
+                    </button>
+                    <div className="p-2 text-center text-xs sm:text-sm">{court.umpire || '—'}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Stacked cards: always on a phone, and at every width once the table is too wide */}
+      <div className={`${showTable ? 'md:hidden' : ''} space-y-3`}>
         <div className="text-center">
           <h2 className="text-lg font-bold text-emerald-900">{title || 'Schedule'}</h2>
           {subtitle ? <p className="text-sm text-amber-900 font-medium">{subtitle}</p> : null}
@@ -208,30 +245,18 @@ export default function ScheduleTable({
               <div key={slot.id} className="rounded-xl border border-amber-200 overflow-hidden shadow-sm">
                 <div className="bg-amber-100 px-3 py-2 text-sm font-semibold">{slot.timeLabel}</div>
                 <div className="p-3 space-y-2 text-sm">
-                  <div>
-                    <span className="text-gray-500 text-xs">Court 1 · </span>
-                    {slot.noteCourt1 || '—'}
-                  </div>
-                  <div>
-                    <span className="text-gray-500 text-xs">Court 2 · </span>
-                    {slot.noteCourt2 || ''}
-                  </div>
+                  {slotCourts(slot, courts).map((court, i) => (
+                    <div key={i}>
+                      <span className="text-gray-500 text-xs">Court {i + 1} · </span>
+                      {court.note || (i === 0 ? '—' : '')}
+                    </div>
+                  ))}
                 </div>
               </div>
             );
           }
 
-          const m1 = matchByGame(scores, slot.gameCourt1);
-          const m2 = matchByGame(scores, slot.gameCourt2);
-          const umps = slotUmpires(slot);
-          const ump1 = umps.court1 || '—';
-          const ump2 = umps.court2 || '—';
-          const clickable = typeof onMatchClick === 'function';
-          const m1Live = isInProgress(m1);
-          const m2Live = isInProgress(m2);
-          const m1Score = formatScoreSummary(m1);
-          const m2Score = formatScoreSummary(m2);
-          const cardLive = m1Live || m2Live;
+          const { list, live: cardLive } = readRow(slot);
 
           return (
             <div
@@ -240,9 +265,11 @@ export default function ScheduleTable({
                 cardLive ? 'border-green-400 ring-2 ring-green-400' : 'border-gray-200'
               }`}
             >
-              <div className={`px-3 py-2 font-semibold text-sm flex items-center justify-between ${
-                cardLive ? 'bg-green-50' : 'bg-gray-100'
-              }`}>
+              <div
+                className={`px-3 py-2 font-semibold text-sm flex items-center justify-between ${
+                  cardLive ? 'bg-green-50' : 'bg-gray-100'
+                }`}
+              >
                 <span>{slot.timeLabel}</span>
                 {cardLive && (
                   <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide bg-green-100 px-2 py-0.5 rounded-full">
@@ -251,56 +278,38 @@ export default function ScheduleTable({
                 )}
               </div>
               <div className="divide-y divide-gray-100">
-                <div className={`p-3 ${m1Live ? 'bg-green-50/90' : 'bg-sky-50/90'}`}>
-                  <div className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
-                    m1Live ? 'text-green-800' : 'text-sky-800'
-                  }`}>
-                    Court 1
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!clickable || !m1}
-                    onClick={() => m1 && onMatchClick(m1.game)}
-                    className={`text-left w-full text-base font-medium ${
-                      clickable && m1 ? 'text-blue-700 active:text-blue-900' : ''
-                    }`}
-                  >
-                    {slot.noteCourt1 || formatMatchLabel(m1)}
-                  </button>
-                  {m1Score && (
-                    <div className={`text-sm font-semibold mt-1 ${
-                      m1?.completed ? 'text-gray-500' : 'text-green-700'
-                    }`}>
-                      {m1Score}{m1?.completed ? ' (Final)' : ''}
+                {list.map((court, i) => (
+                  <div key={i} className={`p-3 ${court.live ? 'bg-green-50/90' : courtStyle(i).card}`}>
+                    <div
+                      className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
+                        court.live ? 'text-green-800' : courtStyle(i).label
+                      }`}
+                    >
+                      Court {i + 1}
                     </div>
-                  )}
-                  <div className="text-xs text-gray-600 mt-1">Umpire: {ump1}</div>
-                </div>
-                <div className={`p-3 ${m2Live ? 'bg-green-50/90' : 'bg-orange-50/90'}`}>
-                  <div className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
-                    m2Live ? 'text-green-800' : 'text-orange-900'
-                  }`}>
-                    Court 2
+                    <button
+                      type="button"
+                      disabled={!clickable || !court.match}
+                      onClick={() => court.match && onMatchClick(court.match.game)}
+                      className={`text-left w-full text-base font-medium ${
+                        clickable && court.match ? 'text-blue-700 active:text-blue-900' : ''
+                      }`}
+                    >
+                      {court.note || formatMatchLabel(court.match)}
+                    </button>
+                    {court.score && (
+                      <div
+                        className={`text-sm font-semibold mt-1 ${
+                          court.match?.completed ? 'text-gray-500' : 'text-green-700'
+                        }`}
+                      >
+                        {court.score}
+                        {court.match?.completed ? ' (Final)' : ''}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-600 mt-1">Umpire: {court.umpire || '—'}</div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={!clickable || !m2}
-                    onClick={() => m2 && onMatchClick(m2.game)}
-                    className={`text-left w-full text-base font-medium ${
-                      clickable && m2 ? 'text-blue-700 active:text-blue-900' : ''
-                    }`}
-                  >
-                    {slot.noteCourt2 || formatMatchLabel(m2)}
-                  </button>
-                  {m2Score && (
-                    <div className={`text-sm font-semibold mt-1 ${
-                      m2?.completed ? 'text-gray-500' : 'text-green-700'
-                    }`}>
-                      {m2Score}{m2?.completed ? ' (Final)' : ''}
-                    </div>
-                  )}
-                  <div className="text-xs text-gray-600 mt-1">Umpire: {ump2}</div>
-                </div>
+                ))}
               </div>
             </div>
           );

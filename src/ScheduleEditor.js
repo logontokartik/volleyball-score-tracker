@@ -4,11 +4,14 @@ import { tournamentDoc } from './clubPaths';
 import { useClub } from './ClubContext';
 import ScheduleAIBuilder from './ScheduleAIBuilder';
 import {
+  MAX_COURT_COUNT,
+  blankCourt,
   blankSlot,
   buildDefaultScheduleSlots,
   buildFinalsSlots,
   formatMatchLabel,
-  slotUmpires,
+  normalizeScheduleSlots,
+  scheduleCourtCount,
 } from './tournamentUtils';
 
 function firestoreRulesHint(err) {
@@ -24,12 +27,12 @@ function firestoreRulesHint(err) {
   return message || 'Save failed.';
 }
 
-function newSlot(kind) {
-  const base = blankSlot({ rowKind: kind });
+function newSlot(kind, courtCount) {
+  const base = blankSlot({ rowKind: kind }, courtCount);
   if (kind === 'break') base.timeLabel = 'Mini-Break';
   if (kind === 'note') {
     base.timeLabel = '7:00 PM';
-    base.noteCourt1 = 'Final (Top 2 Seeds)';
+    base.courts[0].note = 'Final (Top 2 Seeds)';
   }
   return base;
 }
@@ -37,13 +40,20 @@ function newSlot(kind) {
 export default function ScheduleEditor({ tournament, onClose, onSaved }) {
   const { clubId, isClubAdmin } = useClub();
   const scores = tournament.scores || [];
+  const initialCourtCount = useMemo(
+    () => scheduleCourtCount(tournament.scheduleSlots, tournament.courtCount),
+    [tournament.scheduleSlots, tournament.courtCount]
+  );
+  // Rows are converted to the current shape on the way in, so everything below this
+  // point edits one shape only — legacy rows stop existing the moment they are loaded.
   const initialSlots = useMemo(() => {
     if (tournament.scheduleSlots?.length) {
-      return tournament.scheduleSlots.map((s) => ({ ...s }));
+      return normalizeScheduleSlots(tournament.scheduleSlots, initialCourtCount);
     }
-    return buildDefaultScheduleSlots(scores);
-  }, [tournament.id, tournament.scheduleSlots, scores]);
+    return buildDefaultScheduleSlots(scores, initialCourtCount);
+  }, [tournament.id, tournament.scheduleSlots, scores, initialCourtCount]);
 
+  const [courtCount, setCourtCount] = useState(initialCourtCount);
   const [slots, setSlots] = useState(initialSlots);
   const [scheduleTitle, setScheduleTitle] = useState(
     () => tournament.scheduleTitle || `${(tournament.teams || []).length} Teams Format`
@@ -67,6 +77,37 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
     setSlots((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   };
 
+  const updateCourt = (id, index, patch) => {
+    setSlots((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, courts: s.courts.map((c, i) => (i === index ? { ...c, ...patch } : c)) }
+          : s
+      )
+    );
+  };
+
+  const addCourt = () => {
+    if (courtCount >= MAX_COURT_COUNT) return;
+    setCourtCount(courtCount + 1);
+    setSlots((prev) => prev.map((s) => ({ ...s, courts: [...s.courts, blankCourt()] })));
+  };
+
+  // Dropping a court throws away whatever was on it, so it is refused while the last
+  // court still holds a game, an umpire or a note on any row.
+  const lastCourtInUse =
+    courtCount > 1 &&
+    slots.some((s) => {
+      const court = s.courts[courtCount - 1];
+      return Boolean(court && (court.game || court.umpire || court.note));
+    });
+
+  const removeCourt = () => {
+    if (courtCount <= 1 || lastCourtInUse) return;
+    setCourtCount(courtCount - 1);
+    setSlots((prev) => prev.map((s) => ({ ...s, courts: s.courts.slice(0, courtCount - 1) })));
+  };
+
   const move = (index, delta) => {
     const j = index + delta;
     if (j < 0 || j >= slots.length) return;
@@ -88,18 +129,15 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
     }
     setError('');
     setSaving(true);
-    // Resolve any legacy shared `umpire` into explicit per-court fields and drop it, so
-    // the fallback in slotUmpires only ever applies to rows this editor hasn't saved yet.
-    const normalized = slots.map((slot) => {
-      const { umpire, ...rest } = slot;
-      if (slot.rowKind && slot.rowKind !== 'double') return rest;
-      const { court1, court2 } = slotUmpires(slot);
-      return { ...rest, umpireCourt1: court1, umpireCourt2: court2 };
-    });
+    // Write the current shape only: the legacy per-court fields and the older shared
+    // `umpire` are resolved here and dropped, so the fallbacks in slotCourts only ever
+    // apply to rows this editor has not saved yet.
+    const normalized = normalizeScheduleSlots(slots, courtCount);
     try {
       await setDoc(
         tournamentDoc(clubId, tournament.id),
         {
+          courtCount,
           scheduleSlots: normalized,
           scheduleTitle: scheduleTitle.trim() || tournament.scheduleTitle || '',
           scheduleSubtitle: scheduleSubtitle.trim() || tournament.scheduleSubtitle || '',
@@ -116,7 +154,7 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
   };
 
   const resetFromMatches = () => {
-    setSlots(buildDefaultScheduleSlots(scores));
+    setSlots(buildDefaultScheduleSlots(scores, courtCount));
   };
 
   return (
@@ -158,31 +196,63 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
         court, and the umpiring team for each court — they can differ, or use “Same as court 1”.
       </p>
 
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2">
+        <span className="text-sm font-medium text-gray-700">
+          Courts: <span className="font-bold">{courtCount}</span>
+        </span>
+        <button
+          type="button"
+          onClick={removeCourt}
+          disabled={courtCount <= 1 || lastCourtInUse}
+          className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] disabled:opacity-40"
+          title={
+            lastCourtInUse
+              ? `Clear court ${courtCount} on every row before removing it`
+              : 'Remove the last court'
+          }
+        >
+          − Remove court
+        </button>
+        <button
+          type="button"
+          onClick={addCourt}
+          disabled={courtCount >= MAX_COURT_COUNT}
+          className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] disabled:opacity-40"
+        >
+          + Add court
+        </button>
+        {lastCourtInUse && (
+          <span className="text-xs text-amber-700">
+            Court {courtCount} is in use — clear it on every row to remove it.
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setSlots((s) => [...s, newSlot('double')])}
+          onClick={() => setSlots((s) => [...s, newSlot('double', courtCount)])}
           className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px]"
         >
           + Match row
         </button>
         <button
           type="button"
-          onClick={() => setSlots((s) => [...s, newSlot('break')])}
+          onClick={() => setSlots((s) => [...s, newSlot('break', courtCount)])}
           className="text-sm bg-pink-100 border border-pink-300 px-3 py-2 rounded-lg min-h-[44px]"
         >
           + Break row
         </button>
         <button
           type="button"
-          onClick={() => setSlots((s) => [...s, newSlot('note')])}
+          onClick={() => setSlots((s) => [...s, newSlot('note', courtCount)])}
           className="text-sm bg-amber-100 border border-amber-300 px-3 py-2 rounded-lg min-h-[44px]"
         >
           + Note / final row
         </button>
         <button
           type="button"
-          onClick={() => setSlots((s) => [...s, ...buildFinalsSlots()])}
+          onClick={() => setSlots((s) => [...s, ...buildFinalsSlots(courtCount)])}
           className="text-sm bg-emerald-100 border border-emerald-300 px-3 py-2 rounded-lg min-h-[44px]"
           title="Adds break, both semifinals (1v4, 2v3) and the final"
         >
@@ -197,7 +267,12 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
         </button>
       </div>
 
-      <ScheduleAIBuilder tournament={tournament} scores={scores} onSlots={setSlots} />
+      <ScheduleAIBuilder
+        tournament={tournament}
+        scores={scores}
+        courtCount={courtCount}
+        onSlots={setSlots}
+      />
 
       {slots.length === 0 && (
         <p className="text-sm text-gray-600 bg-white border rounded-lg p-3">
@@ -256,26 +331,20 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
 
             {slot.rowKind === 'note' && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Court 1 text</label>
-                  <input
-                    type="text"
-                    value={slot.noteCourt1}
-                    onChange={(e) => updateSlot(slot.id, { noteCourt1: e.target.value })}
-                    className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
-                    placeholder="Final (Top 2 Seeds)"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Court 2 text</label>
-                  <input
-                    type="text"
-                    value={slot.noteCourt2}
-                    onChange={(e) => updateSlot(slot.id, { noteCourt2: e.target.value })}
-                    className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
-                    placeholder="Optional"
-                  />
-                </div>
+                {slot.courts.map((court, courtIndex) => (
+                  <div key={courtIndex}>
+                    <label className="text-xs font-medium text-gray-600">
+                      Court {courtIndex + 1} text
+                    </label>
+                    <input
+                      type="text"
+                      value={court.note}
+                      onChange={(e) => updateCourt(slot.id, courtIndex, { note: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
+                      placeholder={courtIndex === 0 ? 'Final (Top 2 Seeds)' : 'Optional'}
+                    />
+                  </div>
+                ))}
               </div>
             )}
 
@@ -287,101 +356,70 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
                   ))}
                 </datalist>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-sky-800">
-                      Court 1 — umpiring team
-                    </label>
-                    <input
-                      type="text"
-                      value={slotUmpires(slot).court1}
-                      onChange={(e) => updateSlot(slot.id, { umpireCourt1: e.target.value })}
-                      className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
-                      placeholder="e.g. Green"
-                      list={`teams-${tournament.id}`}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <label className="text-xs font-medium text-orange-900">
-                        Court 2 — umpiring team
+                  {slot.courts.map((court, courtIndex) => (
+                    <div
+                      key={courtIndex}
+                      className="rounded-lg border border-gray-200 p-2 space-y-1"
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-xs font-bold text-gray-700">
+                          Court {courtIndex + 1}
+                        </span>
+                        {courtIndex > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCourt(slot.id, courtIndex, {
+                                umpire: slot.courts[0].umpire,
+                              })
+                            }
+                            className="text-xs text-blue-700 underline"
+                          >
+                            Same umpire as court 1
+                          </button>
+                        )}
+                      </div>
+                      <label className="text-xs font-medium text-gray-600 block">
+                        Umpiring team
                       </label>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateSlot(slot.id, { umpireCourt2: slotUmpires(slot).court1 })
+                      <input
+                        type="text"
+                        value={court.umpire}
+                        onChange={(e) =>
+                          updateCourt(slot.id, courtIndex, { umpire: e.target.value })
                         }
-                        className="text-xs text-blue-700 underline"
+                        className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
+                        placeholder="e.g. Green"
+                        list={`teams-${tournament.id}`}
+                      />
+                      <label className="text-xs font-medium text-gray-600 block">Game</label>
+                      <select
+                        value={court.game || ''}
+                        onChange={(e) =>
+                          updateCourt(slot.id, courtIndex, {
+                            game: e.target.value || null,
+                            note: e.target.value ? '' : court.note,
+                          })
+                        }
+                        className="w-full border rounded-lg px-2 py-3 text-base min-h-[44px] bg-white"
                       >
-                        Same as court 1
-                      </button>
+                        <option value="">—</option>
+                        {gameOptions.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="text-xs text-gray-500 mt-1 block">Or custom label</label>
+                      <input
+                        type="text"
+                        value={court.note}
+                        onChange={(e) => updateCourt(slot.id, courtIndex, { note: e.target.value })}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="Overrides match text"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      value={slotUmpires(slot).court2}
-                      onChange={(e) => updateSlot(slot.id, { umpireCourt2: e.target.value })}
-                      className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px]"
-                      placeholder="e.g. Red"
-                      list={`teams-${tournament.id}`}
-                    />
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-sky-800">Court 1 — game</label>
-                    <select
-                      value={slot.gameCourt1 || ''}
-                      onChange={(e) =>
-                        updateSlot(slot.id, {
-                          gameCourt1: e.target.value || null,
-                          noteCourt1: e.target.value ? '' : slot.noteCourt1,
-                        })
-                      }
-                      className="w-full border rounded-lg px-2 py-3 text-base min-h-[44px] bg-white"
-                    >
-                      <option value="">—</option>
-                      {gameOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="text-xs text-gray-500 mt-1 block">Or custom label</label>
-                    <input
-                      type="text"
-                      value={slot.noteCourt1}
-                      onChange={(e) => updateSlot(slot.id, { noteCourt1: e.target.value })}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="Overrides match text"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-orange-900">Court 2 — game</label>
-                    <select
-                      value={slot.gameCourt2 || ''}
-                      onChange={(e) =>
-                        updateSlot(slot.id, {
-                          gameCourt2: e.target.value || null,
-                          noteCourt2: e.target.value ? '' : slot.noteCourt2,
-                        })
-                      }
-                      className="w-full border rounded-lg px-2 py-3 text-base min-h-[44px] bg-white"
-                    >
-                      <option value="">—</option>
-                      {gameOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="text-xs text-gray-500 mt-1 block">Or custom label</label>
-                    <input
-                      type="text"
-                      value={slot.noteCourt2}
-                      onChange={(e) => updateSlot(slot.id, { noteCourt2: e.target.value })}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="Overrides match text"
-                    />
-                  </div>
+                  ))}
                 </div>
               </>
             )}

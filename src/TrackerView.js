@@ -110,7 +110,7 @@ export default function TrackerView() {
   const scheduleSlots =
     tournament?.scheduleSlots?.length > 0
       ? tournament.scheduleSlots
-      : buildDefaultScheduleSlots(scores);
+      : buildDefaultScheduleSlots(scores, tournament?.courtCount);
 
   const hasSavedSchedule = Boolean(tournament?.scheduleSlots?.length);
 
@@ -376,6 +376,7 @@ export default function TrackerView() {
                     subtitle={scheduleSubtitle}
                     scores={scores}
                     scheduleSlots={scheduleSlots}
+                    courtCount={tournament?.courtCount}
                     onMatchClick={onScheduleMatchClick}
                   />
                 </CardContent>

@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { clubDoc, tournamentDoc, tournamentsCol } from './clubPaths';
 import { useClub } from './ClubContext';
 import {
+  DEFAULT_COURT_COUNT,
   DEFAULT_SCHEDULE_FORMAT,
+  MAX_COURT_COUNT,
   SCHEDULE_FORMATS,
   buildDefaultScheduleSlots,
   buildScheduleForFormat,
@@ -81,6 +83,7 @@ export default function AdminPage() {
   const [setsPerMatch, setSetsPerMatch] = useState(3);
   const [meetingsPerPair, setMeetingsPerPair] = useState(1);
   const [pointsToWin, setPointsToWin] = useState(25);
+  const [courtCount, setCourtCount] = useState(DEFAULT_COURT_COUNT);
   const [scheduleFormat, setScheduleFormat] = useState(DEFAULT_SCHEDULE_FORMAT);
   const [editingScheduleForId, setEditingScheduleForId] = useState(null);
   const [editingLocksForId, setEditingLocksForId] = useState(null);
@@ -185,6 +188,10 @@ export default function AdminPage() {
     const spm = Math.min(5, Math.max(1, parseInt(setsPerMatch, 10) || 1));
     const mpp = Math.min(10, Math.max(1, parseInt(meetingsPerPair, 10) || 1));
     const ptw = Math.min(50, Math.max(1, parseInt(pointsToWin, 10) || 25));
+    const courts = Math.min(
+      MAX_COURT_COUNT,
+      Math.max(1, parseInt(courtCount, 10) || DEFAULT_COURT_COUNT)
+    );
 
     const format = SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
     if (teamNames.length < format.minTeams) {
@@ -194,7 +201,7 @@ export default function AdminPage() {
 
     const scheduled = buildScheduleForFormat(scheduleFormat, teamNames, mpp);
     const scores = matchesWithEmptySets(scheduled, spm);
-    const scheduleSlots = buildDefaultScheduleSlots(scores);
+    const scheduleSlots = buildDefaultScheduleSlots(scores, courts);
 
     const id = doc(tournamentsCol(clubId)).id;
     const payload = {
@@ -204,6 +211,7 @@ export default function AdminPage() {
       setsPerMatch: spm,
       meetingsPerPair: mpp,
       pointsToWin: ptw,
+      courtCount: courts,
       scores,
       scheduleSlots,
       scheduleTitle: `${teamNames.length} Teams Format`,
@@ -228,6 +236,7 @@ export default function AdminPage() {
       setSetsPerMatch(3);
       setMeetingsPerPair(1);
       setPointsToWin(25);
+      setCourtCount(DEFAULT_COURT_COUNT);
       setScheduleFormat(DEFAULT_SCHEDULE_FORMAT);
       setBulkTeams('');
       setBulkNotice('');
@@ -327,7 +336,7 @@ export default function AdminPage() {
           placeholder="e.g. Spring league"
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sets per match</label>
             <input
@@ -364,6 +373,18 @@ export default function AdminPage() {
               value={pointsToWin}
               onChange={(e) => setPointsToWin(e.target.value)}
               className="border p-2 rounded w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Courts</label>
+            <input
+              type="number"
+              min={1}
+              max={MAX_COURT_COUNT}
+              value={courtCount}
+              onChange={(e) => setCourtCount(e.target.value)}
+              className="border p-2 rounded w-full"
+              title="How many courts run at once. Can be changed later in Schedule."
             />
           </div>
         </div>

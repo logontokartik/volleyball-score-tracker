@@ -26,8 +26,8 @@ export default function AdminMatchLocks({ tournament, onClose }) {
   const scores = tournament.scores || [];
   const scheduleSlots = useMemo(() => {
     if (tournament.scheduleSlots?.length) return tournament.scheduleSlots;
-    return buildDefaultScheduleSlots(scores);
-  }, [tournament.scheduleSlots, scores]);
+    return buildDefaultScheduleSlots(scores, tournament.courtCount);
+  }, [tournament.scheduleSlots, tournament.courtCount, scores]);
 
   const [savingGame, setSavingGame] = useState(null);
   const [error, setError] = useState('');
