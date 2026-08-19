@@ -220,6 +220,11 @@ export default function TrackerView() {
   // Admin is for admins of THIS club only; it lives at /c/:slug/admin, which gates itself.
   const admin = isClubAdmin;
 
+  // An admin can hide a tournament while it is still the active one — during setup, say.
+  // Nothing about it renders here then; the document itself is still world-readable, so
+  // this is presentation only and never a substitute for firestore.rules.
+  const hiddenActive = Boolean(tournament?.hidden);
+
   // Until Firebase has replied once, `user` is null and so is every role derived from
   // it. Rendering the signed-out view here would show an admin "log in to score" and
   // no Admin tab for a few hundred milliseconds, then flip. (Club readiness needs no
@@ -265,7 +270,29 @@ export default function TrackerView() {
           </Card>
         )}
 
-        {!tournamentLoading && tournament && isTournamentComplete(tournament) && (
+        {!tournamentLoading && hiddenActive && (
+          <Card>
+            <CardContent className="p-6 text-center text-gray-700">
+              <div className="text-5xl mb-4">🏐</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">No games live</h2>
+              <p className="mb-3">
+                {admin
+                  ? 'The active tournament is hidden from the public pages. Show it in Admin when you are ready.'
+                  : 'Nothing is being scored right now.'}
+              </p>
+              {admin && (
+                <Link
+                  to={`/c/${slug}/admin`}
+                  className="inline-flex items-center justify-center min-h-[48px] px-5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                >
+                  Open Admin
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {!tournamentLoading && tournament && !hiddenActive && isTournamentComplete(tournament) && (
           <div className="grid gap-4">
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-8 text-center shadow-sm">
               <div className="text-5xl mb-4">🏐</div>
@@ -283,7 +310,7 @@ export default function TrackerView() {
           </div>
         )}
 
-        {!tournamentLoading && tournament && !isTournamentComplete(tournament) && (
+        {!tournamentLoading && tournament && !hiddenActive && !isTournamentComplete(tournament) && (
           <>
             <div className="text-center px-1">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.name}</h1>

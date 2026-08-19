@@ -34,6 +34,30 @@ function emptyTeamRow() {
   return { id: crypto.randomUUID(), name: '' };
 }
 
+// Rosters arrive either as a spreadsheet column (newlines) or pasted out of an email or
+// chat message (commas), and often as a mix of both, so both separators are accepted at
+// once. Every entry that is dropped is counted rather than discarded quietly: a 24-team
+// paste that silently lands 22 teams is only noticed at the tournament.
+export function parseBulkTeams(text, existingNames) {
+  const taken = new Set(
+    (existingNames || []).map((n) => (n || '').trim().toLowerCase()).filter(Boolean)
+  );
+  const added = [];
+  let duplicates = 0;
+  for (const raw of String(text || '').split(/[,\r\n]+/)) {
+    const name = raw.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (taken.has(key)) {
+      duplicates += 1;
+      continue;
+    }
+    taken.add(key);
+    added.push(name);
+  }
+  return { added, duplicates };
+}
+
 export default function AdminPage() {
   // The club doc is already subscribed live by ClubContext, so the active pointer is read
   // from there rather than opening a second listener on the same document.
@@ -63,6 +87,8 @@ export default function AdminPage() {
   const [editingTeamsForId, setEditingTeamsForId] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [bulkTeams, setBulkTeams] = useState('');
+  const [bulkNotice, setBulkNotice] = useState('');
   const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
@@ -96,6 +122,49 @@ export default function AdminPage() {
     setTeamRows((rows) => (rows.length <= 2 ? rows : rows.filter((r) => r.id !== id)));
   const updateTeamRow = (id, name) =>
     setTeamRows((rows) => rows.map((r) => (r.id === id ? { ...r, name } : r)));
+
+  const handleAddBulkTeams = () => {
+    const { added, duplicates } = parseBulkTeams(
+      bulkTeams,
+      teamRows.map((r) => r.name)
+    );
+    if (!added.length && !duplicates) {
+      setBulkNotice('Nothing to add — paste names separated by commas or new lines.');
+      return;
+    }
+    if (added.length) {
+      setTeamRows((rows) => {
+        // The form starts with four blank rows; appending past them would leave holes in
+        // the list that has to be read and reordered by hand. Blanks are filled in place
+        // first, then the rest are appended — existing names are never overwritten.
+        const queue = [...added];
+        const filled = rows.map((r) =>
+          !r.name.trim() && queue.length ? { ...r, name: queue.shift() } : r
+        );
+        return [...filled, ...queue.map((name) => ({ id: crypto.randomUUID(), name }))];
+      });
+    }
+    setBulkTeams('');
+    const parts = [`Added ${added.length} team${added.length === 1 ? '' : 's'}`];
+    if (duplicates) parts.push(`skipped ${duplicates} duplicate${duplicates === 1 ? '' : 's'}`);
+    setBulkNotice(`${parts.join(', ')}.`);
+  };
+
+  const handleToggleHidden = async (t) => {
+    if (!isClubAdmin) {
+      setError('Only a club admin can hide or show a tournament.');
+      return;
+    }
+    setError('');
+    setSaving(true);
+    try {
+      await setDoc(tournamentDoc(clubId, t.id), { hidden: !t.hidden }, { merge: true });
+    } catch (e) {
+      setError(firestoreRulesHint(e));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleCreateTournament = async () => {
     setError('');
@@ -139,6 +208,7 @@ export default function AdminPage() {
       scheduleSlots,
       scheduleTitle: `${teamNames.length} Teams Format`,
       scheduleSubtitle: formName.trim(),
+      hidden: false,
       createdAt: serverTimestamp(),
     };
 
@@ -149,16 +219,18 @@ export default function AdminPage() {
 
     setSaving(true);
     try {
+      // Creating is not going live: tournaments are usually set up days ahead, and
+      // switching the club's active pointer here would swap the scoreboard out from
+      // under whatever is being played right now. "Set active" is the explicit step.
       await setDoc(tournamentDoc(clubId, id), payload);
-      await setDoc(clubDoc(clubId), { activeTournamentId: id }, { merge: true });
       setFormName('');
       setTeamRows([emptyTeamRow(), emptyTeamRow(), emptyTeamRow(), emptyTeamRow()]);
       setSetsPerMatch(3);
       setMeetingsPerPair(1);
       setPointsToWin(25);
       setScheduleFormat(DEFAULT_SCHEDULE_FORMAT);
-      // The point of creating a tournament is to run it, so land on the live view.
-      navigate(`/c/${slug}`);
+      setBulkTeams('');
+      setBulkNotice('');
     } catch (e) {
       setError(firestoreRulesHint(e));
     } finally {
@@ -352,6 +424,34 @@ export default function AdminPage() {
           ))}
         </div>
 
+        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="bulk-teams">
+            Paste a team list
+          </label>
+          <p className="text-xs text-gray-600 mb-2">
+            Separated by commas, new lines, or both. Names already in the list above are
+            skipped, and the rest are added to the end — reorder them there.
+          </p>
+          <textarea
+            id="bulk-teams"
+            value={bulkTeams}
+            onChange={(e) => setBulkTeams(e.target.value)}
+            rows={4}
+            className="border p-2 rounded w-full font-mono text-sm"
+            placeholder={'Red, Blue, Yellow\nGreen\nBlack'}
+          />
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <button
+              type="button"
+              onClick={handleAddBulkTeams}
+              className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-100"
+            >
+              Add to team list
+            </button>
+            {bulkNotice && <span className="text-sm text-gray-700">{bulkNotice}</span>}
+          </div>
+        </div>
+
         {(() => {
           const named = teamRows.map((r) => r.name.trim()).filter(Boolean);
           const games = previewGameCount(scheduleFormat, named.length, meetingsPerPair);
@@ -370,10 +470,14 @@ export default function AdminPage() {
           type="button"
           onClick={handleCreateTournament}
           disabled={saving || !isClubAdmin}
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          className="bg-blue-600 text-white px-4 py-2 rounded min-h-[44px] disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Create and set active'}
+          {saving ? 'Saving…' : 'Create'}
         </button>
+        <p className="text-sm text-gray-600 mt-2">
+          The new tournament appears in the list below. Nothing changes on the scores page
+          until you choose <span className="font-medium">Set active</span> for it.
+        </p>
         {!isClubAdmin && (
           <p className="text-sm text-amber-700 mt-2">
             Only a club admin can create or switch tournaments.
@@ -382,7 +486,12 @@ export default function AdminPage() {
       </div>
 
       <div className="p-4 border rounded-lg bg-white shadow-sm">
-        <h3 className="text-lg font-bold mb-3">Tournaments</h3>
+        <h3 className="text-lg font-bold mb-1">Tournaments</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          <span className="font-medium">Hide</span> keeps a tournament off the public scores
+          and completed pages. It is a display choice, not access control — the data stays
+          readable to anyone who knows its address.
+        </p>
         {tournaments.length === 0 ? (
           <p className="text-sm text-gray-600">No tournaments yet.</p>
         ) : (
@@ -397,6 +506,11 @@ export default function AdminPage() {
                       {t.meetingsPerPair ?? 1}× round robin
                       {t.id === activeTournamentId && (
                         <span className="ml-2 text-green-700 font-medium">Active</span>
+                      )}
+                      {t.hidden && (
+                        <span className="ml-2 text-gray-700 font-medium">
+                          Hidden from public pages
+                        </span>
                       )}
                     </div>
                   </div>
@@ -423,6 +537,15 @@ export default function AdminPage() {
                       className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-50"
                     >
                       {editingLocksForId === t.id ? 'Close locks' : 'Locks'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleHidden(t)}
+                      disabled={saving || !isClubAdmin}
+                      className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-50 disabled:opacity-50"
+                      title="Show or hide this tournament on the public scores and completed pages"
+                    >
+                      {t.hidden ? 'Show' : 'Hide'}
                     </button>
                     <button
                       type="button"
