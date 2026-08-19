@@ -258,7 +258,7 @@ export async function runMigration(database, { clubId, slug, name, user, overwri
       }
     }
   } else {
-    // One batch, exactly the shape MyClubsPage uses. It has to be one batch: the rules
+    // One batch, exactly the shape ClubsPage uses. It has to be one batch: the rules
     // cross-check clubs/{id} against slugs/{slug} with getAfter(), and the founding
     // admin row against clubs/{id}.createdBy, so split writes are each denied on their
     // own.

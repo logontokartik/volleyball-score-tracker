@@ -66,11 +66,11 @@ export default function SuperAdminPage() {
     return (
       <Shell title="Not available">
         This page is for installation operators. You are signed in as{' '}
-        <span className="font-mono text-amber-300">{user.email}</span>. Your clubs are under{' '}
-        <Link to="/clubs" className="text-amber-300 underline">
-          My clubs
-        </Link>
-        .
+        <span className="font-mono text-amber-300">{user.email}</span>. Browse the{' '}
+        <Link to="/" className="text-amber-300 underline">
+          club list
+        </Link>{' '}
+        instead.
       </Shell>
     );
   }
