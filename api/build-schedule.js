@@ -14,8 +14,9 @@ const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
 // Reading a schedule off a screenshot is extraction, not deep reasoning, and it runs
 // against a hard function timeout — so this defaults lower than the archive assistant.
 // Override with ANTHROPIC_SCHEDULE_EFFORT if a messy source needs more.
+// (The shared ANTHROPIC_EFFORT fallback went with api/ask-archive.js.)
 const EFFORT =
-  process.env.ANTHROPIC_SCHEDULE_EFFORT || process.env.ANTHROPIC_EFFORT || 'low';
+  process.env.ANTHROPIC_SCHEDULE_EFFORT || 'low';
 
 const MAX_TEXT_CHARS = 8000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Anthropic's per-image ceiling

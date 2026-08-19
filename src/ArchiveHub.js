@@ -8,8 +8,8 @@ import { fetchArchiveFromSheets, GVBL_ARCHIVE_SHEET_ID } from './archiveRefreshU
 import {
   googleSheetsArchiveUrl,
   computeArchiveStats,
+  answerArchiveQuestion,
 } from './archiveInsights';
-import { askArchive } from './askArchiveAI';
 import {
   CHAMPION_PHOTOS_BY_TOURNAMENT,
   GVW_EMBEDDED_VIDEO_IFRAME_SRC,
@@ -264,13 +264,18 @@ export default function ArchiveHub() {
     setAsking(true);
     setAskResult(null);
     try {
-      const result = await askArchive(trimmed, {
-        clubId,
-        // Only data this club owns may back the offline answer.
-        archiveData: bundledIsOurs || firestoreArchive ? archiveData : null,
-        stats,
-        signal: controller.signal,
-      });
+      // Answered locally from the data already on the page. There was a Claude-backed
+      // path here; it was removed because the pattern-matched answers cover the
+      // questions people actually ask, and the endpoint behind it could be called by
+      // anyone to spend the project's Anthropic credits.
+      const data = bundledIsOurs || firestoreArchive ? archiveData : null;
+      const result = data
+        ? { ...answerArchiveQuestion(trimmed, data, stats), source: 'local' }
+        : {
+            title: 'No archive to search',
+            body: 'This club has no archive data loaded yet.',
+            source: 'local',
+          };
       if (!controller.signal.aborted) setAskResult(result);
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -306,11 +311,16 @@ export default function ArchiveHub() {
               The archive is built from a club-owned Google Sheet, and this club does not have one
               configured.
             </p>
-            {/* Attaching a spreadsheet is an operator action, not a club-admin one:
-                `archiveSheetId` is super-admin-only in firestore.rules because
-                api/ask-archive fetches whatever it points at on the project's Anthropic
-                key. Telling a club admin to go set it would send them at a write the
-                rules reject. */}
+            {/* Attaching a spreadsheet is an operator action: `archiveSheetId` is
+                super-admin-only in firestore.rules, so telling a club admin to set it
+                would send them at a write the rules reject.
+
+                The original reason for that restriction is gone — it existed because
+                api/ask-archive fetched whatever the field pointed at on the project's
+                Anthropic key, and that function has been deleted. The sheet is now only
+                ever fetched by the browser, so the field could safely go back to being
+                club-admin writable. Left as-is rather than changed silently; relaxing it
+                means a rules change and a test update. */}
             {isSuperAdmin ? (
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
                 As an installation operator you can set{' '}
