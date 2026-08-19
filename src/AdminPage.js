@@ -68,6 +68,14 @@ export function parseBulkTeams(text, existingNames) {
   return { added, duplicates };
 }
 
+/** Text field -> a usable pool count. Unparseable or out of range falls back to the
+ *  nearest allowed value, so the rest of the form always has a real number to render. */
+function clampPoolCount(value) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return MIN_POOL_COUNT;
+  return Math.min(MAX_POOL_COUNT, Math.max(MIN_POOL_COUNT, n));
+}
+
 export default function AdminPage() {
   // The club doc is already subscribed live by ClubContext, so the active pointer is read
   // from there rather than opening a second listener on the same document.
@@ -93,7 +101,13 @@ export default function AdminPage() {
   const [pointsToWin, setPointsToWin] = useState(25);
   const [courtCount, setCourtCount] = useState(DEFAULT_COURT_COUNT);
   const [scheduleFormat, setScheduleFormat] = useState(DEFAULT_SCHEDULE_FORMAT);
-  const [poolCount, setPoolCount] = useState(MIN_POOL_COUNT);
+  // The field holds raw text; the clamped number is derived. Clamping on every
+  // keystroke is what made this unusable: clearing it parsed as NaN and snapped to the
+  // minimum, so typing "5" landed on "25" and clamped to the maximum. The other numeric
+  // inputs on this form already keep their text and clamp at submit; this one has to
+  // derive a number too, because the pool selects below render from it live.
+  const [poolCountText, setPoolCountText] = useState(String(MIN_POOL_COUNT));
+  const poolCount = clampPoolCount(poolCountText);
   const [editingScheduleForId, setEditingScheduleForId] = useState(null);
   const [editingLocksForId, setEditingLocksForId] = useState(null);
   const [editingTeamsForId, setEditingTeamsForId] = useState(null);
@@ -273,7 +287,7 @@ export default function AdminPage() {
       setPointsToWin(25);
       setCourtCount(DEFAULT_COURT_COUNT);
       setScheduleFormat(DEFAULT_SCHEDULE_FORMAT);
-      setPoolCount(MIN_POOL_COUNT);
+      setPoolCountText(String(MIN_POOL_COUNT));
       setBulkTeams('');
       setBulkNotice('');
     } catch (e) {
@@ -456,15 +470,11 @@ export default function AdminPage() {
                   type="number"
                   min={MIN_POOL_COUNT}
                   max={MAX_POOL_COUNT}
-                  value={poolCount}
-                  onChange={(e) =>
-                    setPoolCount(
-                      Math.min(
-                        MAX_POOL_COUNT,
-                        Math.max(MIN_POOL_COUNT, parseInt(e.target.value, 10) || MIN_POOL_COUNT)
-                      )
-                    )
-                  }
+                  value={poolCountText}
+                  onChange={(e) => setPoolCountText(e.target.value)}
+                  // Snap to the allowed range only once editing stops, so an empty field
+                  // or a half-typed number is never rewritten under the cursor.
+                  onBlur={() => setPoolCountText(String(clampPoolCount(poolCountText)))}
                   className="border p-2 rounded w-24 min-h-[44px] bg-white"
                 />
               </div>
