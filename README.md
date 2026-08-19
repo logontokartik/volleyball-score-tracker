@@ -44,11 +44,11 @@ An unconfigured deploy must not hand every visitor super-admin rights.
 
 ### Adding someone to a club
 
-There is no invitation email — an invite pre-authorises an address, and the person picks
-up the role the moment they sign in with Google.
-
 1. A club admin adds the person's email to the club, as **scorer** or **admin**.
-2. That person signs in with Google using the same address.
+2. They are emailed a link (see `api/send-invite.js` below). If `RESEND_API_KEY` is not
+   set the invite is still created and still works — it just is not announced.
+3. They sign in with Google using **that same address** and the invite is waiting on the
+   clubs page.
 
 Because roles are matched by email address, an invite can only be claimed by a
 **verified** address, and the claim is pinned to the role the invite named — an invited
@@ -96,6 +96,22 @@ Two Vercel Functions call Claude, both using the same server-side key:
   not exist and a club with no `archiveSheetId` both return 404 with distinct messages.
   Sheet id and archive are cached separately, each keyed by id, since one warm function
   instance serves every club.
+- **`api/send-invite.js`** — emails someone the invite a club admin just created. Not a
+  Claude feature, but it shares the same shape and the same reasoning about not being an
+  open relay.
+
+  **It cannot mail an arbitrary address.** The request carries the caller's Firebase ID
+  token, and the function uses *that token* to read `clubs/{clubId}/invites/{email}`
+  through the Firestore REST API. Only club admins may read that document, so a 200
+  means Firestore has already decided the caller is one — the permission logic is not
+  duplicated here and cannot drift from `firestore.rules`. The recipient is then taken
+  from the document rather than the request body, so even a real admin can only mail
+  someone they have already invited. The link uses `APP_BASE_URL`, never the request's
+  Host header, which would otherwise let an attacker get a genuine-looking email sent
+  with a link to their own site.
+
+  The email is a notification, not the mechanism: the invite is already saved and
+  claimable, so a send failure is reported to the admin without undoing anything.
 - **`api/build-schedule.js`** — Admin → Schedule → *Build with AI*. Takes a screenshot
   of a schedule (or a typed description) and returns schedule rows. The tournament's
   game list is sent along so Claude maps "Black v Yellow" onto the real game id; any id
@@ -112,6 +128,10 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost and latency. |
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
 | `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
+| `RESEND_API_KEY` | for invite email | — | From [resend.com](https://resend.com). Server-side only. Without it invites still work, they just are not emailed. |
+| `RESEND_EMAIL_DOMAIN` | no | — | Set by Vercel's Resend integration. The sender becomes `invites@<this domain>`, so nothing else is needed. |
+| `RESEND_FROM` | no | derived from `RESEND_EMAIL_DOMAIN` | Overrides the sender when a specific mailbox or display name is wanted. Must be on a domain verified in Resend. |
+| `APP_BASE_URL` | no | `https://volleyscores.app` | Base of the link in the invite email. Deliberately configuration, never the request's Host header. |
 | `FIREBASE_PROJECT_ID` | no | `volleyball-score-tracker` | Project whose Firestore `clubs/{clubId}` documents `ask-archive` reads to resolve `archiveSheetId`. Server-side only; must match `projectId` in `src/firebase.js`. |
 | `REACT_APP_SUPER_ADMIN_EMAILS` | no | empty | Comma-separated super-admin addresses — admin of every club, no member document needed. Public (it is in the JS bundle); mirror it in `superAdmins()` in `firestore.rules`, which is the list `isSuper()` checks against and the only one that is enforced. |
 | `REACT_APP_DEFAULT_CLUB_SLUG` | no | `gvbl` | Club that `/`, `/completed` and `/archive` redirect to. |

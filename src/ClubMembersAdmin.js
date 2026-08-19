@@ -45,6 +45,7 @@ export default function ClubMembersAdmin({ onClose }) {
   const [membersState, setMembersState] = useState({ clubId: null, list: [], loading: true, error: '' });
   const [invitesState, setInvitesState] = useState({ clubId: null, list: [] });
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
   const [inviteEmail, setInviteEmail] = useState('');
@@ -105,6 +106,7 @@ export default function ClubMembersAdmin({ onClose }) {
       setError('Enter a valid email address.');
       return;
     }
+    setNotice('');
     if (members.some((m) => normalizeEmail(m.email) === email)) {
       setError('That address is already a member of this club.');
       return;
@@ -117,9 +119,37 @@ export default function ClubMembersAdmin({ onClose }) {
         email,
         role: inviteRole,
         invitedBy: user.uid,
+        // Named in the email so the recipient knows who invited them.
+        invitedByEmail: normalizeEmail(user.email),
         createdAt: serverTimestamp(),
       });
       setInviteEmail('');
+
+      // The invite is already saved and usable at this point — the email is a
+      // notification, not the mechanism. So a send failure is reported without
+      // undoing anything: the person can still be told to sign in.
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/send-invite', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ clubId, email }),
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          // /api/* falls through to the SPA when the function is not deployed.
+          throw new Error('not-deployed');
+        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'send-failed');
+        setNotice(`Invite saved and emailed to ${email}.`);
+      } catch (sendErr) {
+        setNotice(
+          `Invite saved for ${email}, but the email could not be sent` +
+            (sendErr?.message === 'not-deployed' ? ' (email is not configured here)' : '') +
+            '. Ask them to sign in with that address and it will be waiting.'
+        );
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -221,6 +251,12 @@ export default function ClubMembersAdmin({ onClose }) {
         </div>
       )}
       {error && <div className="text-red-600 text-sm mb-3">{error}</div>}
+      {/* Amber, not red: the invite itself succeeded even when the email did not. */}
+      {notice && (
+        <div className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg text-sm px-3 py-2 mb-3">
+          {notice}
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-600">Loading members…</p>
