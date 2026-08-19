@@ -10,8 +10,9 @@ import { useClubOptional } from '../ClubContext';
  * mode when they are written twice is a section that exists on desktop and not on a
  * phone, which is the device this app is actually used on.
  *
- * Admin is deliberately absent: it is an account-level destination, not a section of the
- * scoreboard, and it lives in the account menu.
+ * Admin rides along for club admins. It started in the account menu, which turned out to
+ * be somewhere nobody looked — an admin could not find the page that lets them edit the
+ * schedule or invite people. Discoverability beats taxonomy here.
  *
  * NavLink puts `aria-current="page"` on the active anchor itself, so neither variant
  * sets it by hand.
@@ -31,6 +32,11 @@ function useClubSections() {
     // tab leads every other club to an empty page for a feature they do not have.
     ...(club?.club?.archiveSheetId
       ? [{ to: `/c/${slug}/archive`, end: false, label: 'Archive' }]
+      : []),
+    // Club admins only. This is a UI gate; the /c/:slug/admin route checks the same
+    // thing, and firestore.rules rejects every admin write regardless of either.
+    ...(club?.isClubAdmin
+      ? [{ to: `/c/${slug}/admin`, end: false, label: 'Admin' }]
       : []),
   ];
 }

@@ -64,7 +64,7 @@ function SiteNav() {
           ) : (
             <>
               <span className="block text-base sm:text-xl font-black tracking-tight truncate">
-                Volley<span className="text-amber-400">Score</span>
+                Volley<span className="text-amber-400">Scores</span>
               </span>
               {/* The tagline is hidden on a phone on purpose: this header is a fixed
                   56px (--site-header-h) that the sub-tabs pin beneath, and a second line
