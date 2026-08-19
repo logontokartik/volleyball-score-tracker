@@ -244,7 +244,7 @@ export default function ClubsPage() {
       <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-black text-white">
-            Volley<span className="text-amber-400">Score</span>
+            Volley<span className="text-amber-400">Scores</span>
           </h1>
           {/* The header hides this line on a phone to protect its fixed height,
               so it lives here too — where there is room for it. */}
@@ -271,7 +271,7 @@ export default function ClubsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-black text-white">
-            Volley<span className="text-amber-400">Score</span>
+            Volley<span className="text-amber-400">Scores</span>
           </h1>
           {/* The header hides this line on a phone to protect its fixed height,
               so it lives here too — where there is room for it. */}
