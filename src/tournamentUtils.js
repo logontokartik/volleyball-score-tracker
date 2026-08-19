@@ -64,6 +64,20 @@ export function buildSkipAdjacentSchedule(teams, meetingsPerPair) {
 export const MIN_POOL_COUNT = 2;
 export const MAX_POOL_COUNT = 8;
 
+/**
+ * A pool-count text field -> a usable number.
+ *
+ * Lives here rather than in either admin screen because both edit pool counts, and a
+ * per-screen copy is how one of them ends up clamping differently from the other.
+ * Unparseable or out-of-range falls back to the nearest allowed value, so callers always
+ * have a real number to render pool selects from.
+ */
+export function clampPoolCount(value) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return MIN_POOL_COUNT;
+  return Math.min(MAX_POOL_COUNT, Math.max(MIN_POOL_COUNT, n));
+}
+
 // A pool of one plays nobody, so it is never a legal pool — not a warning, a block.
 export const MIN_POOL_TEAMS = 2;
 

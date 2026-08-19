@@ -5,6 +5,7 @@ import { useClub } from './ClubContext';
 import {
   DEFAULT_SCHEDULE_FORMAT,
   MAX_POOL_COUNT,
+  clampPoolCount,
   MIN_POOL_COUNT,
   SCHEDULE_FORMATS,
   buildScheduleForFormat,
@@ -45,9 +46,13 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
   const [formatId, setFormatId] = useState(
     () => tournament.scheduleFormat || DEFAULT_SCHEDULE_FORMAT
   );
-  const [poolCount, setPoolCount] = useState(() =>
-    Math.min(MAX_POOL_COUNT, Math.max(MIN_POOL_COUNT, (tournament.pools || []).length || MIN_POOL_COUNT))
+  // Raw text, with the number derived from it — same reason as the create form: clamping
+  // on every keystroke means clearing the field snaps to the minimum, and the digit typed
+  // next appends to that instead of replacing it.
+  const [poolCountText, setPoolCountText] = useState(() =>
+    String(clampPoolCount((tournament.pools || []).length || MIN_POOL_COUNT))
   );
+  const poolCount = clampPoolCount(poolCountText);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -208,15 +213,9 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
                 type="number"
                 min={MIN_POOL_COUNT}
                 max={MAX_POOL_COUNT}
-                value={poolCount}
-                onChange={(e) =>
-                  setPoolCount(
-                    Math.min(
-                      MAX_POOL_COUNT,
-                      Math.max(MIN_POOL_COUNT, parseInt(e.target.value, 10) || MIN_POOL_COUNT)
-                    )
-                  )
-                }
+                value={poolCountText}
+                onChange={(e) => setPoolCountText(e.target.value)}
+                onBlur={() => setPoolCountText(String(clampPoolCount(poolCountText)))}
                 className="border p-2 rounded w-24 min-h-[44px] bg-white"
               />
             </div>

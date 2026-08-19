@@ -8,6 +8,7 @@ import {
   DEFAULT_SCHEDULE_FORMAT,
   MAX_COURT_COUNT,
   MAX_POOL_COUNT,
+  clampPoolCount,
   MIN_POOL_COUNT,
   SCHEDULE_FORMATS,
   buildDefaultScheduleSlots,
@@ -66,14 +67,6 @@ export function parseBulkTeams(text, existingNames) {
     added.push(name);
   }
   return { added, duplicates };
-}
-
-/** Text field -> a usable pool count. Unparseable or out of range falls back to the
- *  nearest allowed value, so the rest of the form always has a real number to render. */
-function clampPoolCount(value) {
-  const n = parseInt(value, 10);
-  if (!Number.isFinite(n)) return MIN_POOL_COUNT;
-  return Math.min(MAX_POOL_COUNT, Math.max(MIN_POOL_COUNT, n));
 }
 
 export default function AdminPage() {
