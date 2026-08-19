@@ -22,7 +22,20 @@
  */
 
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'volleyball-score-tracker';
-const RESEND_FROM = process.env.RESEND_FROM || 'VolleyScores <invites@volleyscores.app>';
+/**
+ * Sender address.
+ *
+ * Vercel's Resend integration provisions RESEND_API_KEY and RESEND_EMAIL_DOMAIN — a bare
+ * verified domain, not a full address — so that is what gets used when present. Resend
+ * rejects a `from` on an unverified domain outright, which is why this is derived rather
+ * than hardcoded. RESEND_FROM overrides it when a specific mailbox or display name is
+ * wanted.
+ */
+const RESEND_FROM =
+  process.env.RESEND_FROM ||
+  (process.env.RESEND_EMAIL_DOMAIN
+    ? `VolleyScores <invites@${process.env.RESEND_EMAIL_DOMAIN.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '')}>`
+    : 'VolleyScores <invites@volleyscores.app>');
 
 /**
  * Where the invite link points. Deliberately configuration and NOT the request's Host

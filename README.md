@@ -129,7 +129,8 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
 | `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
 | `RESEND_API_KEY` | for invite email | — | From [resend.com](https://resend.com). Server-side only. Without it invites still work, they just are not emailed. |
-| `RESEND_FROM` | no | `VolleyScores <invites@volleyscores.app>` | Sender. Must be an address on a domain verified in Resend. |
+| `RESEND_EMAIL_DOMAIN` | no | — | Set by Vercel's Resend integration. The sender becomes `invites@<this domain>`, so nothing else is needed. |
+| `RESEND_FROM` | no | derived from `RESEND_EMAIL_DOMAIN` | Overrides the sender when a specific mailbox or display name is wanted. Must be on a domain verified in Resend. |
 | `APP_BASE_URL` | no | `https://volleyscores.app` | Base of the link in the invite email. Deliberately configuration, never the request's Host header. |
 | `FIREBASE_PROJECT_ID` | no | `volleyball-score-tracker` | Project whose Firestore `clubs/{clubId}` documents `ask-archive` reads to resolve `archiveSheetId`. Server-side only; must match `projectId` in `src/firebase.js`. |
 | `REACT_APP_SUPER_ADMIN_EMAILS` | no | empty | Comma-separated super-admin addresses — admin of every club, no member document needed. Public (it is in the JS bundle); mirror it in `superAdmins()` in `firestore.rules`, which is the list `isSuper()` checks against and the only one that is enforced. |
