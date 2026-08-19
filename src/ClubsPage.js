@@ -242,7 +242,16 @@ export default function ClubsPage() {
   if (!user) {
     return (
       <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6">
-        <h1 className="text-2xl sm:text-3xl font-black text-white">Clubs</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black text-white">
+            Volley<span className="text-amber-400">Score</span>
+          </h1>
+          {/* The header hides this line on a phone to protect its fixed height,
+              so it lives here too — where there is room for it. */}
+          <p className="text-sm text-slate-300 mt-1">
+            Your one stop shop to manage clubs, schedule, scores
+          </p>
+        </div>
         {directorySection}
         <section className={cardClass}>
           <p className="text-sm text-slate-300">
@@ -250,7 +259,7 @@ export default function ClubsPage() {
             you, or start a club of your own.
           </p>
           <button type="button" onClick={signIn} className={`${primaryButtonClass} mt-4`}>
-            Sign in with Google
+            Sign in / Sign up with Google
           </button>
         </section>
       </div>
@@ -260,7 +269,16 @@ export default function ClubsPage() {
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-black text-white">Clubs</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black text-white">
+            Volley<span className="text-amber-400">Score</span>
+          </h1>
+          {/* The header hides this line on a phone to protect its fixed height,
+              so it lives here too — where there is room for it. */}
+          <p className="text-sm text-slate-300 mt-1">
+            Your one stop shop to manage clubs, schedule, scores
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setCreating((c) => !c)}

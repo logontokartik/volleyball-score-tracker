@@ -54,14 +54,25 @@ function SiteNav() {
             All clubs
           </NavLink>
         )}
-        <span className="flex-1 min-w-0 text-base sm:text-xl font-black tracking-tight truncate">
+        <span className="flex-1 min-w-0 leading-tight">
           {/* Inside a club the club's own name is the title. The name arrives a beat
               after the slug does, so the slug stands in and the header does not jump. */}
           {slug ? (
-            club?.club?.name || slug
+            <span className="block text-base sm:text-xl font-black tracking-tight truncate">
+              {club?.club?.name || slug}
+            </span>
           ) : (
             <>
-              Volleyball <span className="text-amber-400 font-semibold">Clubs</span>
+              <span className="block text-base sm:text-xl font-black tracking-tight truncate">
+                Volley<span className="text-amber-400">Score</span>
+              </span>
+              {/* The tagline is hidden on a phone on purpose: this header is a fixed
+                  56px (--site-header-h) that the sub-tabs pin beneath, and a second line
+                  at 390px would overflow it. ClubsPage carries the same line where it
+                  has room, so a phone visitor still sees it. */}
+              <span className="hidden sm:block text-xs font-medium text-slate-300 truncate">
+                Your one stop shop to manage clubs, schedule, scores
+              </span>
             </>
           )}
         </span>

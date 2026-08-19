@@ -310,7 +310,7 @@ export default function TrackerView() {
                 {[
                   { id: 'schedule', label: 'Schedule' },
                   { id: 'scores', label: 'Scores' },
-                  { id: 'finals', label: '🏆 Finals' },
+                  { id: 'finals', label: '🏆 Knockout' },
                   { id: 'table', label: 'Table' },
                 ].map((tab) => (
                   <button

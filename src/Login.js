@@ -91,7 +91,7 @@ export default function Login() {
   }, [open]);
 
   // Render nothing until Firebase has answered, so the header does not flash a
-  // "Sign in" button at someone who is already signed in.
+  // sign-in button at someone who is already signed in.
   if (loading) return null;
 
   if (!user) {
@@ -111,7 +111,7 @@ export default function Login() {
           className="flex items-center gap-2 bg-white text-slate-900 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold min-h-[44px] shrink-0 hover:bg-slate-100 transition-colors"
         >
           <GoogleIcon />
-          Sign in
+          Sign in / Sign up
         </button>
       </div>
     );

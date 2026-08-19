@@ -297,8 +297,8 @@ export default function FinalsView({ teams, finalsMatches, setFinalsMatches, use
         <Card>
           <CardContent className="p-6 text-center text-gray-500">
             {user
-              ? 'No finals matches yet. Use the form above to add Quarter Finals, Semi Finals, or Finals.'
-              : 'No finals matches have been added yet.'}
+              ? 'No finals, semis or quarters added yet. Use the form above to add one.'
+              : 'No finals, semis or quarters added yet.'}
           </CardContent>
         </Card>
       )}
