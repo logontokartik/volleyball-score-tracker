@@ -87,9 +87,13 @@ const scheduleSchema = (courtCount) => ({
           rowKind: { type: 'string', enum: ['double', 'break', 'note'] },
           courts: {
             type: 'array',
+            // The length is stated in the description, NOT as minItems/maxItems.
+            // Structured outputs reject complex array constraints, and because this
+            // function calls the API over raw fetch there is no SDK to strip them the
+            // way the Python/TypeScript clients do — they went to the wire and the
+            // request was refused outright. The array is padded and trimmed to
+            // courtCount server-side below, so the constraint bought nothing anyway.
             description: `Exactly ${courtCount} entries, court 1 first.`,
-            minItems: courtCount,
-            maxItems: courtCount,
             items: {
               type: 'object',
               properties: {
@@ -221,13 +225,40 @@ export default {
     if (!res.ok) {
       const detail = await res.text();
       console.error('[build-schedule] anthropic error', res.status, detail);
+
+      // "Could not read that schedule" was a dead end: it says the input was bad when
+      // the actual causes are usually configuration — a rejected schema, a bad key, an
+      // unknown model. None of those improve by rewording the prompt, and the only way
+      // to tell them apart was the function logs. Pass the upstream reason through.
+      let upstream = '';
+      try {
+        upstream = JSON.parse(detail)?.error?.message || '';
+      } catch {
+        upstream = detail.slice(0, 200);
+      }
+
+      if (res.status === 429) {
+        return json(
+          { error: 'The schedule builder is rate limited right now — try again shortly.' },
+          502
+        );
+      }
+      if (res.status === 401 || res.status === 403) {
+        return json(
+          { error: `The Anthropic API rejected our key (${res.status}). Check ANTHROPIC_API_KEY in the deployment settings.` },
+          502
+        );
+      }
+      if (res.status === 400) {
+        // A 400 is our request, not the user's schedule — say so, so nobody wastes time
+        // rewording a description that was never the problem.
+        return json(
+          { error: `The schedule builder sent an invalid request and Anthropic refused it: ${upstream || 'no detail returned'}. This is a bug on our side, not a problem with what you typed.` },
+          502
+        );
+      }
       return json(
-        {
-          error:
-            res.status === 429
-              ? 'The schedule builder is rate limited right now — try again shortly.'
-              : 'The schedule builder could not read that schedule.',
-        },
+        { error: `The schedule builder failed (Anthropic returned ${res.status})${upstream ? `: ${upstream}` : ''}.` },
         502
       );
     }
