@@ -4,7 +4,7 @@ import TrackerView from './TrackerView';
 import ArchiveHub from './ArchiveHub';
 import CompletedTournamentsView from './CompletedTournamentsView';
 import Login from './Login';
-import MyClubsPage from './MyClubsPage';
+import ClubsPage from './ClubsPage';
 import SuperAdminPage from './SuperAdminPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ClubProvider, useClub, useClubOptional } from './ClubContext';
@@ -12,8 +12,9 @@ import { isSuperAdmin } from './roles';
 
 /**
  * The club that the bare paths belong to. Before clubs existed this app served one
- * league from `/`, `/completed` and `/archive`, and those links are in players' phones
- * and group chats — they redirect here rather than 404.
+ * league from `/completed` and `/archive`, and those links are in players' phones and
+ * group chats — they redirect here rather than 404. `/` is now the club directory, so
+ * a shared bare link lands on the list rather than on this club.
  */
 const DEFAULT_CLUB_SLUG = process.env.REACT_APP_DEFAULT_CLUB_SLUG || 'gvbl';
 
@@ -24,10 +25,13 @@ const navLinkClass = ({ isActive }) =>
 
 function SiteNav() {
   const { user } = useAuth();
-  // Null outside the club routes — /clubs, /super and the 404 render the same header
-  // but have no club in scope.
+  // Null outside the club routes — the directory, /super and the 404 render the same
+  // header but have no club in scope.
   const club = useClubOptional();
   const slug = club?.slug;
+  // Only clubs with a spreadsheet attached have an archive to show. Without this the
+  // tab leads every other club to an empty page for a feature they do not have.
+  const hasArchive = Boolean(club?.club?.archiveSheetId);
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-700/80 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg">
@@ -46,6 +50,11 @@ function SiteNav() {
           </span>
         </div>
         <nav className="flex flex-wrap items-center gap-2" aria-label="Main">
+          {/* The way back out of a club, and the whole nav when there is no club in
+              scope. Public, so a signed-out visitor can browse to one. */}
+          <NavLink to="/" end className={navLinkClass}>
+            Clubs
+          </NavLink>
           {/* Tabs are club-scoped, so outside a club they would be links to whichever
               club happened to be last — no club, no tabs. */}
           {slug && (
@@ -56,15 +65,12 @@ function SiteNav() {
               <NavLink to={`/c/${slug}/completed`} className={navLinkClass}>
                 Completed
               </NavLink>
-              <NavLink to={`/c/${slug}/archive`} className={navLinkClass}>
-                Tournament archive
-              </NavLink>
+              {hasArchive && (
+                <NavLink to={`/c/${slug}/archive`} className={navLinkClass}>
+                  Tournament archive
+                </NavLink>
+              )}
             </>
-          )}
-          {user && (
-            <NavLink to="/clubs" className={navLinkClass}>
-              My clubs
-            </NavLink>
           )}
           {isSuperAdmin(user) && (
             <NavLink to="/super" className={navLinkClass}>
@@ -114,7 +120,7 @@ function ClubGate() {
     return (
       <PageMessage title="No such club">
         Nothing is set up at <span className="font-mono text-amber-300">/c/{slug}</span>. Check the
-        link, or pick a club from My clubs.
+        link, or pick a club from the Clubs list.
       </PageMessage>
     );
   }
@@ -149,8 +155,9 @@ export default function App() {
         <div className="min-h-screen bg-slate-950">
           <Routes>
             {/* Legacy single-club paths. Outside any layout so no header paints for
-                the instant before the redirect lands. */}
-            <Route path="/" element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}`} replace />} />
+                the instant before the redirect lands. `/` is no longer among them: the
+                landing page is the club directory, so a visitor who does not already
+                know a club can find one. */}
             <Route
               path="/completed"
               element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}/completed`} replace />}
@@ -159,6 +166,8 @@ export default function App() {
               path="/archive"
               element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}/archive`} replace />}
             />
+            {/* /clubs was the members-only page before the directory absorbed it. */}
+            <Route path="/clubs" element={<Navigate to="/" replace />} />
 
             <Route path="/c/:slug" element={<ClubLayout />}>
               <Route index element={<TrackerView />} />
@@ -167,13 +176,13 @@ export default function App() {
             </Route>
 
             <Route element={<PlainLayout />}>
-              {/* Both pages gate themselves on the signed-in account — SiteNav hides
-                  their links, but a hidden link is not a gate and the URL is guessable.
-                  MyClubsPage asks a signed-out visitor to sign in; SuperAdminPage shows
-                  a "not available" page to anyone who is not a super admin. Neither is
-                  security: firestore.rules is, and it rejects the reads and writes
-                  behind these pages no matter what React decides to render. */}
-              <Route path="/clubs" element={<MyClubsPage />} />
+              {/* The directory is public — the club documents it lists are world-readable,
+                  the same permission that makes a scoreboard shareable. */}
+              <Route path="/" element={<ClubsPage />} />
+              {/* SuperAdminPage gates itself on the signed-in account: SiteNav hides its
+                  link, but a hidden link is not a gate and the URL is guessable. That is
+                  not security either — firestore.rules is, and it rejects the reads and
+                  writes behind the page no matter what React decides to render. */}
               <Route path="/super" element={<SuperAdminPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

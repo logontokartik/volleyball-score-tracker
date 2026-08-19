@@ -1,11 +1,14 @@
-// src/MyClubsPage.js
+// src/ClubsPage.js
 //
-// The one page that exists outside any club: which clubs this account belongs to,
-// which ones have invited it, and how to start a new one.
+// The landing page, and the one page that exists outside any club: every club on the
+// installation, plus — when signed in — which of them this account belongs to, which
+// have invited it, and how to start a new one.
 //
-// Everything here is driven by two collection-group queries. The rules only allow
-// those scoped to yourself (`uid == auth.uid`, `email == token email`), so the filters
-// below are not a convenience — drop either `where` and the whole query is denied.
+// The public directory is a plain `clubs` read, which the rules allow for anyone
+// (`allow read: if true`), the same permission that makes a club's scoreboard shareable.
+// The personal half is two collection-group queries, and the rules only allow those
+// scoped to yourself (`uid == auth.uid`, `email == token email`) — so those `where`
+// filters are not a convenience; drop either and the whole query is denied.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -51,10 +54,14 @@ const primaryButtonClass =
 const secondaryButtonClass =
   'min-h-[44px] px-4 rounded-xl border border-slate-600 bg-slate-800 text-white font-semibold hover:bg-slate-700 disabled:opacity-50';
 
-export default function MyClubsPage() {
+export default function ClubsPage() {
   const { user, loading: authLoading, signIn } = useAuth();
   const navigate = useNavigate();
 
+  // The public directory loads for everyone and is kept separate from the personal
+  // half, so a signed-out visitor — or a signed-in one whose membership query fails —
+  // still gets a usable list of clubs to browse.
+  const [directory, setDirectory] = useState({ loading: true, error: '', clubs: [] });
   const [state, setState] = useState({ loading: true, error: '', clubs: [], invites: [] });
   const [creating, setCreating] = useState(false);
   const [busyInvite, setBusyInvite] = useState('');
@@ -133,6 +140,27 @@ export default function MyClubsPage() {
     load();
   }, [uid, load]);
 
+  useEffect(() => {
+    let cancelled = false;
+    getDocs(collection(db, 'clubs'))
+      .then((snap) => {
+        if (cancelled) return;
+        const clubs = snap.docs
+          .map((d) => ({ clubId: d.id, ...d.data() }))
+          // A club with no slug has no reachable address; listing it would be a dead link.
+          .filter((c) => c.slug)
+          .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+        setDirectory({ loading: false, error: '', clubs });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDirectory({ loading: false, error: 'Could not load the club list.', clubs: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const acceptInvite = async (invite) => {
     setActionError('');
     if (!user?.emailVerified) {
@@ -169,25 +197,70 @@ export default function MyClubsPage() {
     }
   };
 
+  const directorySection = (
+    <section className={cardClass}>
+      <h2 className="text-lg font-bold text-white mb-3">All clubs</h2>
+      {directory.loading ? (
+        <p className="text-sm text-slate-300">Loading clubs…</p>
+      ) : directory.error ? (
+        <p className="text-sm text-red-200">{directory.error}</p>
+      ) : directory.clubs.length === 0 ? (
+        <p className="text-sm text-slate-300">No clubs yet.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {directory.clubs.map((club) => (
+            <li key={club.clubId}>
+              <Link
+                to={`/c/${club.slug}`}
+                className="flex items-center justify-between gap-3 min-h-[48px] rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-2 hover:bg-slate-700"
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold text-white truncate">
+                    {club.name || club.slug}
+                  </span>
+                  <span className="block text-xs text-slate-400 font-mono truncate">
+                    /c/{club.slug}
+                  </span>
+                </span>
+                <span className="shrink-0 text-slate-400" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
   if (authLoading) {
-    return <Shell title="My clubs">Loading…</Shell>;
+    return <Shell title="Clubs">Loading…</Shell>;
   }
 
+  // Signed out is a first-class state here, not a locked door: the directory is public,
+  // so a visitor can pick a club and watch its scoreboard without an account.
   if (!user) {
     return (
-      <Shell title="My clubs">
-        <p>Sign in to see the clubs you belong to and any invites waiting for you.</p>
-        <button type="button" onClick={signIn} className={`${primaryButtonClass} mt-4`}>
-          Sign in with Google
-        </button>
-      </Shell>
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6">
+        <h1 className="text-2xl sm:text-3xl font-black text-white">Clubs</h1>
+        {directorySection}
+        <section className={cardClass}>
+          <p className="text-sm text-slate-300">
+            Sign in to score games, see clubs you belong to and any invites waiting for
+            you, or start a club of your own.
+          </p>
+          <button type="button" onClick={signIn} className={`${primaryButtonClass} mt-4`}>
+            Sign in with Google
+          </button>
+        </section>
+      </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-black text-white">My clubs</h1>
+        <h1 className="text-2xl sm:text-3xl font-black text-white">Clubs</h1>
         <button
           type="button"
           onClick={() => setCreating((c) => !c)}
@@ -280,6 +353,8 @@ export default function MyClubsPage() {
               </ul>
             )}
           </section>
+
+          {directorySection}
         </>
       )}
     </div>
