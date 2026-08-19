@@ -57,6 +57,157 @@ export function buildSkipAdjacentSchedule(teams, meetingsPerPair) {
   return matches;
 }
 
+/* ------------------------------------------------------------------ */
+/* Pools                                                               */
+/* ------------------------------------------------------------------ */
+
+export const MIN_POOL_COUNT = 2;
+export const MAX_POOL_COUNT = 8;
+
+// A pool of one plays nobody, so it is never a legal pool — not a warning, a block.
+export const MIN_POOL_TEAMS = 2;
+
+/** Pool names are positional: pool 1 is "A". Past Z (impossible here) fall back to P27. */
+export function poolLetter(index) {
+  return index < 26 ? String.fromCharCode(65 + index) : `P${index + 1}`;
+}
+
+/**
+ * Pools as `[{ name, teams }]`, cleaned against the tournament's team list.
+ *
+ * Teams that were renamed or removed drop out of their pool here, so a regenerate after
+ * a team edit produces no fixture for a team that no longer exists. A team listed in two
+ * pools is kept only in the first — the schedule has to be unambiguous even if the stored
+ * document is not. With no pools stored at all, everything is one pool: that makes the
+ * format degrade to a plain round robin rather than to an empty schedule.
+ */
+export function normalizePools(pools, teams) {
+  const known = new Set(cleanTeams(teams));
+  const list = Array.isArray(pools) ? pools : [];
+  if (!list.length) return [{ name: poolLetter(0), teams: cleanTeams(teams) }];
+  const claimed = new Set();
+  return list.map((pool, i) => ({
+    name: String(pool?.name ?? '').trim() || poolLetter(i),
+    teams: cleanTeams(pool?.teams).filter((t) => {
+      if (!known.has(t) || claimed.has(t)) return false;
+      claimed.add(t);
+      return true;
+    }),
+  }));
+}
+
+/**
+ * Round robin inside each pool and nothing across pools.
+ *
+ * Every match records the pool it belongs to, so standings can be grouped without
+ * re-deriving who was in which pool from the tournament document.
+ */
+export function buildPoolsSchedule(teams, meetingsPerPair, options) {
+  const pools = normalizePools(options?.pools, teams);
+  const meetings = Math.max(1, Math.floor(Number(meetingsPerPair)) || 1);
+  const matches = [];
+  let gameNum = 0;
+  for (let round = 0; round < meetings; round++) {
+    for (const pool of pools) {
+      for (let i = 0; i < pool.teams.length; i++) {
+        for (let j = i + 1; j < pool.teams.length; j++) {
+          gameNum += 1;
+          matches.push({
+            game: `G${gameNum}`,
+            team1: pool.teams[i],
+            team2: pool.teams[j],
+            pool: pool.name,
+          });
+        }
+      }
+    }
+  }
+  return matches;
+}
+
+/**
+ * The stored pools shape, built from the admin form's team rows (`{ name, pool }`, where
+ * `pool` is a pool index or null). Both the create form and the teams editor enter teams
+ * as an ordered row list, so both produce pools the same way.
+ */
+export function poolsFromRows(rows, poolCount) {
+  return Array.from({ length: poolCount }, (_, i) => ({
+    name: poolLetter(i),
+    teams: (rows || [])
+      .filter((r) => r.pool === i && String(r.name || '').trim())
+      .map((r) => String(r.name).trim()),
+  }));
+}
+
+/** Pool index for each team name, from a stored pools list. Unassigned teams get null. */
+export function poolIndexByTeam(pools) {
+  const map = new Map();
+  (Array.isArray(pools) ? pools : []).forEach((pool, i) => {
+    cleanTeams(pool?.teams).forEach((t) => {
+      if (!map.has(t)) map.set(t, i);
+    });
+  });
+  return map;
+}
+
+/**
+ * Problems that would make a pools tournament unplayable, as a list of sentences.
+ * Named pools rather than indexes, because "Pool D has 1 team" is actionable and
+ * "some pool is too small" is not.
+ */
+export function validatePoolAssignment(pools, teams) {
+  const problems = [];
+  const list = Array.isArray(pools) ? pools : [];
+  const assigned = new Set();
+  list.forEach((pool, i) => {
+    const name = String(pool?.name ?? '').trim() || poolLetter(i);
+    const members = cleanTeams(pool?.teams);
+    members.forEach((t) => assigned.add(t));
+    if (members.length < MIN_POOL_TEAMS) {
+      problems.push(
+        `Pool ${name} has ${members.length} team${members.length === 1 ? '' : 's'} — each pool needs at least ${MIN_POOL_TEAMS}.`
+      );
+    }
+  });
+  const missing = cleanTeams(teams).filter((t) => !assigned.has(t));
+  if (missing.length) {
+    problems.push(
+      `${missing.length} team${missing.length === 1 ? ' is' : 's are'} not in a pool: ${missing.join(', ')}.`
+    );
+  }
+  return problems;
+}
+
+/**
+ * Pool index per team, filling pools in the order the teams are listed.
+ *
+ * Sizes are balanced (25 teams over 6 pools → 5,4,4,4,4,4) and each pool takes a
+ * contiguous run, so the listed order still reads as "these teams are together".
+ * A shortcut only: the assignment it writes is then editable team by team.
+ */
+export function evenSplitPoolIndexes(teamCount, poolCount) {
+  const pools = Math.max(1, Math.floor(Number(poolCount)) || 1);
+  const base = Math.floor(teamCount / pools);
+  const remainder = teamCount % pools;
+  const indexes = [];
+  for (let p = 0; p < pools; p++) {
+    const size = base + (p < remainder ? 1 : 0);
+    for (let k = 0; k < size; k++) indexes.push(p);
+  }
+  return indexes;
+}
+
+/**
+ * Team counts per pool, matching exactly what `buildPoolsSchedule` would produce for the
+ * same input — including its "no pools stored means one pool of everyone" fallback, so
+ * the preview can never disagree with the schedule that gets generated.
+ */
+function poolSizes(teamCount, options) {
+  if (!Array.isArray(options?.pools) || !options.pools.length) return [teamCount];
+  const teams = options.teams ?? options.pools.flatMap((p) => p?.teams || []);
+  return normalizePools(options.pools, teams).map((p) => p.teams.length);
+}
+
 export const SCHEDULE_FORMATS = {
   roundRobin: {
     id: 'roundRobin',
@@ -75,21 +226,37 @@ export const SCHEDULE_FORMATS = {
     gameCount: (n) => (n * (n - 3)) / 2,
     minTeams: 4,
   },
+  pools: {
+    id: 'pools',
+    label: 'Pools (round robin within each pool)',
+    description:
+      'Teams are split into pools you assign by hand; each pool plays its own round robin and nobody plays across pools.',
+    build: buildPoolsSchedule,
+    // The only format whose game count depends on the shape of the draw rather than on
+    // the number of teams: 24 teams is 36 games as 6 pools of 4 and 66 as 4 pools of 6.
+    // Hence the second argument, which every other format ignores.
+    gameCount: (n, options) => poolSizes(n, options).reduce((t, s) => t + (s * (s - 1)) / 2, 0),
+    minTeams: MIN_POOL_COUNT * MIN_POOL_TEAMS,
+  },
 };
 
 export const DEFAULT_SCHEDULE_FORMAT = 'roundRobin';
 
-export function buildScheduleForFormat(formatId, teams, meetingsPerPair) {
+export function buildScheduleForFormat(formatId, teams, meetingsPerPair, options) {
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
-  return format.build(teams, meetingsPerPair);
+  return format.build(teams, meetingsPerPair, options);
 }
 
-/** Games this format produces, for previewing before the tournament is created. */
-export function previewGameCount(formatId, teamCount, meetingsPerPair) {
+/**
+ * Games this format produces, for previewing before the tournament is created.
+ * `options` carries whatever else the format's count depends on — for pools, the
+ * `{ pools, teams }` shape of the draw. Formats that only need a team count ignore it.
+ */
+export function previewGameCount(formatId, teamCount, meetingsPerPair, options) {
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
   const meetings = Math.max(1, Math.floor(Number(meetingsPerPair)) || 1);
   if (teamCount < format.minTeams) return 0;
-  return Math.max(0, format.gameCount(teamCount)) * meetings;
+  return Math.max(0, format.gameCount(teamCount, options)) * meetings;
 }
 
 /* ------------------------------------------------------------------ */
@@ -159,7 +326,7 @@ export function matchHasResults(match) {
  * Rows pointing at a pairing that no longer exists are blanked rather than removed,
  * so the time slots and umpire assignments survive.
  */
-export function remapScheduleSlots(slots, oldScores, newScores) {
+export function remapScheduleSlots(slots, oldScores, newScores, courtCount) {
   const oldById = new Map((oldScores || []).map((m) => [m.game, m]));
   const available = new Map();
   for (const match of newScores || []) {
@@ -180,11 +347,12 @@ export function remapScheduleSlots(slots, oldScores, newScores) {
     return next;
   };
 
-  return (slots || []).map((slot) => ({
-    ...slot,
-    gameCourt1: translate(slot.gameCourt1),
-    gameCourt2: translate(slot.gameCourt2),
-  }));
+  return (slots || []).map((slot) =>
+    withCourts(
+      slot,
+      slotCourts(slot, courtCount).map((court) => ({ ...court, game: translate(court.game) }))
+    )
+  );
 }
 
 export function matchesWithEmptySets(scheduledMatches, setsPerMatch) {
@@ -195,77 +363,154 @@ export function matchesWithEmptySets(scheduledMatches, setsPerMatch) {
   }));
 }
 
-/** One row on the day schedule (two courts + shared umpire, break, or note row). */
-export function buildDefaultScheduleSlots(scores) {
+/* ------------------------------------------------------------------ */
+/* Schedule rows: courts                                               */
+/* ------------------------------------------------------------------ */
+
+export const DEFAULT_COURT_COUNT = 2;
+
+// Eight is past any hall this is used in; the cap exists so a typo in the admin form
+// cannot produce a hundred-column schedule that nothing can render.
+export const MAX_COURT_COUNT = 8;
+
+export function normalizeCourtCount(value) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_COURT_COUNT;
+  return Math.min(MAX_COURT_COUNT, n);
+}
+
+const trimmed = (value) => String(value ?? '').trim();
+
+/** Legacy per-court field names, only ever read through slotCourts below. */
+const LEGACY_COURT_KEYS = ['gameCourt1', 'gameCourt2', 'umpireCourt1', 'umpireCourt2', 'noteCourt1', 'noteCourt2', 'umpire'];
+
+/**
+ * Courts on one schedule row, as `[{ game, umpire, note }, …]`.
+ *
+ * Rows saved before the schedule supported more than two courts carry fixed
+ * `gameCourt1`/`gameCourt2` fields (and their umpire/note siblings) instead of a
+ * `courts` array; those are read here as courts 1 and 2, in order. Clubs are mid-season
+ * on that shape, so this is the path most saved schedules still take — every consumer
+ * goes through this function so none of them has to know two shapes exist.
+ *
+ * The even older pre-split single `umpire` field is honoured for the same reason the
+ * old `slotUmpires` honoured it: it meant one team umpiring the whole row. That reader
+ * is gone — this is now the only place either legacy shape is understood.
+ */
+export function slotCourts(slot, courtCount) {
+  const legacyUmpire = trimmed(slot?.umpire);
+  const count =
+    courtCount == null
+      ? (Array.isArray(slot?.courts) ? Math.max(1, slot.courts.length) : DEFAULT_COURT_COUNT)
+      : normalizeCourtCount(courtCount);
+  const courts = [];
+  for (let i = 0; i < count; i++) {
+    const source = Array.isArray(slot?.courts)
+      ? slot.courts[i] || {}
+      : {
+          game: slot?.[`gameCourt${i + 1}`],
+          umpire: slot?.[`umpireCourt${i + 1}`],
+          note: slot?.[`noteCourt${i + 1}`],
+        };
+    courts.push({
+      game: trimmed(source.game) || null,
+      umpire: trimmed(source.umpire) || legacyUmpire,
+      note: trimmed(source.note),
+    });
+  }
+  return courts;
+}
+
+/** A row in the current shape: legacy court fields dropped, `courts` replaced. */
+function withCourts(slot, courts) {
+  const next = { ...slot, courts };
+  for (const key of LEGACY_COURT_KEYS) delete next[key];
+  return next;
+}
+
+/**
+ * How many courts a saved schedule uses.
+ *
+ * An explicit `courtCount` on the tournament wins, so adding a court shows up on rows
+ * that were saved before it existed. Otherwise it is read off the rows themselves,
+ * and rows with no `courts` array are legacy rows, which always had exactly two.
+ */
+export function scheduleCourtCount(scheduleSlots, courtCount) {
+  const explicit = Math.floor(Number(courtCount));
+  if (Number.isFinite(explicit) && explicit >= 1) return normalizeCourtCount(explicit);
+  let widest = 0;
+  for (const slot of scheduleSlots || []) {
+    if (Array.isArray(slot?.courts)) widest = Math.max(widest, slot.courts.length);
+  }
+  return widest > 0 ? normalizeCourtCount(widest) : DEFAULT_COURT_COUNT;
+}
+
+/** Rewrite rows into the current shape — what gets written back to Firestore. */
+export function normalizeScheduleSlots(slots, courtCount) {
+  const count = normalizeCourtCount(courtCount);
+  return (slots || []).map((slot) => withCourts(slot, slotCourts(slot, count)));
+}
+
+/** One row on the day schedule (a game per court, or a break / note row). */
+export function buildDefaultScheduleSlots(scores, courtCount) {
+  const count = normalizeCourtCount(courtCount);
   const list = scores || [];
   const slots = [];
-  for (let i = 0; i < list.length; i += 2) {
-    const m1 = list[i];
-    const m2 = list[i + 1];
+  for (let i = 0; i < list.length; i += count) {
     slots.push(
-      blankSlot({
-        timeLabel: `Round ${slots.length + 1}`,
-        gameCourt1: m1?.game ?? null,
-        gameCourt2: m2?.game ?? null,
-      })
+      blankSlot(
+        {
+          timeLabel: `Round ${slots.length + 1}`,
+          courts: Array.from({ length: count }, (_, c) => ({
+            game: list[i + c]?.game ?? null,
+            umpire: '',
+            note: '',
+          })),
+        },
+        count
+      )
     );
   }
   return slots;
 }
 
-export function blankSlot(overrides) {
-  return {
+/**
+ * A fresh row. Overrides may still name the legacy court fields — the AI builder and
+ * older callers do — so they are read through the adapter rather than copied across.
+ */
+export function blankSlot(overrides, courtCount) {
+  const merged = {
     id: crypto.randomUUID(),
     timeLabel: '',
     rowKind: 'double',
-    gameCourt1: null,
-    gameCourt2: null,
-    umpireCourt1: '',
-    umpireCourt2: '',
-    noteCourt1: '',
-    noteCourt2: '',
     ...overrides,
   };
+  const count = Array.isArray(overrides?.courts) ? overrides.courts.length : courtCount;
+  return withCourts(merged, slotCourts(merged, count));
 }
 
-/**
- * Umpiring team per court.
- *
- * Schedules saved before umpires were split per court carry a single `umpire` field
- * that applied to both courts; those rows are read as the same team umpiring both,
- * which is what they meant.
- */
-export function slotUmpires(slot) {
-  const legacy = String(slot?.umpire ?? '').trim();
-  return {
-    court1: String(slot?.umpireCourt1 ?? '').trim() || legacy,
-    court2: String(slot?.umpireCourt2 ?? '').trim() || legacy,
-  };
+/** A court with nothing on it, for the editor's "add court" control. */
+export function blankCourt() {
+  return { game: null, umpire: '', note: '' };
 }
 
 /**
  * Playoff rows for a top-4 knockout: two semifinals seeded 1v4 / 2v3, then the final.
  * Times match the club's usual day plan and are editable once added.
  */
-export function buildFinalsSlots() {
+export function buildFinalsSlots(courtCount) {
+  const count = normalizeCourtCount(courtCount);
+  const noteRow = (timeLabel, text) => {
+    const slot = blankSlot({ rowKind: 'note', timeLabel }, count);
+    slot.courts[0].note = text;
+    return slot;
+  };
   return [
-    blankSlot({ rowKind: 'break', timeLabel: 'Break (1:00 – 2:00 pm)' }),
-    blankSlot({
-      rowKind: 'note',
-      timeLabel: '2:00 – 3:15 pm',
-      noteCourt1: 'Semifinal 1 (Seed 1 vs Seed 4)',
-    }),
-    blankSlot({
-      rowKind: 'note',
-      timeLabel: '3:15 – 4:30 pm',
-      noteCourt1: 'Semifinal 2 (Seed 2 vs Seed 3)',
-    }),
-    blankSlot({ rowKind: 'break', timeLabel: 'Break (4:30 – 5:00 pm)' }),
-    blankSlot({
-      rowKind: 'note',
-      timeLabel: '5:00 – 6:30 pm',
-      noteCourt1: 'Final (Semis Winners)',
-    }),
+    blankSlot({ rowKind: 'break', timeLabel: 'Break (1:00 – 2:00 pm)' }, count),
+    noteRow('2:00 – 3:15 pm', 'Semifinal 1 (Seed 1 vs Seed 4)'),
+    noteRow('3:15 – 4:30 pm', 'Semifinal 2 (Seed 2 vs Seed 3)'),
+    blankSlot({ rowKind: 'break', timeLabel: 'Break (4:30 – 5:00 pm)' }, count),
+    noteRow('5:00 – 6:30 pm', 'Final (Semis Winners)'),
   ];
 }
 
@@ -274,8 +519,9 @@ export function orderScoresBySchedule(scores, scheduleSlots) {
   if (!scheduleSlots?.length || !scores?.length) return scores || [];
   const order = [];
   scheduleSlots.forEach((s) => {
-    if (s.gameCourt1) order.push(s.gameCourt1);
-    if (s.gameCourt2) order.push(s.gameCourt2);
+    slotCourts(s).forEach((court) => {
+      if (court.game) order.push(court.game);
+    });
   });
   const seen = new Set(order);
   const byGame = Object.fromEntries(scores.map((m) => [m.game, m]));
@@ -296,8 +542,10 @@ export function matchSlotInfo(match, scheduleSlots) {
     const kind = slot.rowKind || 'double';
     if (kind !== 'double') continue;
     const when = (slot.timeLabel && String(slot.timeLabel).trim()) || 'Scheduled';
-    if (slot.gameCourt1 === match.game) return { when, court: 1 };
-    if (slot.gameCourt2 === match.game) return { when, court: 2 };
+    const courts = slotCourts(slot);
+    for (let i = 0; i < courts.length; i++) {
+      if (courts[i].game === match.game) return { when, court: i + 1 };
+    }
   }
   return null;
 }

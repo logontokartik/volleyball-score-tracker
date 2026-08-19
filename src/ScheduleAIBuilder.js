@@ -64,7 +64,7 @@ async function readImage(file) {
   }
 }
 
-export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
+export default function ScheduleAIBuilder({ tournament, scores, courtCount, onSlots }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [image, setImage] = useState(null);
@@ -123,6 +123,7 @@ export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
           text: text.trim(),
           image: image ? { mediaType: image.mediaType, data: image.data } : null,
           teams: tournament.teams || [],
+          courtCount,
           games: (scores || []).map((m) => ({
             game: m.game,
             team1: m.team1,
@@ -156,7 +157,7 @@ export default function ScheduleAIBuilder({ tournament, scores, onSlots }) {
       if (!res.ok) throw new Error(data.error || 'Could not build the schedule.');
 
       // Server returns plain rows; give them ids so they behave like hand-made rows.
-      onSlots(data.slots.map((slot) => blankSlot(slot)));
+      onSlots(data.slots.map((slot) => blankSlot(slot, courtCount)));
       setWarnings(data.warnings || []);
     } catch (e) {
       setError(

@@ -72,6 +72,24 @@ creation and slug squatting — is covered by tests that run against the Firesto
 emulator. See [`firestore-tests/`](firestore-tests/), and re-run them after touching
 `firestore.rules`.
 
+## Tournaments
+
+A club's tournaments live at `clubs/{clubId}/tournaments/{id}`, and `activeTournamentId`
+on the club document names the one the scores page shows. Creating a tournament does
+**not** make it active — tournaments are usually built days ahead, and activating on
+create would swap the scoreboard out from under a tournament in progress. **Set active**
+in Admin is the separate, deliberate step that puts one live.
+
+Each tournament also carries a boolean `hidden` (absent on anything created before the
+flag existed, which counts as visible). Hiding one keeps it off the public scores and
+completed-tournaments pages, and a hidden tournament shows the "no games live" screen
+even if it is the active one.
+
+**`hidden` is a display preference, not access control.** `clubs/{clubId}/tournaments/*`
+is world-readable in `firestore.rules` — the same rule the public scoreboard depends on —
+so a hidden tournament's document is still fetchable by anyone who knows its id. Use it to
+keep half-built or retired tournaments out of the way, never to keep anything secret.
+
 ## Claude-powered features
 
 Two Vercel Functions call Claude, both using the same server-side key:

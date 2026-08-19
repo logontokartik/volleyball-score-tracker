@@ -110,7 +110,7 @@ export default function TrackerView() {
   const scheduleSlots =
     tournament?.scheduleSlots?.length > 0
       ? tournament.scheduleSlots
-      : buildDefaultScheduleSlots(scores);
+      : buildDefaultScheduleSlots(scores, tournament?.courtCount);
 
   const hasSavedSchedule = Boolean(tournament?.scheduleSlots?.length);
 
@@ -191,11 +191,23 @@ export default function TrackerView() {
     );
   }, [canScore]);
 
-  const leaderboard = calculateLeaderboard(
-    scores,
-    teams,
-    tournament?.setsPerMatch ?? 3
-  );
+  // One standings table per pool, or a single unnamed one for every other format.
+  //
+  // calculateLeaderboard is deliberately pool-agnostic and stays that way: its
+  // tiebreakers — head-to-head above all — are only correct over one closed group of
+  // teams that all played each other. So it is called once per pool with that pool's
+  // teams and that pool's matches, rather than taught about pools.
+  const pools = tournament?.scheduleFormat === 'pools' ? tournament?.pools || [] : [];
+  const standings = pools.length
+    ? pools.map((pool) => ({
+        name: pool.name,
+        rows: calculateLeaderboard(
+          scores.filter((m) => m.pool === pool.name),
+          pool.teams || [],
+          tournament?.setsPerMatch ?? 3
+        ),
+      }))
+    : [{ name: null, rows: calculateLeaderboard(scores, teams, tournament?.setsPerMatch ?? 3) }];
 
   const scheduleTitle =
     tournament?.scheduleTitle ||
@@ -219,6 +231,11 @@ export default function TrackerView() {
 
   // Admin is for admins of THIS club only; it lives at /c/:slug/admin, which gates itself.
   const admin = isClubAdmin;
+
+  // An admin can hide a tournament while it is still the active one — during setup, say.
+  // Nothing about it renders here then; the document itself is still world-readable, so
+  // this is presentation only and never a substitute for firestore.rules.
+  const hiddenActive = Boolean(tournament?.hidden);
 
   // Until Firebase has replied once, `user` is null and so is every role derived from
   // it. Rendering the signed-out view here would show an admin "log in to score" and
@@ -265,7 +282,29 @@ export default function TrackerView() {
           </Card>
         )}
 
-        {!tournamentLoading && tournament && isTournamentComplete(tournament) && (
+        {!tournamentLoading && hiddenActive && (
+          <Card>
+            <CardContent className="p-6 text-center text-gray-700">
+              <div className="text-5xl mb-4">🏐</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">No games live</h2>
+              <p className="mb-3">
+                {admin
+                  ? 'The active tournament is hidden from the public pages. Show it in Admin when you are ready.'
+                  : 'Nothing is being scored right now.'}
+              </p>
+              {admin && (
+                <Link
+                  to={`/c/${slug}/admin`}
+                  className="inline-flex items-center justify-center min-h-[48px] px-5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                >
+                  Open Admin
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {!tournamentLoading && tournament && !hiddenActive && isTournamentComplete(tournament) && (
           <div className="grid gap-4">
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-8 text-center shadow-sm">
               <div className="text-5xl mb-4">🏐</div>
@@ -283,7 +322,7 @@ export default function TrackerView() {
           </div>
         )}
 
-        {!tournamentLoading && tournament && !isTournamentComplete(tournament) && (
+        {!tournamentLoading && tournament && !hiddenActive && !isTournamentComplete(tournament) && (
           <>
             <div className="text-center px-1">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.name}</h1>
@@ -349,6 +388,7 @@ export default function TrackerView() {
                     subtitle={scheduleSubtitle}
                     scores={scores}
                     scheduleSlots={scheduleSlots}
+                    courtCount={tournament?.courtCount}
                     onMatchClick={onScheduleMatchClick}
                   />
                 </CardContent>
@@ -366,111 +406,124 @@ export default function TrackerView() {
                     Max 6 pts / min 5 pts per match won.
                     Tiebreakers: point differential in sets of matches you won, then head-to-head.
                   </p>
-                  {/* Two presentations of one list. A six-column table cannot be made
-                      to fit 390px, and the horizontal-scroll version cut the last three
-                      columns off screen behind a "swipe sideways" hint most people never
-                      act on. Below sm: the same rows are stacked instead. */}
-                  <ul className="sm:hidden grid gap-2">
-                    {leaderboard.map(([team, data], index) => (
-                      <li
-                        key={team}
-                        className={`rounded-xl border px-3 py-2.5 ${
-                          index === 0
-                            ? 'border-amber-300 bg-amber-50'
-                            : 'border-gray-200 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-baseline justify-between gap-3">
-                          <span className="flex items-baseline gap-2 min-w-0">
-                            <span className="text-xs font-bold text-gray-500 tabular-nums w-4 shrink-0">
-                              {index + 1}
-                            </span>
-                            <span className="font-semibold text-gray-900 truncate">{team}</span>
-                          </span>
-                          <span className="shrink-0 tabular-nums">
-                            <span className="text-lg font-bold text-gray-900">
-                              {data.tournamentPoints}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-1">pts</span>
-                          </span>
-                        </div>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600 tabular-nums">
-                          <span>Won {data.matchesWon}</span>
-                          <span>Sets {data.setsWon}</span>
-                          <span>
-                            PD {data.winMatchPointDiff > 0 ? '+' : ''}
-                            {data.winMatchPointDiff}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Two presentations of one list, repeated per pool. A six-column table
+                      cannot be made to fit 390px, and the horizontal-scroll version cut
+                      the last three columns off screen behind a "swipe sideways" hint most
+                      people never act on. Below sm: the same rows are stacked instead. */}
+                  <div className="grid gap-5">
+                    {standings.map((group) => (
+                      <section key={group.name ?? 'all'}>
+                        {/* Sticky under the tab bar so the pool a row belongs to is still
+                            on screen while scrolling six of these on a phone. */}
+                        {group.name && (
+                          <h3 className="sm:static sticky top-[calc(var(--site-header-h)+3.75rem)] z-10 bg-white/95 backdrop-blur-sm text-sm font-bold uppercase tracking-wide text-gray-700 border-b border-gray-200 pb-1 mb-2">
+                            Pool {group.name}
+                          </h3>
+                        )}
+                          <ul className="sm:hidden grid gap-2">
+                            {group.rows.map(([team, data], index) => (
+                              <li
+                                key={team}
+                                className={`rounded-xl border px-3 py-2.5 ${
+                                  index === 0
+                                    ? 'border-amber-300 bg-amber-50'
+                                    : 'border-gray-200 bg-white'
+                                }`}
+                              >
+                                <div className="flex items-baseline justify-between gap-3">
+                                  <span className="flex items-baseline gap-2 min-w-0">
+                                    <span className="text-xs font-bold text-gray-500 tabular-nums w-4 shrink-0">
+                                      {index + 1}
+                                    </span>
+                                    <span className="font-semibold text-gray-900 truncate">{team}</span>
+                                  </span>
+                                  <span className="shrink-0 tabular-nums">
+                                    <span className="text-lg font-bold text-gray-900">
+                                      {data.tournamentPoints}
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">pts</span>
+                                  </span>
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600 tabular-nums">
+                                  <span>Won {data.matchesWon}</span>
+                                  <span>Sets {data.setsWon}</span>
+                                  <span>
+                                    PD {data.winMatchPointDiff > 0 ? '+' : ''}
+                                    {data.winMatchPointDiff}
+                                  </span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
 
-                  <div className="hidden sm:block overscroll-x-contain rounded-lg border border-gray-200">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-gray-100 text-gray-800">
-                        <tr>
-                          <th className="p-3 font-semibold w-9 text-center whitespace-nowrap">#</th>
-                          <th className="p-3 font-semibold whitespace-nowrap min-w-[5rem]">Team</th>
-                          <th
-                            className="p-3 font-semibold text-right whitespace-nowrap"
-                            title="Tournament points (sets + win bonus)"
-                          >
-                            Pts
-                          </th>
-                          <th
-                            className="p-3 font-semibold text-right whitespace-nowrap"
-                            title="Point differential in sets of matches this team won"
-                          >
-                            Won-match PD
-                          </th>
-                          <th
-                            className="p-3 font-semibold text-right whitespace-nowrap"
-                            title="Matches won (completed games only)"
-                          >
-                            W
-                          </th>
-                          <th
-                            className="p-3 font-semibold text-right whitespace-nowrap"
-                            title="Total sets won in completed games"
-                          >
-                            Sets
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {leaderboard.map(([team, data], index) => (
-                          <tr
-                            key={team}
-                            className={
-                              index === 0
-                                ? 'bg-amber-50 font-medium border-t-2 border-amber-200'
-                                : index % 2 === 1
-                                  ? 'bg-gray-50'
-                                  : 'bg-white'
-                            }
-                          >
-                            <td className="p-3 text-center text-gray-700 whitespace-nowrap">
-                              {index + 1}
-                            </td>
-                            <td className="p-3">{team}</td>
-                            <td className="p-3 text-right tabular-nums whitespace-nowrap">
-                              {data.tournamentPoints}
-                            </td>
-                            <td className="p-3 text-right tabular-nums whitespace-nowrap">
-                              {data.winMatchPointDiff > 0 ? '+' : ''}
-                              {data.winMatchPointDiff}
-                            </td>
-                            <td className="p-3 text-right tabular-nums whitespace-nowrap">
-                              {data.matchesWon}
-                            </td>
-                            <td className="p-3 text-right tabular-nums whitespace-nowrap">
-                              {data.setsWon}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                          <div className="hidden sm:block overscroll-x-contain rounded-lg border border-gray-200">
+                            <table className="w-full text-left text-sm">
+                              <thead className="bg-gray-100 text-gray-800">
+                                <tr>
+                                  <th className="p-3 font-semibold w-9 text-center whitespace-nowrap">#</th>
+                                  <th className="p-3 font-semibold whitespace-nowrap min-w-[5rem]">Team</th>
+                                  <th
+                                    className="p-3 font-semibold text-right whitespace-nowrap"
+                                    title="Tournament points (sets + win bonus)"
+                                  >
+                                    Pts
+                                  </th>
+                                  <th
+                                    className="p-3 font-semibold text-right whitespace-nowrap"
+                                    title="Point differential in sets of matches this team won"
+                                  >
+                                    Won-match PD
+                                  </th>
+                                  <th
+                                    className="p-3 font-semibold text-right whitespace-nowrap"
+                                    title="Matches won (completed games only)"
+                                  >
+                                    W
+                                  </th>
+                                  <th
+                                    className="p-3 font-semibold text-right whitespace-nowrap"
+                                    title="Total sets won in completed games"
+                                  >
+                                    Sets
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.rows.map(([team, data], index) => (
+                                  <tr
+                                    key={team}
+                                    className={
+                                      index === 0
+                                        ? 'bg-amber-50 font-medium border-t-2 border-amber-200'
+                                        : index % 2 === 1
+                                          ? 'bg-gray-50'
+                                          : 'bg-white'
+                                    }
+                                  >
+                                    <td className="p-3 text-center text-gray-700 whitespace-nowrap">
+                                      {index + 1}
+                                    </td>
+                                    <td className="p-3">{team}</td>
+                                    <td className="p-3 text-right tabular-nums whitespace-nowrap">
+                                      {data.tournamentPoints}
+                                    </td>
+                                    <td className="p-3 text-right tabular-nums whitespace-nowrap">
+                                      {data.winMatchPointDiff > 0 ? '+' : ''}
+                                      {data.winMatchPointDiff}
+                                    </td>
+                                    <td className="p-3 text-right tabular-nums whitespace-nowrap">
+                                      {data.matchesWon}
+                                    </td>
+                                    <td className="p-3 text-right tabular-nums whitespace-nowrap">
+                                      {data.setsWon}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                      </section>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

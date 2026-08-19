@@ -287,6 +287,9 @@ export default function CompletedTournamentsView() {
       (snap) => {
         const completed = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
+          // `hidden` is an admin display preference, absent on every tournament created
+          // before it existed — so only an explicit true hides one.
+          .filter((t) => !t.hidden)
           .filter(isTournamentComplete)
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setLoaded({ clubId, list: completed, loading: false });
