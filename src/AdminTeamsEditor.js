@@ -4,12 +4,19 @@ import { tournamentDoc } from './clubPaths';
 import { useClub } from './ClubContext';
 import {
   DEFAULT_SCHEDULE_FORMAT,
+  MAX_POOL_COUNT,
+  MIN_POOL_COUNT,
   SCHEDULE_FORMATS,
   buildScheduleForFormat,
+  evenSplitPoolIndexes,
   matchHasResults,
   matchesWithEmptySets,
   mergeScoresPreservingResults,
+  poolIndexByTeam,
+  poolLetter,
+  poolsFromRows,
   remapScheduleSlots,
+  validatePoolAssignment,
 } from './tournamentUtils';
 
 function firestoreRulesHint(err) {
@@ -24,15 +31,22 @@ function firestoreRulesHint(err) {
   return message || 'Save failed.';
 }
 
-const rowFor = (name) => ({ id: crypto.randomUUID(), name });
+const rowFor = (name, pool = null) => ({ id: crypto.randomUUID(), name, pool });
 
 export default function AdminTeamsEditor({ tournament, onClose }) {
   const { clubId, isClubAdmin } = useClub();
-  const [rows, setRows] = useState(() =>
-    (tournament.teams || []).map(rowFor).concat((tournament.teams || []).length ? [] : [rowFor('')])
-  );
+  const [rows, setRows] = useState(() => {
+    // Existing pool membership is read back by team name, so reopening the editor shows
+    // the draw as it stands rather than an empty one that would have to be redone.
+    const byTeam = poolIndexByTeam(tournament.pools);
+    const list = (tournament.teams || []).map((t) => rowFor(t, byTeam.get(String(t).trim()) ?? null));
+    return list.length ? list : [rowFor('')];
+  });
   const [formatId, setFormatId] = useState(
     () => tournament.scheduleFormat || DEFAULT_SCHEDULE_FORMAT
+  );
+  const [poolCount, setPoolCount] = useState(() =>
+    Math.min(MAX_POOL_COUNT, Math.max(MIN_POOL_COUNT, (tournament.pools || []).length || MIN_POOL_COUNT))
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -45,15 +59,23 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
   );
 
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
+  const usePools = formatId === 'pools';
+  const pools = useMemo(() => poolsFromRows(rows, poolCount), [rows, poolCount]);
+  const poolProblems = useMemo(
+    () => (usePools ? validatePoolAssignment(pools, teamNames) : []),
+    [usePools, pools, teamNames]
+  );
 
   /** Everything the save would produce, computed live so the warnings are exact. */
   const preview = useMemo(() => {
     if (teamNames.length < format.minTeams) return null;
+    if (poolProblems.length) return null;
     const setsPerMatch = tournament.setsPerMatch || 3;
     const generated = buildScheduleForFormat(
       formatId,
       teamNames,
-      tournament.meetingsPerPair || 1
+      tournament.meetingsPerPair || 1,
+      { pools }
     );
     const withSets = matchesWithEmptySets(generated, setsPerMatch);
     const merged = mergeScoresPreservingResults(withSets, oldScores);
@@ -75,7 +97,7 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
       keptCount: keptGames.size,
       lost,
     };
-  }, [teamNames, formatId, oldScores, tournament, format.minTeams]);
+  }, [teamNames, formatId, oldScores, tournament, format.minTeams, pools, poolProblems]);
 
   const duplicate = useMemo(() => {
     const seen = new Set(teamNames.map((t) => t.toLowerCase()));
@@ -105,6 +127,10 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
       setError('Team names must be unique.');
       return;
     }
+    if (poolProblems.length) {
+      setError(poolProblems.join(' '));
+      return;
+    }
     if (!preview) return;
 
     if (preview.lost.length) {
@@ -124,6 +150,9 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
         {
           teams: teamNames,
           scheduleFormat: formatId,
+          // Cleared when the format is switched away from pools, so the standings never
+          // group by a draw that no longer produced the match list.
+          pools: usePools ? pools : [],
           scores: preview.scores,
           scheduleSlots: preview.slots,
           scheduleTitle: `${teamNames.length} Teams Format`,
@@ -167,6 +196,57 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
         <p className="text-xs text-gray-600 mt-1">{format.description}</p>
       </div>
 
+      {usePools && (
+        <div className="rounded-lg border border-indigo-200 bg-white/70 p-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="edit-pool-count">
+                Number of pools
+              </label>
+              <input
+                id="edit-pool-count"
+                type="number"
+                min={MIN_POOL_COUNT}
+                max={MAX_POOL_COUNT}
+                value={poolCount}
+                onChange={(e) =>
+                  setPoolCount(
+                    Math.min(
+                      MAX_POOL_COUNT,
+                      Math.max(MIN_POOL_COUNT, parseInt(e.target.value, 10) || MIN_POOL_COUNT)
+                    )
+                  )
+                }
+                className="border p-2 rounded w-24 min-h-[44px] bg-white"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setRows((prev) => {
+                  const named = prev.filter((r) => r.name.trim());
+                  const indexes = evenSplitPoolIndexes(named.length, poolCount);
+                  let next = 0;
+                  return prev.map((r) =>
+                    r.name.trim() ? { ...r, pool: indexes[next++] ?? null } : r
+                  );
+                })
+              }
+              className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-100"
+            >
+              Even split
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+            {pools.map((pool) => (
+              <span key={pool.name} className={pool.teams.length < 2 ? 'text-red-700' : ''}>
+                <span className="font-semibold">Pool {pool.name}</span>: {pool.teams.length}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">
@@ -198,6 +278,29 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
                 className="border p-2 rounded flex-1 min-w-0"
                 placeholder="Team name"
               />
+              {usePools && (
+                <select
+                  aria-label={`Pool for ${row.name || 'this team'}`}
+                  value={row.pool != null && row.pool < poolCount ? row.pool : ''}
+                  onChange={(e) =>
+                    setRows((prev) =>
+                      prev.map((r) =>
+                        r.id === row.id
+                          ? { ...r, pool: e.target.value === '' ? null : Number(e.target.value) }
+                          : r
+                      )
+                    )
+                  }
+                  className="border p-2 rounded bg-white min-h-[44px] shrink-0"
+                >
+                  <option value="">Pool…</option>
+                  {Array.from({ length: poolCount }, (_, i) => (
+                    <option key={i} value={i}>
+                      {poolLetter(i)}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button
                 type="button"
                 aria-label="Move up"
@@ -243,6 +346,14 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
       )}
 
       {duplicate && <div className="text-red-600 text-sm">Team names must be unique.</div>}
+
+      {poolProblems.length > 0 && (
+        <ul className="text-amber-700 text-sm list-disc pl-5 space-y-0.5">
+          {poolProblems.map((problem) => (
+            <li key={problem}>{problem}</li>
+          ))}
+        </ul>
+      )}
 
       {teamNames.length < format.minTeams ? (
         <div className="text-amber-700 text-sm">

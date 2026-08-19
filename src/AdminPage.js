@@ -7,11 +7,17 @@ import {
   DEFAULT_COURT_COUNT,
   DEFAULT_SCHEDULE_FORMAT,
   MAX_COURT_COUNT,
+  MAX_POOL_COUNT,
+  MIN_POOL_COUNT,
   SCHEDULE_FORMATS,
   buildDefaultScheduleSlots,
   buildScheduleForFormat,
+  evenSplitPoolIndexes,
   matchesWithEmptySets,
+  poolLetter,
+  poolsFromRows,
   previewGameCount,
+  validatePoolAssignment,
 } from './tournamentUtils';
 import ScheduleEditor from './ScheduleEditor';
 import AdminMatchLocks from './AdminMatchLocks';
@@ -32,8 +38,10 @@ function firestoreRulesHint(err) {
   return message || 'Request failed.';
 }
 
+// `pool` is the index of the pool this team is in, or null for "not assigned yet".
+// It only means anything for the pools format, and is ignored by every other one.
 function emptyTeamRow() {
-  return { id: crypto.randomUUID(), name: '' };
+  return { id: crypto.randomUUID(), name: '', pool: null };
 }
 
 // Rosters arrive either as a spreadsheet column (newlines) or pasted out of an email or
@@ -85,6 +93,7 @@ export default function AdminPage() {
   const [pointsToWin, setPointsToWin] = useState(25);
   const [courtCount, setCourtCount] = useState(DEFAULT_COURT_COUNT);
   const [scheduleFormat, setScheduleFormat] = useState(DEFAULT_SCHEDULE_FORMAT);
+  const [poolCount, setPoolCount] = useState(MIN_POOL_COUNT);
   const [editingScheduleForId, setEditingScheduleForId] = useState(null);
   const [editingLocksForId, setEditingLocksForId] = useState(null);
   const [editingTeamsForId, setEditingTeamsForId] = useState(null);
@@ -125,6 +134,23 @@ export default function AdminPage() {
     setTeamRows((rows) => (rows.length <= 2 ? rows : rows.filter((r) => r.id !== id)));
   const updateTeamRow = (id, name) =>
     setTeamRows((rows) => rows.map((r) => (r.id === id ? { ...r, name } : r)));
+  const updateTeamPool = (id, pool) =>
+    setTeamRows((rows) => rows.map((r) => (r.id === id ? { ...r, pool } : r)));
+
+  // Assignment is manual by design, but 30 selects one at a time with no starting point
+  // is not control, it is tedium. This fills the pools in listed order; every row can
+  // still be moved afterwards.
+  const handleEvenSplit = () => {
+    setTeamRows((rows) => {
+      const named = rows.filter((r) => r.name.trim());
+      const indexes = evenSplitPoolIndexes(named.length, poolCount);
+      let next = 0;
+      return rows.map((r) => (r.name.trim() ? { ...r, pool: indexes[next++] ?? null } : r));
+    });
+  };
+
+  const usePools = scheduleFormat === 'pools';
+  const pools = poolsFromRows(teamRows, poolCount);
 
   const handleAddBulkTeams = () => {
     const { added, duplicates } = parseBulkTeams(
@@ -199,7 +225,15 @@ export default function AdminPage() {
       return;
     }
 
-    const scheduled = buildScheduleForFormat(scheduleFormat, teamNames, mpp);
+    if (usePools) {
+      const problems = validatePoolAssignment(pools, teamNames);
+      if (problems.length) {
+        setError(problems.join(' '));
+        return;
+      }
+    }
+
+    const scheduled = buildScheduleForFormat(scheduleFormat, teamNames, mpp, { pools });
     const scores = matchesWithEmptySets(scheduled, spm);
     const scheduleSlots = buildDefaultScheduleSlots(scores, courts);
 
@@ -208,6 +242,7 @@ export default function AdminPage() {
       name: formName.trim(),
       teams: teamNames,
       scheduleFormat,
+      pools: usePools ? pools : [],
       setsPerMatch: spm,
       meetingsPerPair: mpp,
       pointsToWin: ptw,
@@ -238,6 +273,7 @@ export default function AdminPage() {
       setPointsToWin(25);
       setCourtCount(DEFAULT_COURT_COUNT);
       setScheduleFormat(DEFAULT_SCHEDULE_FORMAT);
+      setPoolCount(MIN_POOL_COUNT);
       setBulkTeams('');
       setBulkNotice('');
     } catch (e) {
@@ -408,6 +444,52 @@ export default function AdminPage() {
           </p>
         </div>
 
+        {usePools && (
+          <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="pool-count">
+                  Number of pools
+                </label>
+                <input
+                  id="pool-count"
+                  type="number"
+                  min={MIN_POOL_COUNT}
+                  max={MAX_POOL_COUNT}
+                  value={poolCount}
+                  onChange={(e) =>
+                    setPoolCount(
+                      Math.min(
+                        MAX_POOL_COUNT,
+                        Math.max(MIN_POOL_COUNT, parseInt(e.target.value, 10) || MIN_POOL_COUNT)
+                      )
+                    )
+                  }
+                  className="border p-2 rounded w-24 min-h-[44px] bg-white"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleEvenSplit}
+                className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-100"
+              >
+                Even split
+              </button>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Even split fills pools A–{poolLetter(poolCount - 1)} in the order below; change any
+              team afterwards. Every team needs a pool, and no pool can have fewer than 2 teams.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+              {pools.map((pool) => (
+                <span key={pool.name} className={pool.teams.length < 2 ? 'text-red-700' : ''}>
+                  <span className="font-semibold">Pool {pool.name}</span>: {pool.teams.length}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">
             Teams{' '}
@@ -430,9 +512,26 @@ export default function AdminPage() {
                 type="text"
                 value={row.name}
                 onChange={(e) => updateTeamRow(row.id, e.target.value)}
-                className="border p-2 rounded flex-1"
+                className="border p-2 rounded flex-1 min-w-0"
                 placeholder="Team name"
               />
+              {usePools && (
+                <select
+                  aria-label={`Pool for ${row.name || 'this team'}`}
+                  value={row.pool != null && row.pool < poolCount ? row.pool : ''}
+                  onChange={(e) =>
+                    updateTeamPool(row.id, e.target.value === '' ? null : Number(e.target.value))
+                  }
+                  className="border p-2 rounded bg-white min-h-[44px] shrink-0"
+                >
+                  <option value="">Pool…</option>
+                  {Array.from({ length: poolCount }, (_, i) => (
+                    <option key={i} value={i}>
+                      {poolLetter(i)}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button
                 type="button"
                 onClick={() => removeTeamRow(row.id)}
@@ -475,12 +574,16 @@ export default function AdminPage() {
 
         {(() => {
           const named = teamRows.map((r) => r.name.trim()).filter(Boolean);
-          const games = previewGameCount(scheduleFormat, named.length, meetingsPerPair);
+          const games = previewGameCount(scheduleFormat, named.length, meetingsPerPair, {
+            pools,
+            teams: named,
+          });
           if (!games) return null;
           return (
             <p className="text-sm text-gray-700 mb-3">
               <span className="font-semibold">{games}</span> league game{games === 1 ? '' : 's'} will
-              be generated for {named.length} teams.
+              be generated for {named.length} teams
+              {usePools && <> across {poolCount} pools</>}.
             </p>
           );
         })()}

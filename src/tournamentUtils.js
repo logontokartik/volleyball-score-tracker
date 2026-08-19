@@ -57,6 +57,157 @@ export function buildSkipAdjacentSchedule(teams, meetingsPerPair) {
   return matches;
 }
 
+/* ------------------------------------------------------------------ */
+/* Pools                                                               */
+/* ------------------------------------------------------------------ */
+
+export const MIN_POOL_COUNT = 2;
+export const MAX_POOL_COUNT = 8;
+
+// A pool of one plays nobody, so it is never a legal pool — not a warning, a block.
+export const MIN_POOL_TEAMS = 2;
+
+/** Pool names are positional: pool 1 is "A". Past Z (impossible here) fall back to P27. */
+export function poolLetter(index) {
+  return index < 26 ? String.fromCharCode(65 + index) : `P${index + 1}`;
+}
+
+/**
+ * Pools as `[{ name, teams }]`, cleaned against the tournament's team list.
+ *
+ * Teams that were renamed or removed drop out of their pool here, so a regenerate after
+ * a team edit produces no fixture for a team that no longer exists. A team listed in two
+ * pools is kept only in the first — the schedule has to be unambiguous even if the stored
+ * document is not. With no pools stored at all, everything is one pool: that makes the
+ * format degrade to a plain round robin rather than to an empty schedule.
+ */
+export function normalizePools(pools, teams) {
+  const known = new Set(cleanTeams(teams));
+  const list = Array.isArray(pools) ? pools : [];
+  if (!list.length) return [{ name: poolLetter(0), teams: cleanTeams(teams) }];
+  const claimed = new Set();
+  return list.map((pool, i) => ({
+    name: String(pool?.name ?? '').trim() || poolLetter(i),
+    teams: cleanTeams(pool?.teams).filter((t) => {
+      if (!known.has(t) || claimed.has(t)) return false;
+      claimed.add(t);
+      return true;
+    }),
+  }));
+}
+
+/**
+ * Round robin inside each pool and nothing across pools.
+ *
+ * Every match records the pool it belongs to, so standings can be grouped without
+ * re-deriving who was in which pool from the tournament document.
+ */
+export function buildPoolsSchedule(teams, meetingsPerPair, options) {
+  const pools = normalizePools(options?.pools, teams);
+  const meetings = Math.max(1, Math.floor(Number(meetingsPerPair)) || 1);
+  const matches = [];
+  let gameNum = 0;
+  for (let round = 0; round < meetings; round++) {
+    for (const pool of pools) {
+      for (let i = 0; i < pool.teams.length; i++) {
+        for (let j = i + 1; j < pool.teams.length; j++) {
+          gameNum += 1;
+          matches.push({
+            game: `G${gameNum}`,
+            team1: pool.teams[i],
+            team2: pool.teams[j],
+            pool: pool.name,
+          });
+        }
+      }
+    }
+  }
+  return matches;
+}
+
+/**
+ * The stored pools shape, built from the admin form's team rows (`{ name, pool }`, where
+ * `pool` is a pool index or null). Both the create form and the teams editor enter teams
+ * as an ordered row list, so both produce pools the same way.
+ */
+export function poolsFromRows(rows, poolCount) {
+  return Array.from({ length: poolCount }, (_, i) => ({
+    name: poolLetter(i),
+    teams: (rows || [])
+      .filter((r) => r.pool === i && String(r.name || '').trim())
+      .map((r) => String(r.name).trim()),
+  }));
+}
+
+/** Pool index for each team name, from a stored pools list. Unassigned teams get null. */
+export function poolIndexByTeam(pools) {
+  const map = new Map();
+  (Array.isArray(pools) ? pools : []).forEach((pool, i) => {
+    cleanTeams(pool?.teams).forEach((t) => {
+      if (!map.has(t)) map.set(t, i);
+    });
+  });
+  return map;
+}
+
+/**
+ * Problems that would make a pools tournament unplayable, as a list of sentences.
+ * Named pools rather than indexes, because "Pool D has 1 team" is actionable and
+ * "some pool is too small" is not.
+ */
+export function validatePoolAssignment(pools, teams) {
+  const problems = [];
+  const list = Array.isArray(pools) ? pools : [];
+  const assigned = new Set();
+  list.forEach((pool, i) => {
+    const name = String(pool?.name ?? '').trim() || poolLetter(i);
+    const members = cleanTeams(pool?.teams);
+    members.forEach((t) => assigned.add(t));
+    if (members.length < MIN_POOL_TEAMS) {
+      problems.push(
+        `Pool ${name} has ${members.length} team${members.length === 1 ? '' : 's'} — each pool needs at least ${MIN_POOL_TEAMS}.`
+      );
+    }
+  });
+  const missing = cleanTeams(teams).filter((t) => !assigned.has(t));
+  if (missing.length) {
+    problems.push(
+      `${missing.length} team${missing.length === 1 ? ' is' : 's are'} not in a pool: ${missing.join(', ')}.`
+    );
+  }
+  return problems;
+}
+
+/**
+ * Pool index per team, filling pools in the order the teams are listed.
+ *
+ * Sizes are balanced (25 teams over 6 pools → 5,4,4,4,4,4) and each pool takes a
+ * contiguous run, so the listed order still reads as "these teams are together".
+ * A shortcut only: the assignment it writes is then editable team by team.
+ */
+export function evenSplitPoolIndexes(teamCount, poolCount) {
+  const pools = Math.max(1, Math.floor(Number(poolCount)) || 1);
+  const base = Math.floor(teamCount / pools);
+  const remainder = teamCount % pools;
+  const indexes = [];
+  for (let p = 0; p < pools; p++) {
+    const size = base + (p < remainder ? 1 : 0);
+    for (let k = 0; k < size; k++) indexes.push(p);
+  }
+  return indexes;
+}
+
+/**
+ * Team counts per pool, matching exactly what `buildPoolsSchedule` would produce for the
+ * same input — including its "no pools stored means one pool of everyone" fallback, so
+ * the preview can never disagree with the schedule that gets generated.
+ */
+function poolSizes(teamCount, options) {
+  if (!Array.isArray(options?.pools) || !options.pools.length) return [teamCount];
+  const teams = options.teams ?? options.pools.flatMap((p) => p?.teams || []);
+  return normalizePools(options.pools, teams).map((p) => p.teams.length);
+}
+
 export const SCHEDULE_FORMATS = {
   roundRobin: {
     id: 'roundRobin',
@@ -75,21 +226,37 @@ export const SCHEDULE_FORMATS = {
     gameCount: (n) => (n * (n - 3)) / 2,
     minTeams: 4,
   },
+  pools: {
+    id: 'pools',
+    label: 'Pools (round robin within each pool)',
+    description:
+      'Teams are split into pools you assign by hand; each pool plays its own round robin and nobody plays across pools.',
+    build: buildPoolsSchedule,
+    // The only format whose game count depends on the shape of the draw rather than on
+    // the number of teams: 24 teams is 36 games as 6 pools of 4 and 66 as 4 pools of 6.
+    // Hence the second argument, which every other format ignores.
+    gameCount: (n, options) => poolSizes(n, options).reduce((t, s) => t + (s * (s - 1)) / 2, 0),
+    minTeams: MIN_POOL_COUNT * MIN_POOL_TEAMS,
+  },
 };
 
 export const DEFAULT_SCHEDULE_FORMAT = 'roundRobin';
 
-export function buildScheduleForFormat(formatId, teams, meetingsPerPair) {
+export function buildScheduleForFormat(formatId, teams, meetingsPerPair, options) {
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
-  return format.build(teams, meetingsPerPair);
+  return format.build(teams, meetingsPerPair, options);
 }
 
-/** Games this format produces, for previewing before the tournament is created. */
-export function previewGameCount(formatId, teamCount, meetingsPerPair) {
+/**
+ * Games this format produces, for previewing before the tournament is created.
+ * `options` carries whatever else the format's count depends on — for pools, the
+ * `{ pools, teams }` shape of the draw. Formats that only need a team count ignore it.
+ */
+export function previewGameCount(formatId, teamCount, meetingsPerPair, options) {
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
   const meetings = Math.max(1, Math.floor(Number(meetingsPerPair)) || 1);
   if (teamCount < format.minTeams) return 0;
-  return Math.max(0, format.gameCount(teamCount)) * meetings;
+  return Math.max(0, format.gameCount(teamCount, options)) * meetings;
 }
 
 /* ------------------------------------------------------------------ */
