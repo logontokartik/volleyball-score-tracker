@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { deleteDoc, deleteField, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { clubDoc, tournamentDoc, tournamentsCol } from './clubPaths';
 import { useClub } from './ClubContext';
 import {
@@ -33,10 +34,11 @@ function emptyTeamRow() {
   return { id: crypto.randomUUID(), name: '' };
 }
 
-export default function AdminPage({ onNavigateScores }) {
+export default function AdminPage() {
   // The club doc is already subscribed live by ClubContext, so the active pointer is read
   // from there rather than opening a second listener on the same document.
-  const { clubId, club, isClubAdmin } = useClub();
+  const { clubId, slug, club, isClubAdmin } = useClub();
+  const navigate = useNavigate();
   const activeTournamentId = club?.activeTournamentId || null;
 
   const [tournaments, setTournaments] = useState([]);
@@ -155,7 +157,8 @@ export default function AdminPage({ onNavigateScores }) {
       setMeetingsPerPair(1);
       setPointsToWin(25);
       setScheduleFormat(DEFAULT_SCHEDULE_FORMAT);
-      if (onNavigateScores) onNavigateScores();
+      // The point of creating a tournament is to run it, so land on the live view.
+      navigate(`/c/${slug}`);
     } catch (e) {
       setError(firestoreRulesHint(e));
     } finally {
@@ -195,7 +198,7 @@ export default function AdminPage({ onNavigateScores }) {
     setSaving(true);
     try {
       await setDoc(clubDoc(clubId), { activeTournamentId: id }, { merge: true });
-      if (onNavigateScores) onNavigateScores();
+      navigate(`/c/${slug}`);
     } catch (e) {
       setError(firestoreRulesHint(e));
     } finally {

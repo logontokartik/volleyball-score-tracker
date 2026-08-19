@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, Outlet, useParams } fr
 import TrackerView from './TrackerView';
 import ArchiveHub from './ArchiveHub';
 import CompletedTournamentsView from './CompletedTournamentsView';
+import AdminPage from './AdminPage';
 import Login from './Login';
 import ClubsPage from './ClubsPage';
 import SuperAdminPage from './SuperAdminPage';
@@ -134,6 +135,31 @@ function ClubGate() {
   return <Outlet />;
 }
 
+/**
+ * Club admin, gated on being an admin of THIS club. The account menu only shows the link
+ * to admins, but a hidden menu item is not a gate and `/c/{slug}/admin` is guessable. This
+ * check is UI only — firestore.rules is the real boundary, and it rejects every admin
+ * write behind this page no matter what React decides to render.
+ */
+function ClubAdminRoute() {
+  const { isClubAdmin, slug } = useClub();
+  if (!isClubAdmin) {
+    return (
+      <PageMessage title="Admin is not available">
+        Your account is not an admin of{' '}
+        <span className="font-mono text-amber-300">/c/{slug}</span>. Ask a club admin for access.
+      </PageMessage>
+    );
+  }
+  // AdminPage was built to sit inside the tracker's light surface; the app shell behind
+  // the routes is dark, so the page brings its own background now that it stands alone.
+  return (
+    <div className="min-h-screen bg-gray-50/80 p-3 sm:p-4">
+      <AdminPage />
+    </div>
+  );
+}
+
 /** Layout for the pages that exist outside any club. */
 function PlainLayout() {
   return (
@@ -173,6 +199,7 @@ export default function App() {
               <Route index element={<TrackerView />} />
               <Route path="completed" element={<CompletedTournamentsView />} />
               <Route path="archive" element={<ArchiveHub />} />
+              <Route path="admin" element={<ClubAdminRoute />} />
             </Route>
 
             <Route element={<PlainLayout />}>
