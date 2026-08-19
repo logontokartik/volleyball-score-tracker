@@ -118,7 +118,6 @@ export default function Login() {
   }
 
   const slug = club?.slug;
-  const showAdmin = Boolean(slug && club?.isClubAdmin);
   const label = user.displayName || user.email || 'Account';
 
   return (
@@ -163,11 +162,6 @@ export default function Login() {
             )}
           </div>
 
-          {showAdmin && (
-            <Link to={`/c/${slug}/admin`} role="menuitem" className={menuItemClass}>
-              Admin
-            </Link>
-          )}
           <Link to="/" role="menuitem" className={menuItemClass}>
             All clubs
           </Link>
