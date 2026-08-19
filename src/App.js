@@ -3,12 +3,13 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, Outlet, useParams } fr
 import TrackerView from './TrackerView';
 import ArchiveHub from './ArchiveHub';
 import CompletedTournamentsView from './CompletedTournamentsView';
+import AdminPage from './AdminPage';
 import Login from './Login';
 import ClubsPage from './ClubsPage';
 import SuperAdminPage from './SuperAdminPage';
-import { AuthProvider, useAuth } from './AuthContext';
+import { AuthProvider } from './AuthContext';
 import { ClubProvider, useClub, useClubOptional } from './ClubContext';
-import { isSuperAdmin } from './roles';
+import ClubSectionNav from './components/ClubSectionNav';
 
 /**
  * The club that the bare paths belong to. Before clubs existed this app served one
@@ -18,71 +19,67 @@ import { isSuperAdmin } from './roles';
  */
 const DEFAULT_CLUB_SLUG = process.env.REACT_APP_DEFAULT_CLUB_SLUG || 'gvbl';
 
-const navLinkClass = ({ isActive }) =>
-  `px-4 py-2.5 rounded-xl text-sm font-semibold min-h-[44px] flex items-center transition-colors ${
-    isActive ? 'bg-amber-500 text-slate-900 shadow' : 'bg-white/10 text-white hover:bg-white/20'
-  }`;
-
+/**
+ * One compact row on every viewport: back affordance, club name, account.
+ *
+ * The three club sections are NOT here on a phone — they are the bottom tab bar, which
+ * is where a thumb is while the other hand is holding a whistle. From `sm:` up they come
+ * back into this row as text links.
+ */
 function SiteNav() {
-  const { user } = useAuth();
   // Null outside the club routes — the directory, /super and the 404 render the same
   // header but have no club in scope.
   const club = useClubOptional();
   const slug = club?.slug;
-  // Only clubs with a spreadsheet attached have an archive to show. Without this the
-  // tab leads every other club to an empty page for a feature they do not have.
-  const hasArchive = Boolean(club?.club?.archiveSheetId);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-700/80 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-lg sm:text-xl font-black tracking-tight truncate">
-            {/* Inside a club the club's own name is the title. The name arrives a beat
-                after the slug does, so the slug stands in and the header does not jump. */}
-            {slug ? (
-              club?.club?.name || slug
-            ) : (
-              <>
-                Volleyball <span className="text-amber-400 font-semibold">Clubs</span>
-              </>
-            )}
-          </span>
-        </div>
-        <nav className="flex flex-wrap items-center gap-2" aria-label="Main">
-          {/* The way back out of a club, and the whole nav when there is no club in
-              scope. Public, so a signed-out visitor can browse to one. */}
-          <NavLink to="/" end className={navLinkClass}>
-            Clubs
+    <header
+      // Height comes from the shared custom property rather than a literal, because the
+      // tracker's sub-tab row pins itself directly below this header and the two numbers
+      // must be the same one. See SITE_HEADER_H in App().
+      className="sticky top-0 z-50 h-[var(--site-header-h)] border-b border-slate-700/80 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg"
+    >
+      <div className="max-w-6xl mx-auto h-full px-3 sm:px-4 flex items-center gap-3">
+        {/* The way back out of a club. `/` is the directory now, so this replaces the
+            old "Clubs" nav item rather than sitting alongside it. */}
+        {slug && (
+          <NavLink
+            to="/"
+            end
+            className="shrink-0 min-h-[44px] flex items-center gap-1 -ml-1 px-1 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+          >
+            <span aria-hidden="true" className="text-lg leading-none">
+              ‹
+            </span>
+            All clubs
           </NavLink>
-          {/* Tabs are club-scoped, so outside a club they would be links to whichever
-              club happened to be last — no club, no tabs. */}
-          {slug && (
+        )}
+        <span className="flex-1 min-w-0 leading-tight">
+          {/* Inside a club the club's own name is the title. The name arrives a beat
+              after the slug does, so the slug stands in and the header does not jump. */}
+          {slug ? (
+            <span className="block text-base sm:text-xl font-black tracking-tight truncate">
+              {club?.club?.name || slug}
+            </span>
+          ) : (
             <>
-              <NavLink to={`/c/${slug}`} end className={navLinkClass}>
-                Live score tracker
-              </NavLink>
-              <NavLink to={`/c/${slug}/completed`} className={navLinkClass}>
-                Completed
-              </NavLink>
-              {hasArchive && (
-                <NavLink to={`/c/${slug}/archive`} className={navLinkClass}>
-                  Tournament archive
-                </NavLink>
-              )}
+              <span className="block text-base sm:text-xl font-black tracking-tight truncate">
+                Volley<span className="text-amber-400">Score</span>
+              </span>
+              {/* The tagline is hidden on a phone on purpose: this header is a fixed
+                  56px (--site-header-h) that the sub-tabs pin beneath, and a second line
+                  at 390px would overflow it. ClubsPage carries the same line where it
+                  has room, so a phone visitor still sees it. */}
+              <span className="hidden sm:block text-xs font-medium text-slate-300 truncate">
+                Your one stop shop to manage clubs, schedule, scores
+              </span>
             </>
           )}
-          {isSuperAdmin(user) && (
-            <NavLink to="/super" className={navLinkClass}>
-              Super admin
-            </NavLink>
-          )}
-        </nav>
-        {/* Sign-in lives in the nav so it is reachable from every page, not just the
-            tracker. On a phone it wraps onto its own full-width row. */}
-        <div className="w-full sm:w-auto flex justify-start sm:justify-end">
-          <Login />
-        </div>
+        </span>
+        <ClubSectionNav variant="header" />
+        {/* Reachable from every page, not just the tracker. Collapsed to an avatar so it
+            cannot push this row to a second line on a 390px phone. */}
+        <Login />
       </div>
     </header>
   );
@@ -108,7 +105,15 @@ function ClubLayout() {
   return (
     <ClubProvider slug={slug}>
       <SiteNav />
-      <ClubGate />
+      {/* TrackerView, CompletedTournamentsView and ArchiveHub each bring their own page
+          wrapper, so the room for the fixed bottom bar is reserved here, once, for all of
+          them — otherwise the last score tile sits under the bar and cannot be tapped.
+          The reserved strip is exactly the bar's own height, so at full scroll the bar
+          covers it and the dark shell never shows through. */}
+      <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">
+        <ClubGate />
+      </div>
+      <ClubSectionNav variant="bottom" />
     </ClubProvider>
   );
 }
@@ -134,6 +139,31 @@ function ClubGate() {
   return <Outlet />;
 }
 
+/**
+ * Club admin, gated on being an admin of THIS club. The account menu only shows the link
+ * to admins, but a hidden menu item is not a gate and `/c/{slug}/admin` is guessable. This
+ * check is UI only — firestore.rules is the real boundary, and it rejects every admin
+ * write behind this page no matter what React decides to render.
+ */
+function ClubAdminRoute() {
+  const { isClubAdmin, slug } = useClub();
+  if (!isClubAdmin) {
+    return (
+      <PageMessage title="Admin is not available">
+        Your account is not an admin of{' '}
+        <span className="font-mono text-amber-300">/c/{slug}</span>. Ask a club admin for access.
+      </PageMessage>
+    );
+  }
+  // AdminPage was built to sit inside the tracker's light surface; the app shell behind
+  // the routes is dark, so the page brings its own background now that it stands alone.
+  return (
+    <div className="min-h-screen bg-gray-50/80 p-3 sm:p-4">
+      <AdminPage />
+    </div>
+  );
+}
+
 /** Layout for the pages that exist outside any club. */
 function PlainLayout() {
   return (
@@ -148,11 +178,22 @@ function NotFoundPage() {
   return <PageMessage title="Page not found">That address does not exist.</PageMessage>;
 }
 
+/**
+ * The site header's height, in one place.
+ *
+ * TrackerView pins its sub-tab row directly below the header. That offset used to be a
+ * literal `top-16` in another file, which is only correct as long as nobody touches the
+ * header — and the header just changed. Declaring it as a custom property on the shell
+ * means both the header (`h-[var(--site-header-h)]`) and the sub-tabs
+ * (`top-[var(--site-header-h)]`) read the same number, and it inherits to every route.
+ */
+const SITE_HEADER_H = '56px';
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-slate-950">
+        <div className="min-h-screen bg-slate-950" style={{ '--site-header-h': SITE_HEADER_H }}>
           <Routes>
             {/* Legacy single-club paths. Outside any layout so no header paints for
                 the instant before the redirect lands. `/` is no longer among them: the
@@ -173,6 +214,7 @@ export default function App() {
               <Route index element={<TrackerView />} />
               <Route path="completed" element={<CompletedTournamentsView />} />
               <Route path="archive" element={<ArchiveHub />} />
+              <Route path="admin" element={<ClubAdminRoute />} />
             </Route>
 
             <Route element={<PlainLayout />}>

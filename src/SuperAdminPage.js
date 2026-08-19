@@ -56,7 +56,7 @@ export default function SuperAdminPage() {
       <Shell title="Super admin">
         <p>Sign in to continue.</p>
         <button type="button" onClick={signIn} className={`${primaryButtonClass} mt-4`}>
-          Sign in with Google
+          Sign in / Sign up with Google
         </button>
       </Shell>
     );
