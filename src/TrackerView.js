@@ -293,11 +293,11 @@ export default function TrackerView() {
             </div>
 
             {/* Pinned BELOW the site header, not at the same offset: both sticking to
-                top-0 made this row slide under the header and disappear on scroll.
-                top-16 assumes a 64px-tall (h-16) site header on mobile — see the note
-                in the mobile-nav plan; if the header's height changes, this changes. */}
+                top-0 made this row slide under the header and disappear on scroll. The
+                offset is the header's own height, declared once as --site-header-h on
+                the app shell (App.js), so this cannot drift out of step with it. */}
             <div
-              className="sticky top-16 z-30 -mx-1 px-1 py-2 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200/80 sm:border-0 sm:bg-transparent sm:static sm:backdrop-blur-none"
+              className="sticky top-[var(--site-header-h)] z-30 -mx-1 px-1 py-2 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200/80 sm:border-0 sm:bg-transparent sm:static sm:backdrop-blur-none"
             >
               {/* A segmented control, not a nav bar: one bordered track with a single
                   filled segment, so it reads as subordinate to the section nav and does
