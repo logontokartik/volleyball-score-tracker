@@ -92,28 +92,8 @@ keep half-built or retired tournaments out of the way, never to keep anything se
 
 ## Claude-powered features
 
-Two Vercel Functions call Claude, both using the same server-side key:
+Vercel Functions that call Claude, sharing one server-side key:
 
-- **`api/ask-archive.js`** — the Archive page's *Ask the archive* panel, per club. The
-  browser posts `{ question, clubId }`; the function reads `archiveSheetId` off
-  `clubs/{clubId}` itself, pulls that spreadsheet server-side, hands Claude the rosters,
-  career stats, champions and rules, and returns a `{ title, body }` answer.
-
-  **The client never sends a spreadsheet id.** If it could, anyone could POST an
-  arbitrary sheet and spend the project's Anthropic credits summarising it, and the
-  function would double as an open fetch proxy. Resolving the id from the club document
-  closes that only in combination with the second half: **`archiveSheetId` is
-  super-admin-only in `firestore.rules`** — a club admin may edit everything else on the
-  club document but not that field. Anyone with a Google account can create a club and
-  become its admin, so if club admins could set `archiveSheetId` the "resolve it
-  server-side" step would be no barrier at all: create a club, point it anywhere, ask
-  away. Attaching a spreadsheet is therefore an operator action.
-  `clubs/{clubId}` is world-readable, so the lookup uses the Firestore REST API with **no
-  service-account key and no new dependency**; the club id is validated against
-  `/^[A-Za-z0-9_-]{1,128}$/` before it is interpolated into that URL. A club that does
-  not exist and a club with no `archiveSheetId` both return 404 with distinct messages.
-  Sheet id and archive are cached separately, each keyed by id, since one warm function
-  instance serves every club.
 - **`api/send-invite.js`** — emails someone the invite a club admin just created. Not a
   Claude feature, but it shares the same shape and the same reasoning about not being an
   open relay.
@@ -144,13 +124,12 @@ Add the key in **Vercel → Project → Settings → Environment Variables**:
 | --- | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | yes | — | From [console.anthropic.com](https://console.anthropic.com). Server-side only. |
 | `ANTHROPIC_MODEL` | no | `claude-opus-5` | Set to `claude-sonnet-5` or `claude-haiku-4-5` to cut cost and latency. |
-| `ANTHROPIC_EFFORT` | no | `medium` | `low` is faster/cheaper; `high` reasons harder. |
 | `ANTHROPIC_SCHEDULE_EFFORT` | no | `low` | Effort for the schedule builder only. Raise it if a messy screenshot reads badly. |
 | `RESEND_API_KEY` | for invite email | — | From [resend.com](https://resend.com). Server-side only. Without it invites still work, they just are not emailed. |
 | `RESEND_EMAIL_DOMAIN` | no | — | Set by Vercel's Resend integration. The sender becomes `invites@<this domain>`, so nothing else is needed. |
 | `RESEND_FROM` | no | derived from `RESEND_EMAIL_DOMAIN` | Overrides the sender when a specific mailbox or display name is wanted. Must be on a domain verified in Resend. |
 | `APP_BASE_URL` | no | `https://volleyscores.app` | Base of the link in the invite email. Deliberately configuration, never the request's Host header. |
-| `FIREBASE_PROJECT_ID` | no | `volleyball-score-tracker` | Project whose Firestore `clubs/{clubId}` documents `ask-archive` reads to resolve `archiveSheetId`. Server-side only; must match `projectId` in `src/firebase.js`. |
+| `FIREBASE_PROJECT_ID` | no | `volleyball-score-tracker` | Project whose Firestore documents the functions read to check permissions. Server-side only; must match `projectId` in `src/firebase.js`. |
 | `REACT_APP_SUPER_ADMIN_EMAILS` | no | empty | Comma-separated super-admin addresses — admin of every club, no member document needed. Public (it is in the JS bundle); mirror it in `superAdmins()` in `firestore.rules`, which is the list `isSuper()` checks against and the only one that is enforced. |
 | `REACT_APP_DEFAULT_CLUB_SLUG` | no | `gvbl` | Club that `/`, `/completed` and `/archive` redirect to. |
 
@@ -212,14 +191,6 @@ vercel dev
   club's data.
 - A club with no `archiveSheetId` has no archive: the page says so instead of rendering
   empty tables and a link to nothing.
-- Precomputed totals are passed alongside the raw data, and Claude is instructed to use
-  those figures rather than recount, so stat answers stay exact.
-- The archive prefix is sent with `cache_control`, so repeat questions bill the ~16k
-  tokens of context at roughly 10% of list price.
-- Requests are capped at 10/minute per IP and 500 characters per question.
-- `directory[].appearances` is **deliberately excluded** from the AI context — see the
-  comment in `api/ask-archive.js`; that field is populated from the wrong spreadsheet
-  columns and contains other players' names.
 - **Keep these files `.js`, not `.mjs`.** Vercel's zero-config detection for the `/api`
   directory does not pick up `.mjs`; such a file is silently not deployed, and requests
   to it fall through to the SPA and return `index.html`. ESM syntax works fine in

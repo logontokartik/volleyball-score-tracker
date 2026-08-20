@@ -21,6 +21,7 @@ import {
   validatePoolAssignment,
 } from './tournamentUtils';
 import ScheduleEditor from './ScheduleEditor';
+import FixtureAIBuilder from './FixtureAIBuilder';
 import AdminMatchLocks from './AdminMatchLocks';
 import AdminTeamsEditor from './AdminTeamsEditor';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -108,6 +109,11 @@ export default function AdminPage() {
   const [deleting, setDeleting] = useState(false);
   const [bulkTeams, setBulkTeams] = useState('');
   const [bulkNotice, setBulkNotice] = useState('');
+  // AI-built fixtures, held here until Create. While this is non-empty it replaces the
+  // format dropdown as the source of the match list, and the tournament is stored as
+  // `custom` so nothing later rebuilds it from a rule.
+  const [aiFixtures, setAiFixtures] = useState([]);
+  const [aiWarnings, setAiWarnings] = useState([]);
   const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
@@ -158,6 +164,7 @@ export default function AdminPage() {
 
   const usePools = scheduleFormat === 'pools';
   const pools = poolsFromRows(teamRows, poolCount);
+  const usingAiFixtures = aiFixtures.length > 0;
 
   const handleAddBulkTeams = () => {
     const { added, duplicates } = parseBulkTeams(
@@ -226,7 +233,11 @@ export default function AdminPage() {
       Math.max(1, parseInt(courtCount, 10) || DEFAULT_COURT_COUNT)
     );
 
-    const format = SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
+    // AI fixtures answer "who plays who" themselves, so the chosen format's team minimum
+    // is not what applies — the fixture list is.
+    const format = usingAiFixtures
+      ? SCHEDULE_FORMATS.custom
+      : SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
     if (teamNames.length < format.minTeams) {
       setError(`"${format.label}" needs at least ${format.minTeams} teams.`);
       return;
@@ -240,7 +251,22 @@ export default function AdminPage() {
       }
     }
 
-    const scheduled = buildScheduleForFormat(scheduleFormat, teamNames, mpp, { pools });
+    // The one substitution: fixtures either come from the rule the dropdown names, or
+    // from the AI panel. Everything after this point is identical either way — the same
+    // empty sets, the same default schedule rows.
+    const scheduled = usingAiFixtures
+      ? buildScheduleForFormat('custom', teamNames, mpp, { fixtures: aiFixtures })
+      : buildScheduleForFormat(scheduleFormat, teamNames, mpp, { pools });
+
+    if (usingAiFixtures && !scheduled.length) {
+      // Only reachable by renaming or removing teams after generating: the fixtures name
+      // teams that no longer exist, so there is nothing left to save.
+      setError(
+        'The generated fixtures no longer match the team list — regenerate them, or discard them and pick a format.'
+      );
+      return;
+    }
+
     const scores = matchesWithEmptySets(scheduled, spm);
     const scheduleSlots = buildDefaultScheduleSlots(scores, courts);
 
@@ -248,7 +274,7 @@ export default function AdminPage() {
     const payload = {
       name: formName.trim(),
       teams: teamNames,
-      scheduleFormat,
+      scheduleFormat: usingAiFixtures ? 'custom' : scheduleFormat,
       pools: usePools ? pools : [],
       setsPerMatch: spm,
       meetingsPerPair: mpp,
@@ -283,6 +309,8 @@ export default function AdminPage() {
       setPoolCountText(String(MIN_POOL_COUNT));
       setBulkTeams('');
       setBulkNotice('');
+      setAiFixtures([]);
+      setAiWarnings([]);
     } catch (e) {
       setError(firestoreRulesHint(e));
     } finally {
@@ -437,18 +465,50 @@ export default function AdminPage() {
           <select
             value={scheduleFormat}
             onChange={(e) => setScheduleFormat(e.target.value)}
-            className="border p-2 rounded w-full bg-white"
+            disabled={usingAiFixtures}
+            className="border p-2 rounded w-full bg-white disabled:bg-gray-100 disabled:text-gray-500"
           >
-            {Object.values(SCHEDULE_FORMATS).map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
+            {/* `custom` is not a rule you can pick — it is what a tournament becomes once
+                its fixtures were described rather than generated. */}
+            {Object.values(SCHEDULE_FORMATS)
+              .filter((f) => !f.manual)
+              .map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
           </select>
           <p className="text-xs text-gray-600 mt-1">
-            {(SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT])
-              .description}
+            {usingAiFixtures
+              ? 'The generated fixtures below are being used instead. Discard them to go back to a format.'
+              : (SCHEDULE_FORMATS[scheduleFormat] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT])
+                  .description}
           </p>
+        </div>
+
+        <div className="mb-4">
+          <FixtureAIBuilder
+            clubId={clubId}
+            teams={teamRows.map((r) => r.name.trim()).filter(Boolean)}
+            courtCount={Math.min(
+              MAX_COURT_COUNT,
+              Math.max(1, parseInt(courtCount, 10) || DEFAULT_COURT_COUNT)
+            )}
+            setsPerMatch={Math.min(5, Math.max(1, parseInt(setsPerMatch, 10) || 1))}
+            meetingsPerPair={Math.min(10, Math.max(1, parseInt(meetingsPerPair, 10) || 1))}
+            pools={usePools ? pools : []}
+            fixtures={aiFixtures}
+            warnings={aiWarnings}
+            onFixtures={(fixtures, warnings) => {
+              setAiFixtures(fixtures);
+              setAiWarnings(warnings);
+              setError('');
+            }}
+            onDiscard={() => {
+              setAiFixtures([]);
+              setAiWarnings([]);
+            }}
+          />
         </div>
 
         {usePools && (
@@ -577,16 +637,19 @@ export default function AdminPage() {
 
         {(() => {
           const named = teamRows.map((r) => r.name.trim()).filter(Boolean);
-          const games = previewGameCount(scheduleFormat, named.length, meetingsPerPair, {
-            pools,
-            teams: named,
-          });
+          const games = previewGameCount(
+            usingAiFixtures ? 'custom' : scheduleFormat,
+            named.length,
+            meetingsPerPair,
+            { pools, teams: named, fixtures: aiFixtures }
+          );
           if (!games) return null;
           return (
             <p className="text-sm text-gray-700 mb-3">
               <span className="font-semibold">{games}</span> league game{games === 1 ? '' : 's'} will
-              be generated for {named.length} teams
-              {usePools && <> across {poolCount} pools</>}.
+              be {usingAiFixtures ? 'created from the fixtures above' : 'generated'} for{' '}
+              {named.length} teams
+              {usePools && !usingAiFixtures && <> across {poolCount} pools</>}.
             </p>
           );
         })()}

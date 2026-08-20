@@ -78,6 +78,18 @@ function rowHasAny(row, startCol = 0) {
  * @param {string} sheetId the club's `archiveSheetId`
  * @returns {Promise<object>} archiveData-shaped object
  */
+/**
+ * KNOWN DEFECT — `directory[].appearances`.
+ *
+ * The per-tournament columns read into `appearances` below overlap the WINNERS/RUNNERS
+ * block, so the values are other players' names rather than that player's appearances.
+ * Every entry carries all 18 tournament keys regardless of `tournamentsPlayed`, and 36
+ * of 221 entries never contain their own name.
+ *
+ * It is still rendered in the Player directory tab. This note used to live in
+ * api/ask-archive.js, which deliberately excluded the field from what it sent to a
+ * model; that file has been deleted, so the note moved here, next to the actual bug.
+ */
 export async function fetchArchiveFromSheets(sheetId) {
   if (!sheetId) throw new Error('This club has no archive spreadsheet configured.');
 

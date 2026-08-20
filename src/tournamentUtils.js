@@ -222,6 +222,52 @@ function poolSizes(teamCount, options) {
   return normalizePools(options.pools, teams).map((p) => p.teams.length);
 }
 
+/* ------------------------------------------------------------------ */
+/* Custom fixtures                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The fixtures handed in through `options.fixtures`, rather than derived from a rule.
+ *
+ * This is what makes an AI-built draw storable: every other format answers "who plays
+ * who" from the team list, so a tournament whose fixtures came from a description had
+ * nowhere to live. Anything that regenerates a match list from the stored format — the
+ * teams editor does, on every save — reaches this and gets the fixtures back instead of
+ * quietly rebuilding them into a round robin.
+ *
+ * Fixtures naming a team that is no longer in the list drop out, the same way
+ * `normalizePools` drops a renamed team from its pool: a fixture for a team that does not
+ * exist cannot be played. Ids are reassigned so they stay G1..Gn and dense.
+ * `meetingsPerPair` is ignored — the fixture list already says how often a pair meets.
+ */
+export function buildCustomSchedule(teams, meetingsPerPair, options) {
+  const known = new Map(cleanTeams(teams).map((t) => [t.toLowerCase(), t]));
+  const fixtures = Array.isArray(options?.fixtures) ? options.fixtures : [];
+  const matches = [];
+  for (const fixture of fixtures) {
+    const team1 = known.get(String(fixture?.team1 ?? '').trim().toLowerCase());
+    const team2 = known.get(String(fixture?.team2 ?? '').trim().toLowerCase());
+    if (!team1 || !team2 || team1 === team2) continue;
+    const pool = String(fixture?.pool ?? '').trim();
+    matches.push({
+      game: `G${matches.length + 1}`,
+      team1,
+      team2,
+      ...(pool ? { pool } : {}),
+    });
+  }
+  return matches;
+}
+
+/** The fixture shape (`{ team1, team2, pool }`) of an existing match list. */
+export function fixturesFromScores(scores) {
+  return (scores || []).map((m) => ({
+    team1: m.team1,
+    team2: m.team2,
+    ...(m.pool ? { pool: m.pool } : {}),
+  }));
+}
+
 export const SCHEDULE_FORMATS = {
   roundRobin: {
     id: 'roundRobin',
@@ -252,6 +298,27 @@ export const SCHEDULE_FORMATS = {
     gameCount: (n, options) => poolSizes(n, options).reduce((t, s) => t + (s * (s - 1)) / 2, 0),
     minTeams: MIN_POOL_COUNT * MIN_POOL_TEAMS,
   },
+  custom: {
+    id: 'custom',
+    label: 'Custom fixtures',
+    description:
+      'The fixture list was written for this tournament rather than generated from a rule — editing teams keeps it as it is.',
+    build: buildCustomSchedule,
+    // Counted through the builder when the team list is to hand, so the preview drops the
+    // same fixtures the save would — a team renamed after the fixtures were generated
+    // must not still be counted.
+    gameCount: (n, options) =>
+      Array.isArray(options?.teams)
+        ? buildCustomSchedule(options.teams, 1, options).length
+        : (options?.fixtures || []).length,
+    minTeams: 2,
+    // Not offered in the format dropdowns: it is not something to switch TO, it is what a
+    // tournament already is once its fixtures were built by hand or by the AI panel.
+    manual: true,
+    // The fixture list is already the whole draw, repeats included, so it must not be
+    // multiplied by meetingsPerPair the way a per-pairing rule is.
+    countsMeetings: false,
+  },
 };
 
 export const DEFAULT_SCHEDULE_FORMAT = 'roundRobin';
@@ -270,7 +337,10 @@ export function previewGameCount(formatId, teamCount, meetingsPerPair, options) 
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
   const meetings = Math.max(1, Math.floor(Number(meetingsPerPair)) || 1);
   if (teamCount < format.minTeams) return 0;
-  return Math.max(0, format.gameCount(teamCount, options)) * meetings;
+  // Formats that count per pairing scale with meetings; a custom fixture list already
+  // contains its repeats, so it does not.
+  const multiplier = format.countsMeetings === false ? 1 : meetings;
+  return Math.max(0, format.gameCount(teamCount, options)) * multiplier;
 }
 
 /* ------------------------------------------------------------------ */

@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { blankSlot } from './tournamentUtils';
+import { useAuth } from './AuthContext';
+import { useClub } from './ClubContext';
 
 const ENDPOINT = '/api/build-schedule';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -65,6 +67,8 @@ async function readImage(file) {
 }
 
 export default function ScheduleAIBuilder({ tournament, scores, courtCount, onSlots }) {
+  const { user } = useAuth();
+  const { clubId } = useClub();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [image, setImage] = useState(null);
@@ -115,11 +119,15 @@ export default function ScheduleAIBuilder({ tournament, scores, courtCount, onSl
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
+      // The endpoint authorises club admins on this token; this panel only ever renders
+      // inside the admin schedule editor, so there is always one to send.
+      const token = await user.getIdToken();
       const res = await fetch(ENDPOINT, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         signal: controller.signal,
         body: JSON.stringify({
+          clubId,
           text: text.trim(),
           image: image ? { mediaType: image.mediaType, data: image.data } : null,
           teams: tournament.teams || [],
