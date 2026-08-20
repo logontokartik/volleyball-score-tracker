@@ -163,6 +163,63 @@ await t('a stranger who created their own club still cannot attach a spreadsheet
   await assertFails(updateDoc(doc(outsid,'clubs/proxyclub'), { archiveSheetId:'ANY-PUBLIC-SHEET' }));
 });
 
+
+console.log('\n--- scoring-access requests ---');
+await env.withSecurityRulesDisabled(async (c) => {
+  await setDoc(doc(c.firestore(),'clubs/gvbl/requests/out'),
+    { uid:'out', email:'outsider@example.com', displayName:'Outsider' });
+});
+
+await t('a signed-in stranger may ask for access, for themselves',
+  ()=>assertSucceeds(setDoc(doc(outsid,'clubs/gvbl/requests/out'),
+    { uid:'out', email:'outsider@example.com' })));
+await t('...but CANNOT file a request in someone else\'s name',
+  ()=>assertFails(setDoc(doc(outsid,'clubs/gvbl/requests/gs'),
+    { uid:'gs', email:'gvblscorer@example.com' })));
+await t('...and CANNOT claim an address that is not theirs',
+  ()=>assertFails(setDoc(doc(outsid,'clubs/gvbl/requests/out'),
+    { uid:'out', email:'someone.else@example.com' })));
+await t('an unverified account cannot request',
+  ()=>assertFails(setDoc(doc(unver,'clubs/gvbl/requests/uv'), { uid:'uv', email:'invited@example.com' })));
+await t('signed out cannot request',
+  ()=>assertFails(setDoc(doc(anon,'clubs/gvbl/requests/x'), { uid:'x', email:'x@example.com' })));
+
+await t('the requester can read their own request', ()=>assertSucceeds(getDoc(doc(outsid,'clubs/gvbl/requests/out'))));
+await t('a club admin can read requests',            ()=>assertSucceeds(getDoc(doc(gAdmin,'clubs/gvbl/requests/out'))));
+await t('a scorer CANNOT read requests (they are email addresses)',
+  ()=>assertFails(getDoc(doc(gScore,'clubs/gvbl/requests/out'))));
+await t('the public CANNOT read requests',           ()=>assertFails(getDoc(doc(anon,'clubs/gvbl/requests/out'))));
+await t('an admin of ANOTHER club cannot read them', ()=>assertFails(getDoc(doc(ctx('zz','z@example.com'),'clubs/gvbl/requests/out'))));
+
+console.log('\n--- approving a request ---');
+await t('an admin may add a member who actually asked', async()=>{
+  const b = writeBatch(gAdmin);
+  b.set(doc(gAdmin,'clubs/gvbl/members/out'), { uid:'out', email:'outsider@example.com', role:'scorer' });
+  b.delete(doc(gAdmin,'clubs/gvbl/requests/out'));
+  await assertSucceeds(b.commit());
+});
+await env.withSecurityRulesDisabled(async (c) => {
+  await deleteDoc(doc(c.firestore(),'clubs/gvbl/members/out'));
+  await setDoc(doc(c.firestore(),'clubs/gvbl/requests/out'), { uid:'out', email:'outsider@example.com' });
+});
+await t('an admin may approve as admin if they choose',
+  ()=>assertSucceeds(setDoc(doc(gAdmin,'clubs/gvbl/members/out'), { uid:'out', email:'outsider@example.com', role:'admin' })));
+await env.withSecurityRulesDisabled(async (c) => { await deleteDoc(doc(c.firestore(),'clubs/gvbl/members/out')); });
+
+await t('an admin CANNOT invent a role',
+  ()=>assertFails(setDoc(doc(gAdmin,'clubs/gvbl/members/out'), { uid:'out', email:'outsider@example.com', role:'owner' })));
+// The whole point: the request document is the consent.
+await t('an admin CANNOT add somebody who never asked',
+  ()=>assertFails(setDoc(doc(gAdmin,'clubs/gvbl/members/nobody'), { uid:'nobody', email:'nobody@example.com', role:'scorer' })));
+await t('a scorer CANNOT approve a request',
+  ()=>assertFails(setDoc(doc(gScore,'clubs/gvbl/members/out'), { uid:'out', email:'outsider@example.com', role:'scorer' })));
+await t('an admin CANNOT approve a request into ANOTHER club',
+  ()=>assertFails(setDoc(doc(gAdmin,'clubs/other/members/out'), { uid:'out', email:'outsider@example.com', role:'scorer' })));
+await t('a requester CANNOT approve themselves',
+  ()=>assertFails(setDoc(doc(outsid,'clubs/gvbl/members/out'), { uid:'out', email:'outsider@example.com', role:'scorer' })));
+await t('the requester may withdraw their own request',
+  ()=>assertSucceeds(deleteDoc(doc(outsid,'clubs/gvbl/requests/out'))));
+
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

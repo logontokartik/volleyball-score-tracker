@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { formatMatchHeadingForScores, getSetCap, getSetTarget } from './tournamentUtils';
+// The dialog is otherwise prop-driven, but this one child sources its own club and auth
+// from context — passing its state down would mean two copies of the same truth.
+import RequestScoringAccess from './RequestScoringAccess';
 
 /**
  * Score entry for a single game, as a modal.
@@ -116,11 +119,16 @@ export default function MatchScoreDialog({
             </p>
           )}
           {!canScore && (
-            <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-              {signedIn
-                ? 'Your account is not on this club’s scoring team, so scores are read-only. Ask a club admin for scorer access.'
-                : 'Log in to enter or adjust scores.'}
-            </p>
+            <div className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+              <p>
+                {signedIn
+                  ? 'Your account is not on this club’s scoring team, so scores are read-only. Ask a club admin for scorer access.'
+                  : 'Log in to enter or adjust scores.'}
+              </p>
+              {/* Same component as the scores list, so the dialog can never offer a
+                  different answer about whether asking is possible or already done. */}
+              <RequestScoringAccess className="mt-3" />
+            </div>
           )}
 
           {match.sets.map((set, setIndex) => {

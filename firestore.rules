@@ -133,7 +133,31 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/clubs/$(clubId)/invites/$(email()))
           && get(/databases/$(database)/documents/clubs/$(clubId)/invites/$(email()))
                .data.role == request.resource.data.role;
+        // Approving a request. Unlike the two above, this one is performed BY an admin
+        // FOR someone else — so the thing that makes it safe is the request document,
+        // which only that uid can create. No request, no membership: an admin cannot use
+        // this to add somebody who never asked. The role is pinned to the two real roles
+        // so a typo cannot invent a third.
+        allow create: if isClubAdmin(clubId)
+          && exists(/databases/$(database)/documents/clubs/$(clubId)/requests/$(uid))
+          && request.resource.data.uid == uid
+          && request.resource.data.role in ['scorer', 'admin'];
         allow update, delete: if isClubAdmin(clubId);
+      }
+
+      // Someone signed in asking a club for scoring access. Keyed by uid, so asking
+      // twice updates one row rather than spamming the admin's list.
+      match /requests/{uid} {
+        // You may only ask on your own behalf, with your own verified address — the
+        // address is what the admin sees when deciding.
+        allow create, update: if verified() && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email == email();
+        // Admins triage; a requester can see their own to know it is still pending.
+        // Deliberately not public: a request list is a list of email addresses.
+        allow read: if isClubAdmin(clubId) || (signedIn() && uid == request.auth.uid);
+        // Admin declines, or the requester withdraws.
+        allow delete: if isClubAdmin(clubId) || (signedIn() && uid == request.auth.uid);
       }
 
       // Doc id is the lowercased invited email, so an invite is looked up by address
