@@ -18,9 +18,17 @@ import { useClub } from './ClubContext';
 function errorText(err) {
   const code = err?.code;
   if (code === 'permission-denied') {
-    // The rules demand a verified address that matches the document, so this is nearly
-    // always an unverified sign-in rather than anything the person can retry into.
-    return 'Firestore blocked that. Your account needs a verified email address to ask for access.';
+    // Deliberately does NOT name a single cause. This used to assert "your account needs
+    // a verified email address", which is the one explanation that cannot apply: sign-in
+    // is Google-only and Google always sets email_verified. The real cause is almost
+    // always that firestore.rules has not been published since the requests collection
+    // was added, in which case every write here is default-denied — and telling someone
+    // to verify an already-verified address sends them nowhere.
+    return (
+      'Firestore refused that request. The most likely reason is that this deployment ' +
+      'is still running an older version of the security rules — ask an admin to ' +
+      'publish firestore.rules.'
+    );
   }
   return err?.message || 'Could not send that request. Check your connection and try again.';
 }
