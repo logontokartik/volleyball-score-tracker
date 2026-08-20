@@ -31,12 +31,16 @@ await env.withSecurityRulesDisabled(async (c) => {
   await setDoc(doc(d,'clubs/gvbl/members/gs'), { uid:'gs', email:'gvblscorer@example.com', role:'scorer' });
   await setDoc(doc(d,'clubs/gvbl/tournaments/t1'), TOURN);
   await setDoc(doc(d,'clubs/gvbl/archive/snapshot'), { masterList: [] });
+  await setDoc(doc(d,'clubs/gvbl/players/p1'), { name:'Priya', nameLower:'priya', position:'Libero' });
+  await setDoc(doc(d,'clubs/gvbl/playerContacts/p1'), { email:'priya@example.com' });
   await setDoc(doc(d,'clubs/gvbl/invites/invited@example.com'), { email:'invited@example.com', role:'scorer' });
   await setDoc(doc(d,'users/ga'), { email:'gvbladmin@example.com', displayName:'G Admin' });
   // A second, unrelated club
   await setDoc(doc(d,'clubs/other'), { name:'Other', slug:'other', createdBy:'zz' });
   await setDoc(doc(d,'clubs/other/members/zz'), { uid:'zz', email:'z@example.com', role:'admin' });
   await setDoc(doc(d,'clubs/other/tournaments/t9'), TOURN);
+  await setDoc(doc(d,'clubs/other/players/op1'), { name:'Sam', nameLower:'sam' });
+  await setDoc(doc(d,'clubs/other/playerContacts/op1'), { email:'sam@example.com' });
 });
 
 console.log('\n--- users/{uid}: the sign-in profile upsert ---');
@@ -219,6 +223,49 @@ await t('a requester CANNOT approve themselves',
   ()=>assertFails(setDoc(doc(outsid,'clubs/gvbl/members/out'), { uid:'out', email:'outsider@example.com', role:'scorer' })));
 await t('the requester may withdraw their own request',
   ()=>assertSucceeds(deleteDoc(doc(outsid,'clubs/gvbl/requests/out'))));
+
+
+console.log('\n--- the player database: a public roster with private contacts ---');
+const PLAYER  = { name:'Ana', nameLower:'ana', position:'Setter' };
+const CONTACT = { email:'ana@example.com' };
+// The roster is scoreboard content, so it is public like the rest of the scoreboard.
+await t('anyone reads a player',                 ()=>assertSucceeds(getDoc(doc(anon,'clubs/gvbl/players/p1'))));
+// The whole reason for the second collection: an address book must not be world-readable.
+await t('player emails are NOT public',          ()=>assertFails(getDoc(doc(anon,'clubs/gvbl/playerContacts/p1'))));
+await t('outsider CANNOT read player emails',    ()=>assertFails(getDoc(doc(outsid,'clubs/gvbl/playerContacts/p1'))));
+await t('scorer reads player emails',            ()=>assertSucceeds(getDoc(doc(gScore,'clubs/gvbl/playerContacts/p1'))));
+await t('admin reads player emails',             ()=>assertSucceeds(getDoc(doc(gAdmin,'clubs/gvbl/playerContacts/p1'))));
+await t('super admin reads player emails',       ()=>assertSucceeds(getDoc(doc(superA,'clubs/gvbl/playerContacts/p1'))));
+
+await t('admin adds a player',                   ()=>assertSucceeds(setDoc(doc(gAdmin,'clubs/gvbl/players/p2'), PLAYER)));
+await t('admin writes a player contact',         ()=>assertSucceeds(setDoc(doc(gAdmin,'clubs/gvbl/playerContacts/p2'), CONTACT)));
+await t('admin deletes a player contact',        ()=>assertSucceeds(deleteDoc(doc(gAdmin,'clubs/gvbl/playerContacts/p2'))));
+await t('admin deletes a player',                ()=>assertSucceeds(deleteDoc(doc(gAdmin,'clubs/gvbl/players/p2'))));
+// Rosters are admin work, not scoring: a scorer may not rewrite who played.
+await t('scorer CANNOT add a player',            ()=>assertFails(setDoc(doc(gScore,'clubs/gvbl/players/p3'), PLAYER)));
+await t('scorer CANNOT edit a player',           ()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/players/p1'), { name:'Hacked' })));
+await t('scorer CANNOT write a player contact',  ()=>assertFails(setDoc(doc(gScore,'clubs/gvbl/playerContacts/p1'), CONTACT)));
+await t('signed out CANNOT add a player',        ()=>assertFails(setDoc(doc(anon,'clubs/gvbl/players/p3'), PLAYER)));
+await t('outsider CANNOT add a player',          ()=>assertFails(setDoc(doc(outsid,'clubs/gvbl/players/p3'), PLAYER)));
+
+// Same isolation as everything else under a club — a roster is club data too.
+await t('gvbl admin CANNOT add to other club players',   ()=>assertFails(setDoc(doc(gAdmin,'clubs/other/players/op2'), PLAYER)));
+await t('gvbl admin CANNOT read other club contacts',    ()=>assertFails(getDoc(doc(gAdmin,'clubs/other/playerContacts/op1'))));
+await t('gvbl scorer CANNOT read other club contacts',   ()=>assertFails(getDoc(doc(gScore,'clubs/other/playerContacts/op1'))));
+
+// `rosters` rides on the tournament document, so it is the scorer field list that keeps
+// it admin-only. This is the test that fails if someone widens scorerFieldsOnly().
+const ROSTERS = [{ team:'Black', playerIds:['p1'] }];
+// The scorer's attempts write a DIFFERENT value on purpose. affectedKeys() reports what
+// actually changed, so re-writing the value the admin just stored is not an affected key
+// at all and sails through hasOnly() — a test that reused ROSTERS here would report a
+// pass for a write that never tested the rule.
+const ROSTERS2 = [{ team:'Black', playerIds:['p1','p2'] }];
+await t('admin writes tournament rosters',       ()=>assertSucceeds(updateDoc(doc(gAdmin,'clubs/gvbl/tournaments/t1'), { rosters:ROSTERS })));
+await t('scorer CANNOT write tournament rosters',()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { rosters:ROSTERS2 })));
+await t('scorer CANNOT smuggle rosters with scores', ()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { scores:[{game:'G2'}], rosters:ROSTERS2 })));
+await t('anyone reads tournament rosters',       ()=>assertSucceeds(getDoc(doc(anon,'clubs/gvbl/tournaments/t1'))));
+
 
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);

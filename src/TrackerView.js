@@ -8,6 +8,7 @@ import ScheduleTable from './ScheduleTable';
 import FinalsView from './FinalsView';
 import MatchScoreDialog from './MatchScoreDialog';
 import RequestScoringAccess from './RequestScoringAccess';
+import TeamsView from './TeamsView';
 import { Card, CardContent } from './components/ui/card';
 import { isTournamentComplete } from './CompletedTournamentsView';
 import {
@@ -350,6 +351,7 @@ export default function TrackerView() {
                 {[
                   { id: 'schedule', label: 'Schedule' },
                   { id: 'scores', label: 'Scores' },
+                  { id: 'teams', label: 'Teams' },
                   { id: 'finals', label: 'Knockout' },
                   { id: 'table', label: 'Table' },
                 ].map((tab) => (
@@ -359,7 +361,12 @@ export default function TrackerView() {
                     role="tab"
                     aria-selected={scoresTab === tab.id}
                     onClick={() => setScoresTab(tab.id)}
-                    className={`flex-1 py-2 px-2 rounded-[0.6rem] text-xs sm:text-sm min-h-[44px] transition-colors ${
+                    // A fifth tab is what forced the responsive type and padding here.
+                    // At 11px with 4px of padding the longest label ('Schedule') needs
+                    // ~54px and the narrowest phone in the browserslist gives each tab
+                    // 58px, so the row still fits on one line rather than wrapping or
+                    // hiding a tab behind a horizontal scroll nobody discovers.
+                    className={`flex-1 min-w-0 py-2 px-1 sm:px-2 rounded-[0.6rem] text-[11px] sm:text-sm min-h-[44px] whitespace-nowrap transition-colors ${
                       scoresTab === tab.id
                         ? 'bg-slate-800 text-white font-semibold'
                         : 'text-gray-600 font-medium hover:bg-gray-100'
@@ -394,6 +401,10 @@ export default function TrackerView() {
                   />
                 </CardContent>
               </Card>
+            )}
+
+            {scoresTab === 'teams' && (
+              <TeamsView tournament={tournament} teams={teams} pools={pools} />
             )}
 
             {scoresTab === 'table' && (

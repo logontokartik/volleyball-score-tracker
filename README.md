@@ -59,8 +59,8 @@ covered by tests.
 
 The rules let a scorer update **only** the `scores` and `finalsMatches` fields of an
 existing tournament in their own club. They cannot create or delete a tournament, change
-teams, format, name or schedule, switch which tournament is live, or touch any other
-club at all.
+teams, format, name, schedule or rosters, switch which tournament is live, add or edit a
+player, or touch any other club at all.
 
 Within those two fields the rules do not inspect the contents, so a scorer determined to
 use the browser console could still write a nonsense score, or re-open a game they had
@@ -89,6 +89,38 @@ even if it is the active one.
 is world-readable in `firestore.rules` — the same rule the public scoreboard depends on —
 so a hidden tournament's document is still fetchable by anyone who knows its id. Use it to
 keep half-built or retired tournaments out of the way, never to keep anything secret.
+
+## Players and rosters
+
+A club keeps one player list, at `clubs/{clubId}/players/{playerId}` — separate documents,
+not a field on the tournament. Players outlive tournaments: the same person turns up next
+season on a different team, and a profile should not have to be retyped every time. The
+**Teams** tab on a tournament shows each team with its players; club admins add and edit
+them there.
+
+Only `name` is required. `position` comes from a fixed list rather than free text, so a
+roster can be read at a glance instead of containing six spellings of "Outside Hitter".
+
+**Email addresses live in a second collection, `clubs/{clubId}/playerContacts/{playerId}`,
+and this split is load-bearing.** The Teams tab is part of the public tournament page, so
+names and positions are world-readable like everything else on a scoreboard. A list of
+email addresses is not something a public page should hand out — it is the same reason
+member documents are already withheld — and a roster would be a far easier address book to
+scrape, since nobody even has to sign in. `playerContacts` is readable by club members
+only. New fields go in one collection or the other on the same test: **would we print it
+on a scoreboard?** A jersey number goes in `players`; a phone number does not.
+
+Which players are on which team is stored per tournament, as a `rosters` array of
+`{ team, playerIds }` on the tournament document — that question has no answer without
+naming a tournament. It is an array rather than a map keyed by team name because
+`setDoc(..., { merge: true })` merges nested maps key by key, so a removed team's key
+would linger forever, and team names are free text that can contain the `.` Firestore
+reads as a field-path separator.
+
+Rosters are stored **by team name**, which makes the teams editor the one place they can
+be orphaned. Renaming a team there follows the rosters across and drops the ones whose
+team no longer exists; without that, renaming "Black" to "Storm" would make its players
+vanish from the Teams tab with nothing on screen to explain it.
 
 ## Claude-powered features
 

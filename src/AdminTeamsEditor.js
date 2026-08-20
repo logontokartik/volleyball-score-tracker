@@ -20,6 +20,7 @@ import {
   remapScheduleSlots,
   validatePoolAssignment,
 } from './tournamentUtils';
+import { remapRosters } from './playerUtils';
 
 function firestoreRulesHint(err) {
   const message = typeof err?.message === 'string' ? err.message : '';
@@ -91,19 +92,27 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
    * teams by name: without this, renaming one team would silently delete every fixture it
    * appeared in. Removing a team still removes its fixtures — that one is the point.
    */
+  // Old name -> new name, for everything stored BY team name rather than by id: the
+  // fixture list below, and the rosters. Both would silently lose their contents on a
+  // rename without it.
+  const renames = useMemo(
+    () =>
+      new Map(
+        rows
+          .filter((r) => r.original && r.name.trim())
+          .map((r) => [r.original.trim().toLowerCase(), r.name.trim()])
+      ),
+    [rows]
+  );
+
   const existingFixtures = useMemo(() => {
-    const renamed = new Map(
-      rows
-        .filter((r) => r.original && r.name.trim())
-        .map((r) => [r.original.trim().toLowerCase(), r.name.trim()])
-    );
-    const follow = (name) => renamed.get(String(name ?? '').trim().toLowerCase()) ?? name;
+    const follow = (name) => renames.get(String(name ?? '').trim().toLowerCase()) ?? name;
     return fixturesFromScores(oldScores).map((f) => ({
       ...f,
       team1: follow(f.team1),
       team2: follow(f.team2),
     }));
-  }, [oldScores, rows]);
+  }, [oldScores, renames]);
   const pools = useMemo(() => poolsFromRows(rows, poolCount), [rows, poolCount]);
   const poolProblems = useMemo(
     () => (usePools ? validatePoolAssignment(pools, teamNames) : []),
@@ -202,6 +211,11 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
           scores: preview.scores,
           scheduleSlots: preview.slots,
           scheduleTitle: `${teamNames.length} Teams Format`,
+          // Rosters are stored against the team name, so this save is the one moment
+          // they can be orphaned: rename 'Black' to 'Storm' and its players vanish from
+          // the Teams tab with nothing to explain it. Following the renames and dropping
+          // the teams that no longer exist keeps the two in step.
+          rosters: remapRosters(tournament.rosters || [], renames, teamNames),
         },
         { merge: true }
       );
