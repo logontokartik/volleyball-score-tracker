@@ -13,6 +13,17 @@ club + slug + founding-admin write, and the slug-squatting attempts that must fa
 super-admin reach; the `users/{uid}` sign-in profile upsert; and the two
 collection-group queries the UI depends on.
 
+It also covers the player database, where the interesting rule is the split: a player's
+name and position are world-readable (the Teams tab is a public page) while their email
+address, in the parallel `playerContacts` collection, is club-members-only. Both are
+admin-write, as is the `rosters` field on the tournament — the test that a scorer cannot
+write `rosters` is the one that fails if `scorerFieldsOnly()` is ever widened.
+
+> A scorer's roster-write attempts deliberately store a **different** value from the one
+> the admin just wrote. `affectedKeys()` reports what actually changed, so re-writing an
+> identical value affects no keys and passes `hasOnly()` — a test that reused the same
+> value would report a pass without ever exercising the rule. It did, until it didn't.
+
 It also covers scoring-access requests: who may file one (yourself only, verified address
 only), who may read them (club admins and the requester — they are a list of email
 addresses), and approval. The load-bearing case is that **an admin cannot add a member who
@@ -36,7 +47,7 @@ cd firestore-tests && npm init -y && npm pkg set type=module \
 
 E=./firestore-tests/node_modules/.bin/firebase
 
-# Rules — 85 tests
+# Rules — 107 tests
 $E emulators:exec --only firestore --project demo-clubs \
   "RULES_FILE=$PWD/firestore.rules node firestore-tests/rules.test.mjs"
 

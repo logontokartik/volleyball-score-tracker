@@ -10,7 +10,9 @@ rules_version = '2';
 //                                          activeTournamentId }
 //   clubs/{clubId}/members/{uid}         { uid, email, role: 'admin'|'scorer', … }
 //   clubs/{clubId}/invites/{emailLower}  { email, role, invitedBy, createdAt }
-//   clubs/{clubId}/tournaments/{id}      teams, schedule, scores
+//   clubs/{clubId}/tournaments/{id}      teams, schedule, scores, rosters
+//   clubs/{clubId}/players/{playerId}    { name, position, … } — public
+//   clubs/{clubId}/playerContacts/{id}   { email, … } — club-private
 //   clubs/{clubId}/archive/snapshot      archived-season snapshot
 //   slugs/{slug}                         { clubId } — the public URL reservation
 //
@@ -42,7 +44,9 @@ service cloud.firestore {
       return isSuper() || (isMember(clubId) && get(memberRef(clubId)).data.role == 'admin');
     }
     // The only fields a scorer may change on a tournament: live scores, and finals
-    // results. Teams, schedule, format and name are all admin territory.
+    // results. Teams, schedule, format, name and `rosters` — who is on which team — are
+    // all admin territory. Adding a field here is the whole of the decision to let a
+    // scorer write it, so new fields are admin-only by default.
     function scorerFieldsOnly() {
       return request.resource.data.diff(resource.data)
         .affectedKeys().hasOnly(['scores', 'finalsMatches']);
@@ -173,6 +177,30 @@ service cloud.firestore {
         allow read: if true;
         allow create, delete: if isClubAdmin(clubId);
         allow update: if isClubAdmin(clubId) || (isMember(clubId) && scorerFieldsOnly());
+      }
+
+      // The club's player database, deliberately split across two collections.
+      //
+      // A roster is scoreboard content: the Teams tab is part of the public tournament
+      // page, so names and positions are world-readable like every other thing on it.
+      // An email address is not. Member documents are already withheld from the public
+      // for exactly that reason, and a player list would otherwise be a far easier
+      // address book to scrape — nobody even has to be signed in to reach it.
+      //
+      // So the split is by AUDIENCE, not by convenience: `players` holds what a
+      // spectator may see, `playerContacts` holds what only the club may. Anything
+      // added later lands in one or the other on the same test — would we print it on
+      // a scoreboard? A phone number and an emergency contact go in playerContacts; a
+      // jersey number goes in players.
+      match /players/{playerId} {
+        allow read: if true;
+        allow write: if isClubAdmin(clubId);
+      }
+      // Keyed by the SAME player id, so a contact row is worthless on its own: without
+      // the public document it is an email with no name attached to it.
+      match /playerContacts/{playerId} {
+        allow read: if isMember(clubId) || isSuper();
+        allow write: if isClubAdmin(clubId);
       }
 
       match /archive/{docId} {

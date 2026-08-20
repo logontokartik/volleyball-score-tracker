@@ -43,6 +43,19 @@ export const requestsCol = (clubId, database = db) =>
 export const requestDoc = (clubId, uid, database = db) =>
   doc(database, 'clubs', clubId, 'requests', uid);
 
+// The club's player database. `players` is public — it is what the Teams tab shows —
+// and `playerContacts` is club-only, keyed by the same id. See firestore.rules for why
+// the two are separate rather than one document with a mixed audience.
+export const playersCol = (clubId, database = db) =>
+  collection(database, 'clubs', clubId, 'players');
+export const playerDoc = (clubId, playerId, database = db) =>
+  doc(database, 'clubs', clubId, 'players', playerId);
+
+export const playerContactsCol = (clubId, database = db) =>
+  collection(database, 'clubs', clubId, 'playerContacts');
+export const playerContactDoc = (clubId, playerId, database = db) =>
+  doc(database, 'clubs', clubId, 'playerContacts', playerId);
+
 // One snapshot document per club, so the archive can be replaced atomically.
 export const archiveSnapshotDoc = (clubId, database = db) =>
   doc(database, 'clubs', clubId, 'archive', 'snapshot');
