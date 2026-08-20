@@ -13,6 +13,12 @@ club + slug + founding-admin write, and the slug-squatting attempts that must fa
 super-admin reach; the `users/{uid}` sign-in profile upsert; and the two
 collection-group queries the UI depends on.
 
+It also covers scoring-access requests: who may file one (yourself only, verified address
+only), who may read them (club admins and the requester — they are a list of email
+addresses), and approval. The load-bearing case is that **an admin cannot add a member who
+never asked** — an admin creating a membership for someone else is allowed *only* when
+that person's request document exists, and only they can create it.
+
 `rest-auth.test.mjs` covers the assumption `api/send-invite.js` is built on: that a
 Firebase ID token passed as a Bearer to the Firestore REST API is evaluated against these
 rules. A club admin's token can read an invite; a scorer's cannot; an anonymous request
@@ -30,7 +36,7 @@ cd firestore-tests && npm init -y && npm pkg set type=module \
 
 E=./firestore-tests/node_modules/.bin/firebase
 
-# Rules — 67 tests
+# Rules — 85 tests
 $E emulators:exec --only firestore --project demo-clubs \
   "RULES_FILE=$PWD/firestore.rules node firestore-tests/rules.test.mjs"
 
