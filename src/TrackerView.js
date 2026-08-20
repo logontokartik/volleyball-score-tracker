@@ -7,6 +7,7 @@ import { tournamentDoc } from './clubPaths';
 import ScheduleTable from './ScheduleTable';
 import FinalsView from './FinalsView';
 import MatchScoreDialog from './MatchScoreDialog';
+import RequestScoringAccess from './RequestScoringAccess';
 import { Card, CardContent } from './components/ui/card';
 import { isTournamentComplete } from './CompletedTournamentsView';
 import {
@@ -543,13 +544,18 @@ export default function TrackerView() {
 
             {scoresTab === 'scores' && (
               <div className="grid gap-4">
-                <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-3 text-center">
-                  {canScore
-                    ? 'Tap a game to open it and enter the score. It reopens wherever you left off, so you can close it mid-game.'
-                    : user
-                      ? 'Tap a game to see its score. Your account has no scoring access to this club — ask a club admin for an invite.'
-                      : 'Tap a game to see its score. Log in to enter or adjust scores.'}
-                </p>
+                <div className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl px-4 py-3 flex flex-col items-center gap-3 text-center">
+                  <p>
+                    {canScore
+                      ? 'Tap a game to open it and enter the score. It reopens wherever you left off, so you can close it mid-game.'
+                      : user
+                        ? 'Tap a game to see its score. Your account has no scoring access to this club — ask a club admin for it.'
+                        : 'Tap a game to see its score. Log in to enter or adjust scores.'}
+                  </p>
+                  {/* Renders nothing unless the visitor is signed in and cannot score,
+                      so the two branches above stay the only copy that decides. */}
+                  <RequestScoringAccess />
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {orderedScores.map((match) => {
                     const locked = Boolean(match.completed);

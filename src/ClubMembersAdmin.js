@@ -12,8 +12,18 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
-import { invitesCol, inviteDoc, memberDoc, membersCol, normalizeEmail } from './clubPaths';
+import {
+  invitesCol,
+  inviteDoc,
+  memberDoc,
+  membersCol,
+  normalizeEmail,
+  requestDoc,
+  requestsCol,
+} from './clubPaths';
+import { db } from './firebase';
 import { useClub } from './ClubContext';
 import { useAuth } from './AuthContext';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -34,6 +44,14 @@ function errorText(err) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// createdAt is a serverTimestamp, so it is briefly null on the writer's own optimistic
+// snapshot before the server value lands.
+function askedWhen(createdAt) {
+  const date = createdAt?.toDate?.();
+  if (!date) return 'Just now';
+  return `Asked ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
+
 export default function ClubMembersAdmin({ onClose }) {
   const { clubId, isClubAdmin } = useClub();
   const { user } = useAuth();
@@ -44,6 +62,10 @@ export default function ClubMembersAdmin({ onClose }) {
   // clubId, and in that frame a "Remove" click would target clubs/B/members/<uidFromA>.
   const [membersState, setMembersState] = useState({ clubId: null, list: [], loading: true, error: '' });
   const [invitesState, setInvitesState] = useState({ clubId: null, list: [] });
+  const [requestsState, setRequestsState] = useState({ clubId: null, list: [] });
+  // Role chosen per request, keyed by uid. Absent means the default, scorer.
+  const [requestRoles, setRequestRoles] = useState({});
+  const [pendingDecline, setPendingDecline] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -59,6 +81,7 @@ export default function ClubMembersAdmin({ onClose }) {
   // Also gated on isClubAdmin, so losing admin in a club empties the list rather than
   // leaving the last snapshot on screen.
   const invites = invitesState.clubId === clubId && isClubAdmin ? invitesState.list : [];
+  const requests = requestsState.clubId === clubId && isClubAdmin ? requestsState.list : [];
 
   useEffect(() => {
     if (!clubId) return undefined;
@@ -86,6 +109,18 @@ export default function ClubMembersAdmin({ onClose }) {
     const unsub = onSnapshot(
       invitesCol(clubId),
       (snap) => setInvitesState({ clubId, list: snap.docs.map((d) => ({ id: d.id, ...d.data() })) }),
+      (err) => setMembersState((s) => (s.clubId === clubId ? { ...s, error: errorText(err) } : s))
+    );
+    return unsub;
+  }, [clubId, isClubAdmin]);
+
+  useEffect(() => {
+    // Admin-only read, same as invites: listing requests as a scorer is a permission
+    // error, so the listener is never opened for one.
+    if (!clubId || !isClubAdmin) return undefined;
+    const unsub = onSnapshot(
+      requestsCol(clubId),
+      (snap) => setRequestsState({ clubId, list: snap.docs.map((d) => ({ id: d.id, ...d.data() })) }),
       (err) => setMembersState((s) => (s.clubId === clubId ? { ...s, error: errorText(err) } : s))
     );
     return unsub;
@@ -200,6 +235,50 @@ export default function ClubMembersAdmin({ onClose }) {
     }
   };
 
+  const handleApprove = async (req) => {
+    setError('');
+    setNotice('');
+    setBusy(true);
+    try {
+      // One batch, and it has to be: the rules permit an admin to create a membership
+      // for someone else ONLY while that person's request document exists, and a batch
+      // is evaluated against pre-batch state, so the delete does not pull the rug out
+      // from under the create. Two separate writes could leave a membership with an
+      // orphaned request, or a declined-looking request and no membership.
+      const batch = writeBatch(db);
+      batch.set(memberDoc(clubId, req.id), {
+        // req.id, not req.uid — the rules pin the new member's uid to the request's
+        // document id, and a hand-edited `uid` field would be rejected rather than obeyed.
+        uid: req.id,
+        email: normalizeEmail(req.email),
+        displayName: req.displayName || null,
+        role: requestRoles[req.id] || 'scorer',
+        joinedAt: serverTimestamp(),
+      });
+      batch.delete(requestDoc(clubId, req.id));
+      await batch.commit();
+      setNotice(`${req.displayName || req.email || req.id} now has access to this club.`);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (!pendingDecline) return;
+    setError('');
+    setBusy(true);
+    try {
+      await deleteDoc(requestDoc(clubId, pendingDecline.id));
+      setPendingDecline(null);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const askRemove = (member) => {
     setError('');
     if (isSelf(member) && isLastAdmin(member)) {
@@ -224,6 +303,25 @@ export default function ClubMembersAdmin({ onClose }) {
             {pendingRemove?.displayName || pendingRemove?.email}
           </span>{' '}
           will lose access to this club immediately. They can be invited again later.
+        </p>
+      </ConfirmDialog>
+
+      {/* Declining tells the person nothing — no email goes out and their request simply
+          disappears — so the admin gets a confirm rather than a one-tap delete. */}
+      <ConfirmDialog
+        open={Boolean(pendingDecline)}
+        title="Decline this request?"
+        confirmLabel="Decline request"
+        busy={busy}
+        onCancel={() => (busy ? null : setPendingDecline(null))}
+        onConfirm={handleDecline}
+      >
+        <p>
+          <span className="font-semibold text-gray-900">
+            {pendingDecline?.displayName || pendingDecline?.email}
+          </span>{' '}
+          is not told when a request is declined, and will not know to ask again. They can
+          send a new request themselves, or you can invite them by email.
         </p>
       </ConfirmDialog>
 
@@ -307,6 +405,68 @@ export default function ClubMembersAdmin({ onClose }) {
 
       {isClubAdmin && (
         <>
+          <div className="border-t pt-4 mb-5">
+            <h4 className="font-bold mb-2">Access requests</h4>
+            {requests.length === 0 ? (
+              <p className="text-sm text-gray-600">
+                Nobody is waiting. Requests appear here when a signed-in visitor asks for
+                scoring access from the scores screen.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {requests.map((req) => (
+                  <li
+                    key={req.id}
+                    className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">
+                        {req.displayName || req.email || req.id}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {req.displayName && req.email ? `${req.email} · ` : ''}
+                        {askedWhen(req.createdAt)}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <select
+                        value={requestRoles[req.id] || 'scorer'}
+                        onChange={(e) =>
+                          setRequestRoles((r) => ({ ...r, [req.id]: e.target.value }))
+                        }
+                        disabled={busy}
+                        className="border p-2 rounded-lg bg-white min-h-[44px] disabled:opacity-50"
+                        aria-label={`Role to approve ${req.email || req.id} as`}
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(req)}
+                        disabled={busy}
+                        className="text-sm bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg min-h-[44px] hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDecline(req)}
+                        disabled={busy}
+                        className="text-sm bg-white border border-red-300 text-red-700 px-3 py-2 rounded-lg min-h-[44px] hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <form onSubmit={handleInvite} className="border-t pt-4">
             <h4 className="font-bold mb-2">Invite someone</h4>
             <div className="flex flex-col sm:flex-row gap-2">

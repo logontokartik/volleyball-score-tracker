@@ -35,6 +35,14 @@ export const invitesCol = (clubId, database = db) =>
 export const inviteDoc = (clubId, email, database = db) =>
   doc(database, 'clubs', clubId, 'invites', normalizeEmail(email));
 
+// Scoring-access requests, keyed by uid rather than email: the requester is already
+// signed in when they ask, and keying by uid means asking twice updates one row instead
+// of piling up duplicates in the admin's list.
+export const requestsCol = (clubId, database = db) =>
+  collection(database, 'clubs', clubId, 'requests');
+export const requestDoc = (clubId, uid, database = db) =>
+  doc(database, 'clubs', clubId, 'requests', uid);
+
 // One snapshot document per club, so the archive can be replaced atomically.
 export const archiveSnapshotDoc = (clubId, database = db) =>
   doc(database, 'clubs', clubId, 'archive', 'snapshot');
