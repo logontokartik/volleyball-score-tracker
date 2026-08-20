@@ -10,6 +10,7 @@ import {
   SCHEDULE_FORMATS,
   buildScheduleForFormat,
   evenSplitPoolIndexes,
+  fixturesFromScores,
   matchHasResults,
   matchesWithEmptySets,
   mergeScoresPreservingResults,
@@ -32,7 +33,14 @@ function firestoreRulesHint(err) {
   return message || 'Save failed.';
 }
 
-const rowFor = (name, pool = null) => ({ id: crypto.randomUUID(), name, pool });
+// `original` is the name this row was loaded with, or '' for a row added here. It is what
+// lets a rename be followed rather than treated as "one team gone, one team new".
+const rowFor = (name, pool = null, original = '') => ({
+  id: crypto.randomUUID(),
+  name,
+  pool,
+  original,
+});
 
 export default function AdminTeamsEditor({ tournament, onClose }) {
   const { clubId, isClubAdmin } = useClub();
@@ -40,7 +48,9 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
     // Existing pool membership is read back by team name, so reopening the editor shows
     // the draw as it stands rather than an empty one that would have to be redone.
     const byTeam = poolIndexByTeam(tournament.pools);
-    const list = (tournament.teams || []).map((t) => rowFor(t, byTeam.get(String(t).trim()) ?? null));
+    const list = (tournament.teams || []).map((t) =>
+      rowFor(t, byTeam.get(String(t).trim()) ?? null, t)
+    );
     return list.length ? list : [rowFor('')];
   });
   const [formatId, setFormatId] = useState(
@@ -65,6 +75,35 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
 
   const format = SCHEDULE_FORMATS[formatId] || SCHEDULE_FORMATS[DEFAULT_SCHEDULE_FORMAT];
   const usePools = formatId === 'pools';
+  const isCustom = formatId === 'custom';
+
+  /**
+   * The fixtures a custom tournament already has.
+   *
+   * This editor rebuilds the match list from the format on every save. Without a custom
+   * format to rebuild *from*, a tournament whose fixtures were written for it — by the AI
+   * panel or by hand — would come back out of here as a plain round robin, silently, with
+   * the real draw gone. Reading them off the stored match list and feeding them back in
+   * is what makes the rebuild a no-op for the pairings while still letting teams be
+   * renamed, reordered or removed.
+   *
+   * Renames are followed through each row's original name, because the fixtures identify
+   * teams by name: without this, renaming one team would silently delete every fixture it
+   * appeared in. Removing a team still removes its fixtures — that one is the point.
+   */
+  const existingFixtures = useMemo(() => {
+    const renamed = new Map(
+      rows
+        .filter((r) => r.original && r.name.trim())
+        .map((r) => [r.original.trim().toLowerCase(), r.name.trim()])
+    );
+    const follow = (name) => renamed.get(String(name ?? '').trim().toLowerCase()) ?? name;
+    return fixturesFromScores(oldScores).map((f) => ({
+      ...f,
+      team1: follow(f.team1),
+      team2: follow(f.team2),
+    }));
+  }, [oldScores, rows]);
   const pools = useMemo(() => poolsFromRows(rows, poolCount), [rows, poolCount]);
   const poolProblems = useMemo(
     () => (usePools ? validatePoolAssignment(pools, teamNames) : []),
@@ -80,7 +119,7 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
       formatId,
       teamNames,
       tournament.meetingsPerPair || 1,
-      { pools }
+      { pools, fixtures: existingFixtures }
     );
     const withSets = matchesWithEmptySets(generated, setsPerMatch);
     const merged = mergeScoresPreservingResults(withSets, oldScores);
@@ -102,7 +141,7 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
       keptCount: keptGames.size,
       lost,
     };
-  }, [teamNames, formatId, oldScores, tournament, format.minTeams, pools, poolProblems]);
+  }, [teamNames, formatId, oldScores, tournament, format.minTeams, pools, poolProblems, existingFixtures]);
 
   const duplicate = useMemo(() => {
     const seen = new Set(teamNames.map((t) => t.toLowerCase()));
@@ -156,8 +195,10 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
           teams: teamNames,
           scheduleFormat: formatId,
           // Cleared when the format is switched away from pools, so the standings never
-          // group by a draw that no longer produced the match list.
-          pools: usePools ? pools : [],
+          // group by a draw that no longer produced the match list. A custom fixture list
+          // is the exception: its fixtures carry their own pool labels, so the stored
+          // draw still describes them and is left alone.
+          pools: usePools ? pools : isCustom ? tournament.pools || [] : [],
           scores: preview.scores,
           scheduleSlots: preview.slots,
           scheduleTitle: `${teamNames.length} Teams Format`,
@@ -192,14 +233,36 @@ export default function AdminTeamsEditor({ tournament, onClose }) {
           onChange={(e) => setFormatId(e.target.value)}
           className="w-full border rounded-lg px-3 py-3 text-base min-h-[44px] bg-white"
         >
-          {Object.values(SCHEDULE_FORMATS).map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.label}
-            </option>
-          ))}
+          {/* `custom` is only listed while the tournament IS custom: it is not a rule you
+              can switch to, it is the fixture list this tournament already has. Choosing
+              anything else here throws that list away, which is what the warning says. */}
+          {Object.values(SCHEDULE_FORMATS)
+            .filter((f) => !f.manual || f.id === tournament.scheduleFormat)
+            .map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
         </select>
         <p className="text-xs text-gray-600 mt-1">{format.description}</p>
       </div>
+
+      {isCustom && (
+        <div className="text-sm rounded-lg border border-violet-200 bg-violet-50 p-3 text-violet-900">
+          <span className="font-semibold">Fixtures are kept exactly as they are.</span> Saving
+          re-uses this tournament's own {existingFixtures.length} fixture
+          {existingFixtures.length === 1 ? '' : 's'} rather than regenerating them from a rule —
+          renaming or reordering teams is safe. Removing a team removes its fixtures with it.
+        </div>
+      )}
+
+      {!isCustom && tournament.scheduleFormat === 'custom' && (
+        <div className="text-sm rounded-lg border border-red-300 bg-red-50 p-3 text-red-800">
+          <span className="font-semibold">This replaces the custom fixture list.</span> Saving with
+          "{format.label}" regenerates every pairing from that rule, and the draw written for this
+          tournament is gone. Switch back to Custom fixtures to keep it.
+        </div>
+      )}
 
       {usePools && (
         <div className="rounded-lg border border-indigo-200 bg-white/70 p-3">

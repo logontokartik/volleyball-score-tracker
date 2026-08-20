@@ -6,10 +6,24 @@
  * real game id rather than inventing one; anything it returns that isn't in that list is
  * dropped here rather than trusted.
  *
+ * ## Why this is not an open endpoint
+ *
+ * Same club-admin check as api/build-fixtures.js, and for the same reason: a model call
+ * on the project's Anthropic key is worth money to a stranger. The caller's Firebase ID
+ * token is passed straight through to the Firestore REST API to read their own
+ * membership, `clubs/{clubId}/members/{uid}`, and the role on it has to be `admin`. The
+ * uid comes out of the token's payload without being verified — safe because the
+ * membership read is made with the whole token, so a payload edited to name another uid
+ * no longer matches the signature and Firestore refuses it. This endpoint only ever runs
+ * from the admin schedule editor, so a real caller always has a token to send.
+ *
  * ANTHROPIC_API_KEY is read server-side only and never reaches the browser.
  */
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
+
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'volleyball-score-tracker';
+const CLUB_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 // Reading a schedule off a screenshot is extraction, not deep reasoning, and it runs
 // against a hard function timeout — so this defaults lower than the archive assistant.
@@ -44,6 +58,25 @@ function rateLimited(ip) {
     }
   }
   return false;
+}
+
+const firestoreDoc = (path) =>
+  `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
+
+/**
+ * The `user_id` claim out of a Firebase ID token, or '' if it does not look like one.
+ * Decoded, not verified — it is only ever used to build the Firestore path that is then
+ * read WITH the same token, so Firestore's verification is what stands behind it.
+ */
+function uidFromToken(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) return '';
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return String(payload.user_id || payload.sub || '');
+  } catch {
+    return '';
+  }
 }
 
 const instructions = (courtCount) => `You convert a volleyball tournament schedule into structured rows.
@@ -139,12 +172,57 @@ export default {
       return json({ error: 'Too many requests in a row — give it a minute.' }, 429);
     }
 
+    // The caller's Firebase ID token. Passed straight through to Firestore below; this
+    // function never trusts it on its own.
+    const authorization = request.headers.get('authorization') || '';
+    const bearer = /^Bearer\s+(\S+)/i.exec(authorization);
+    if (!bearer) return json({ error: 'Sign in again and retry.' }, 401);
+
     let body;
     try {
       body = await request.json();
     } catch {
       return json({ error: 'Malformed request body.' }, 400);
     }
+
+    const clubId = String(body.clubId ?? '').trim();
+    if (!CLUB_ID_RE.test(clubId)) return json({ error: 'Invalid club.' }, 400);
+
+    const uid = uidFromToken(bearer[1]);
+    if (!uid) return json({ error: 'Sign in again and retry.' }, 401);
+
+    // Reading the membership AS THE CALLER is the authorization step: a non-member is
+    // refused by firestore.rules, and a member's own document carries the role.
+    let memberRes;
+    try {
+      memberRes = await fetch(
+        firestoreDoc(`clubs/${encodeURIComponent(clubId)}/members/${encodeURIComponent(uid)}`),
+        { headers: { authorization } }
+      );
+    } catch (err) {
+      console.error('[build-schedule] membership lookup network error:', err);
+      return json({ error: 'Could not reach the membership store.' }, 502);
+    }
+
+    if (memberRes.status === 401 || memberRes.status === 403 || memberRes.status === 404) {
+      return json({ error: 'Only a club admin can build the schedule for this club.' }, 403);
+    }
+    if (!memberRes.ok) {
+      console.error(
+        '[build-schedule] membership lookup failed',
+        memberRes.status,
+        await memberRes.text()
+      );
+      return json({ error: 'Could not read your club membership.' }, 502);
+    }
+    const memberDoc = await memberRes.json();
+    if ((memberDoc.fields?.role?.stringValue || '') !== 'admin') {
+      // A scorer is a real member; editing the schedule is still admin territory, and
+      // firestore.rules would refuse the save even if this let the call through.
+      return json({ error: 'Only a club admin can build the schedule for this club.' }, 403);
+    }
+
+    /* ---- Everything below this line runs only for a club admin ---- */
 
     const text = String(body.text ?? '').trim();
     const image = body.image || null;
