@@ -13,10 +13,12 @@ import { Card, CardContent } from './components/ui/card';
 import {
   POSITIONS,
   normalizePlayerInput,
+  rosterCaptainId,
   rosterForTeam,
   rosterPlayerIds,
   sortPlayers,
   validatePlayerInput,
+  withCaptainForTeam,
   withRosterForTeam,
 } from './playerUtils';
 
@@ -82,13 +84,38 @@ function PositionChip({ position }) {
 }
 
 /** Name, position, and — for club members only — the email address. */
-function PlayerRow({ player, email, children }) {
+/**
+ * The captain's marker.
+ *
+ * Bold alone carries the meaning only for someone who already knows the convention, and
+ * on a roster of one it says nothing at all — there is no unbolded name to compare it
+ * with. The letter is what makes it legible cold.
+ */
+function CaptainChip() {
+  return (
+    <span
+      className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800"
+      title="Team captain"
+    >
+      C
+    </span>
+  );
+}
+
+function PlayerRow({ player, email, isCaptain, children }) {
   return (
     <li className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-0">
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-gray-900">{player.name}</span>
+        <span
+          className={`block truncate text-sm text-gray-900 ${
+            isCaptain ? 'font-bold' : 'font-medium'
+          }`}
+        >
+          {player.name}
+        </span>
         {email && <span className="block truncate text-xs text-gray-500">{email}</span>}
       </span>
+      {isCaptain && <CaptainChip />}
       <PositionChip position={player.position} />
       {children}
     </li>
@@ -410,6 +437,25 @@ export default function TeamsView({ tournament, teams, pools }) {
   );
 
   /**
+   * Name or unname the team's captain. Tapping the current captain clears the role, which
+   * is the only way to have a team with none once one has been set.
+   */
+  const setCaptain = useCallback(
+    async (team, playerId) => {
+      setBusy(true);
+      setError('');
+      try {
+        await saveRosters(withCaptainForTeam(rosters, team, playerId));
+      } catch (e) {
+        setError(e?.message || 'Could not change the captain.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [rosters, saveRosters]
+  );
+
+  /**
    * Off this team, still in the club.
    *
    * Deliberately not a delete: the profile is the club's, not this tournament's, and
@@ -460,6 +506,7 @@ export default function TeamsView({ tournament, teams, pools }) {
 
       {teamList.map((team) => {
         const roster = rosterForTeam(rosters, team, playersById);
+        const captainId = rosterCaptainId(rosters, team);
         const open = managing === team;
         const onTeam = new Set(rosterPlayerIds(rosters, team));
         const available = sorted.filter((p) => !onTeam.has(p.id));
@@ -493,9 +540,32 @@ export default function TeamsView({ tournament, teams, pools }) {
                         />
                       </li>
                     ) : (
-                      <PlayerRow key={p.id} player={p} email={emails.get(p.id)}>
+                      <PlayerRow
+                        key={p.id}
+                        player={p}
+                        email={emails.get(p.id)}
+                        isCaptain={p.id === captainId}
+                      >
                         {open && (
                           <>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => setCaptain(team, p.id)}
+                              aria-pressed={p.id === captainId}
+                              title={
+                                p.id === captainId
+                                  ? 'Remove as captain'
+                                  : 'Make this player the captain'
+                              }
+                              className={`shrink-0 min-h-[44px] px-2 text-xs font-medium disabled:opacity-50 ${
+                                p.id === captainId
+                                  ? 'text-amber-700 hover:underline'
+                                  : 'text-gray-500 hover:underline'
+                              }`}
+                            >
+                              {p.id === captainId ? 'Captain ✓' : 'Captain'}
+                            </button>
                             <button
                               type="button"
                               disabled={busy}
