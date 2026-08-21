@@ -10,6 +10,7 @@ import {
   tournamentDoc,
 } from './clubPaths';
 import { Card, CardContent } from './components/ui/card';
+import { ConsentBadge, ConsentControl, useClubConsents } from './PlayerConsent';
 import {
   POSITIONS,
   normalizePlayerInput,
@@ -102,22 +103,33 @@ function CaptainChip() {
   );
 }
 
-function PlayerRow({ player, email, isCaptain, children }) {
+/**
+ * One roster line: who they are on top, what an admin can do about it underneath.
+ *
+ * The actions are NOT on the identity row. That row already carries a name, a captain
+ * mark, a consent badge and a position, and adding three buttons to it crushed the name
+ * to an ellipsis at 390px — measured, not guessed. The name is the one thing on the line
+ * that has to survive, so the buttons moved down instead.
+ */
+function PlayerRow({ player, email, isCaptain, badge, footer }) {
   return (
-    <li className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-0">
-      <span className="min-w-0 flex-1">
-        <span
-          className={`block truncate text-sm text-gray-900 ${
-            isCaptain ? 'font-bold' : 'font-medium'
-          }`}
-        >
-          {player.name}
+    <li className="py-2 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block truncate text-sm text-gray-900 ${
+              isCaptain ? 'font-bold' : 'font-medium'
+            }`}
+          >
+            {player.name}
+          </span>
+          {email && <span className="block truncate text-xs text-gray-500">{email}</span>}
         </span>
-        {email && <span className="block truncate text-xs text-gray-500">{email}</span>}
-      </span>
-      {isCaptain && <CaptainChip />}
-      <PositionChip position={player.position} />
-      {children}
+        {isCaptain && <CaptainChip />}
+        {badge}
+        <PositionChip position={player.position} />
+      </div>
+      {footer}
     </li>
   );
 }
@@ -305,6 +317,9 @@ function EditPlayerForm({ player, email, onSave, onCancel, busy }) {
 export default function TeamsView({ tournament, teams, pools }) {
   const { clubId, isClubAdmin, canScore } = useClub();
   const { players, emails, loading } = useClubPlayers(clubId, canScore);
+  // Waiver state is club business, not scoreboard content: members only, same as the
+  // email addresses above.
+  const consentByPlayer = useClubConsents(clubId, canScore);
 
   const [managing, setManaging] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -545,46 +560,56 @@ export default function TeamsView({ tournament, teams, pools }) {
                         player={p}
                         email={emails.get(p.id)}
                         isCaptain={p.id === captainId}
-                      >
-                        {open && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => setCaptain(team, p.id)}
-                              aria-pressed={p.id === captainId}
-                              title={
-                                p.id === captainId
-                                  ? 'Remove as captain'
-                                  : 'Make this player the captain'
-                              }
-                              className={`shrink-0 min-h-[44px] px-2 text-xs font-medium disabled:opacity-50 ${
-                                p.id === captainId
-                                  ? 'text-amber-700 hover:underline'
-                                  : 'text-gray-500 hover:underline'
-                              }`}
-                            >
-                              {p.id === captainId ? 'Captain ✓' : 'Captain'}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => setEditing(p.id)}
-                              className="shrink-0 min-h-[44px] px-2 text-xs font-medium text-blue-700 hover:underline disabled:opacity-50"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => removeFromTeam(team, p.id)}
-                              className="shrink-0 min-h-[44px] px-2 text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
-                            >
-                              Remove
-                            </button>
-                          </>
-                        )}
-                      </PlayerRow>
+                        // Hidden while managing: the consent panel below the row states
+                        // the same thing in full, and three chips beside the name left
+                        // it truncated to "Priya Rama…" at 390px. The name wins.
+                        badge={
+                          canScore && !open ? <ConsentBadge entry={consentByPlayer.get(p.id)} /> : null
+                        }
+                        footer={
+                          open ? (
+                            <>
+                              <div className="mt-1 flex flex-wrap items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => setCaptain(team, p.id)}
+                                  aria-pressed={p.id === captainId}
+                                  title={
+                                    p.id === captainId
+                                      ? 'Remove as captain'
+                                      : 'Make this player the captain'
+                                  }
+                                  className={`min-h-[44px] px-2 text-xs font-medium disabled:opacity-50 ${
+                                    p.id === captainId
+                                      ? 'text-amber-700 hover:underline'
+                                      : 'text-gray-500 hover:underline'
+                                  }`}
+                                >
+                                  {p.id === captainId ? 'Captain ✓' : 'Captain'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => setEditing(p.id)}
+                                  className="min-h-[44px] px-2 text-xs font-medium text-blue-700 hover:underline disabled:opacity-50"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => removeFromTeam(team, p.id)}
+                                  className="min-h-[44px] px-2 text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <ConsentControl player={p} entry={consentByPlayer.get(p.id)} />
+                            </>
+                          ) : null
+                        }
+                      />
                     )
                   )}
                 </ul>

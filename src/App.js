@@ -6,6 +6,7 @@ import CompletedTournamentsView from './CompletedTournamentsView';
 import AdminPage from './AdminPage';
 import Login from './Login';
 import ClubsPage from './ClubsPage';
+import ConsentPage from './ConsentPage';
 import SuperAdminPage from './SuperAdminPage';
 import { AuthProvider } from './AuthContext';
 import { ClubProvider, useClub, useClubOptional } from './ClubContext';
@@ -164,6 +165,22 @@ function ClubAdminRoute() {
   );
 }
 
+/**
+ * The waiver page's own layout: the club chrome, but deliberately WITHOUT the bottom tab
+ * bar. Someone arriving here has been sent a link to read and sign one document — a row
+ * of scoreboard tabs across the bottom of a legal agreement invites them to wander off
+ * mid-form, and the form is the only reason they are here.
+ */
+function ClubConsentLayout() {
+  const { slug } = useParams();
+  return (
+    <ClubProvider slug={slug}>
+      <SiteNav />
+      <ClubGate />
+    </ClubProvider>
+  );
+}
+
 /** Layout for the pages that exist outside any club. */
 function PlainLayout() {
   return (
@@ -209,6 +226,14 @@ export default function App() {
             />
             {/* /clubs was the members-only page before the directory absorbed it. */}
             <Route path="/clubs" element={<Navigate to="/" replace />} />
+
+            {/* Declared before the general club layout so the more specific path wins
+                regardless of how the router ranks them. The token is the authorisation:
+                anyone holding this URL may sign this one waiver without an account,
+                which is the only workable flow for players who will never sign in. */}
+            <Route path="/c/:slug/consent/:token" element={<ClubConsentLayout />}>
+              <Route index element={<ConsentPage />} />
+            </Route>
 
             <Route path="/c/:slug" element={<ClubLayout />}>
               <Route index element={<TrackerView />} />

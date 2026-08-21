@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, collectionGroup, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, collectionGroup, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 
 const env = await initializeTestEnvironment({
   projectId: 'demo-clubs',
@@ -33,6 +33,9 @@ await env.withSecurityRulesDisabled(async (c) => {
   await setDoc(doc(d,'clubs/gvbl/archive/snapshot'), { masterList: [] });
   await setDoc(doc(d,'clubs/gvbl/players/p1'), { name:'Priya', nameLower:'priya', position:'Libero' });
   await setDoc(doc(d,'clubs/gvbl/playerContacts/p1'), { email:'priya@example.com' });
+  await setDoc(doc(d,'clubs/gvbl/consentRequests/tokpend'), { token:'tokpend', playerId:'p1', playerName:'Priya', status:'pending' });
+  await setDoc(doc(d,'clubs/gvbl/consentRequests/toksign'), { token:'toksign', playerId:'p1', playerName:'Priya', status:'signed' });
+  await setDoc(doc(d,'clubs/gvbl/consents/toksign'), { token:'toksign', playerId:'p1', dateOfBirth:'2012-01-01', guardianEmail:'r@d.com', waiverText:'…', waiverVersion:'2026-08-21' });
   await setDoc(doc(d,'clubs/gvbl/invites/invited@example.com'), { email:'invited@example.com', role:'scorer' });
   await setDoc(doc(d,'users/ga'), { email:'gvbladmin@example.com', displayName:'G Admin' });
   // A second, unrelated club
@@ -41,6 +44,7 @@ await env.withSecurityRulesDisabled(async (c) => {
   await setDoc(doc(d,'clubs/other/tournaments/t9'), TOURN);
   await setDoc(doc(d,'clubs/other/players/op1'), { name:'Sam', nameLower:'sam' });
   await setDoc(doc(d,'clubs/other/playerContacts/op1'), { email:'sam@example.com' });
+  await setDoc(doc(d,'clubs/other/consentRequests/otok'), { token:'otok', playerId:'op1', status:'pending' });
 });
 
 console.log('\n--- users/{uid}: the sign-in profile upsert ---');
@@ -266,6 +270,69 @@ await t('scorer CANNOT write tournament rosters',()=>assertFails(updateDoc(doc(g
 await t('scorer CANNOT smuggle rosters with scores', ()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { scores:[{game:'G2'}], rosters:ROSTERS2 })));
 await t('anyone reads tournament rosters',       ()=>assertSucceeds(getDoc(doc(anon,'clubs/gvbl/tournaments/t1'))));
 
+
+
+console.log('\n--- participation waivers: an anonymous signer, holding one link ---');
+const SIGNATURE = { token:'tokpend', playerId:'p1', participantName:'Priya',
+  dateOfBirth:'2012-01-01', signedName:'Rosa', guardianEmail:'r@d.com',
+  waiverText:'the full agreement as displayed', waiverVersion:'2026-08-21' };
+
+// The link IS the authorisation. Someone who was sent it can read the request and sign.
+await t('anyone holding the link reads the request',   ()=>assertSucceeds(getDoc(doc(anon,'clubs/gvbl/consentRequests/tokpend'))));
+await t('a signed-out visitor CAN sign the waiver',    ()=>assertSucceeds(setDoc(doc(anon,'clubs/gvbl/consents/tokpend'), SIGNATURE)));
+// ...but the collection must not be enumerable, or every outstanding link is harvestable.
+await t('the public CANNOT list consent requests',     ()=>assertFails(getDocs(query(collection(anon,'clubs/gvbl/consentRequests')))));
+await t('an admin CAN list consent requests',          ()=>assertSucceeds(getDocs(query(collection(gAdmin,'clubs/gvbl/consentRequests')))));
+
+// The signature holds a date of birth and a guardian's address: the most sensitive data
+// here. The person who wrote it must not be able to read it back afterwards.
+await t('the signer CANNOT read the signature back',   ()=>assertFails(getDoc(doc(anon,'clubs/gvbl/consents/toksign'))));
+await t('an outsider CANNOT read a signature',         ()=>assertFails(getDoc(doc(outsid,'clubs/gvbl/consents/toksign'))));
+await t('a club scorer reads signatures',              ()=>assertSucceeds(getDoc(doc(gScore,'clubs/gvbl/consents/toksign'))));
+await t('a club admin reads signatures',               ()=>assertSucceeds(getDoc(doc(gAdmin,'clubs/gvbl/consents/toksign'))));
+
+// A signed waiver is a record of what someone agreed to. Nobody edits it, ever.
+await t('an admin CANNOT edit a signature',            ()=>assertFails(updateDoc(doc(gAdmin,'clubs/gvbl/consents/toksign'), { signedName:'Someone else' })));
+await t('a super admin CANNOT edit a signature',       ()=>assertFails(updateDoc(doc(superA,'clubs/gvbl/consents/toksign'), { signedName:'Someone else' })));
+await t('the public CANNOT overwrite a signature',     ()=>assertFails(setDoc(doc(anon,'clubs/gvbl/consents/toksign'), SIGNATURE)));
+await t('an admin may withdraw (delete) a signature',  ()=>assertSucceeds(deleteDoc(doc(gAdmin,'clubs/gvbl/consents/tokpend'))));
+
+// No link, no signature: a signature cannot be manufactured out of nothing.
+await t('CANNOT sign without a matching request',      ()=>assertFails(setDoc(doc(anon,'clubs/gvbl/consents/madeup'), { ...SIGNATURE, token:'madeup' })));
+await t('CANNOT sign against an already-signed request',()=>assertFails(setDoc(doc(anon,'clubs/gvbl/consents/toksign2'), { ...SIGNATURE, token:'toksign2' })));
+
+// The one-way flip out of 'pending' is what stops a leaked link being re-used.
+await t('the signer may flip the request to signed',   ()=>assertSucceeds(updateDoc(doc(anon,'clubs/gvbl/consentRequests/tokpend'), { status:'signed', signedAt:new Date() })));
+await t('...and CANNOT reset it to pending afterwards',()=>assertFails(updateDoc(doc(anon,'clubs/gvbl/consentRequests/tokpend'), { status:'pending' })));
+await t('the signer CANNOT rewrite who the link is for',()=>assertFails(updateDoc(doc(anon,'clubs/gvbl/consentRequests/toksign'), { playerId:'p9' })));
+await t('the public CANNOT create a consent request',  ()=>assertFails(setDoc(doc(anon,'clubs/gvbl/consentRequests/mine'), { token:'mine', playerId:'p1', status:'pending' })));
+await t('a scorer CANNOT create a consent request',    ()=>assertFails(setDoc(doc(gScore,'clubs/gvbl/consentRequests/mine'), { token:'mine', playerId:'p1', status:'pending' })));
+await t('an admin creates a consent request',          ()=>assertSucceeds(setDoc(doc(gAdmin,'clubs/gvbl/consentRequests/mine'), { token:'mine', playerId:'p1', status:'pending' })));
+
+// Cross-club, as everywhere else.
+// The app signs with a writeBatch: the signature and the status flip go together, or
+// neither does. Batched writes are evaluated against PRE-batch state, which is the exact
+// thing that has caught this codebase before (see the getAfter() notes in the rules), so
+// the batch is tested as a batch rather than inferred from the two halves passing alone.
+await t('the real signing batch (write + flip) is allowed', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(),'clubs/gvbl/consentRequests/batchtok'),
+      { token:'batchtok', playerId:'p1', playerName:'Priya', status:'pending' });
+  });
+  const b = writeBatch(anon);
+  b.set(doc(anon,'clubs/gvbl/consents/batchtok'), { ...SIGNATURE, token:'batchtok' });
+  b.update(doc(anon,'clubs/gvbl/consentRequests/batchtok'), { status:'signed', signedAt:new Date() });
+  await assertSucceeds(b.commit());
+});
+await t('...and the same batch a second time is refused', async () => {
+  const b = writeBatch(anon);
+  b.set(doc(anon,'clubs/gvbl/consents/batchtok'), { ...SIGNATURE, token:'batchtok' });
+  b.update(doc(anon,'clubs/gvbl/consentRequests/batchtok'), { status:'signed', signedAt:new Date() });
+  await assertFails(b.commit());
+});
+
+await t('gvbl admin CANNOT read other club signatures',()=>assertFails(getDoc(doc(gAdmin,'clubs/other/consents/otok'))));
+await t('gvbl admin CANNOT issue a link in other club',()=>assertFails(setDoc(doc(gAdmin,'clubs/other/consentRequests/x'), { token:'x', playerId:'op1', status:'pending' })));
 
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);

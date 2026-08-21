@@ -164,6 +164,61 @@ be orphaned. Renaming a team there follows the rosters across and drops the ones
 team no longer exists; without that, renaming "Black" to "Storm" would make its players
 vanish from the Teams tab with nothing on screen to explain it.
 
+## Participation waivers
+
+Players can be asked to sign an assumption-of-risk and release agreement online. An admin
+creates a one-use link from the **Teams** tab (Manage players → *Create consent link*) and
+sends it to the player, or to a parent if they are under 18. The link opens
+`/c/{slug}/consent/{token}`, shows the agreement in full, and records the signature.
+
+**This waiver text is a template and has not been reviewed by a lawyer.** Have one in the
+club's jurisdiction review `src/waiver.js` before relying on it. Two things in particular:
+many jurisdictions will not enforce a release of ordinary negligence at all, and **a
+parent's release signed on behalf of a minor is void or sharply limited in a large number
+of US states**. The minor flow collects a signature a court may or may not honour; it is
+not a substitute for the club's insurance.
+
+### How the link is authorised
+
+Almost no player has an account, and none should need one to sign a waiver — so the
+**link is the authorisation**. The document id is 192 bits from the platform CSPRNG, and
+holding it permits exactly one signature. That is the same model as any emailed "confirm
+your booking" link, and it is why the token must never be derived from a player id, a
+name, or anything else reconstructible.
+
+Two collections, because they have two audiences:
+
+- `clubs/{clubId}/consentRequests/{token}` — `{ playerId, playerName, status }`. Readable
+  by `get` with the token, but **not listable** by the public: with `list` the collection
+  could be enumerated and every outstanding link harvested. Admins may list.
+- `clubs/{clubId}/consents/{token}` — the signature, including date of birth and guardian
+  contact details. This is the most sensitive data in the database: club members only,
+  and **not readable by the person who wrote it**.
+
+A signed consent is **immutable** — no admin, not even a super admin, can edit one. A
+record of what somebody agreed to is worthless if it can be rewritten afterwards.
+Withdrawing consent deletes it, which leaves no altered document to misread later.
+
+### What is stored, and why
+
+Each signature keeps the `waiverVersion`, a SHA-256 `waiverHash`, and the **full text
+exactly as displayed**. Editing the wording in `src/waiver.js` without bumping
+`WAIVER_VERSION` would silently re-attribute new language to old signatures, so bump it
+for any change at all, including typos.
+
+The signer must scroll to the end of the agreement before the confirmation box unlocks,
+and `acknowledgedFullText` records that they did. No IP address is collected — that would
+mean pulling in a third party and then being responsible for the result.
+
+The media release is a **separate, optional** checkbox, deliberately outside the
+agreement. Bundling it into a liability waiver is what gets the whole thing characterised
+as take-it-or-leave-it consent that was never freely given; declining it does not affect
+participation.
+
+There is deliberately no "mark as signed on paper" button. A waiver's value is the record
+of what a specific person agreed to, and an admin ticking a box on someone else's behalf
+produces a record that says nothing.
+
 ## Claude-powered features
 
 Vercel Functions that call Claude, sharing one server-side key:
