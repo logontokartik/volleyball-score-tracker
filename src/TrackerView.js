@@ -416,7 +416,8 @@ export default function TrackerView() {
                     Win = 3 pts + 3 bonus (sweep 2-0) or + 2 bonus (win 2-1).
                     Losing team earns 1 pt if they won a set.
                     Max 6 pts / min 5 pts per match won.
-                    Tiebreakers: point differential in sets of matches you won, then head-to-head.
+                    Tiebreakers: overall point differential (every set of every completed
+                    game), then head-to-head.
                   </p>
                   {/* Two presentations of one list, repeated per pool. A six-column table
                       cannot be made to fit 390px, and the horizontal-scroll version cut
@@ -460,8 +461,8 @@ export default function TrackerView() {
                                   <span>Won {data.matchesWon}</span>
                                   <span>Sets {data.setsWon}</span>
                                   <span>
-                                    PD {data.winMatchPointDiff > 0 ? '+' : ''}
-                                    {data.winMatchPointDiff}
+                                    PD {data.overallPointDiff > 0 ? '+' : ''}
+                                    {data.overallPointDiff}
                                   </span>
                                 </div>
                               </li>
@@ -482,9 +483,9 @@ export default function TrackerView() {
                                   </th>
                                   <th
                                     className="p-3 font-semibold text-right whitespace-nowrap"
-                                    title="Point differential in sets of matches this team won"
+                                    title="Points scored minus points conceded, across every set of every completed game"
                                   >
-                                    Won-match PD
+                                    PD
                                   </th>
                                   <th
                                     className="p-3 font-semibold text-right whitespace-nowrap"
@@ -520,8 +521,8 @@ export default function TrackerView() {
                                       {data.tournamentPoints}
                                     </td>
                                     <td className="p-3 text-right tabular-nums whitespace-nowrap">
-                                      {data.winMatchPointDiff > 0 ? '+' : ''}
-                                      {data.winMatchPointDiff}
+                                      {data.overallPointDiff > 0 ? '+' : ''}
+                                      {data.overallPointDiff}
                                     </td>
                                     <td className="p-3 text-right tabular-nums whitespace-nowrap">
                                       {data.matchesWon}

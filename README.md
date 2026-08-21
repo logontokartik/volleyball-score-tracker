@@ -90,6 +90,37 @@ is world-readable in `firestore.rules` — the same rule the public scoreboard d
 so a hidden tournament's document is still fetchable by anyone who knows its id. Use it to
 keep half-built or retired tournaments out of the way, never to keep anything secret.
 
+## Standings and tiebreakers
+
+Points come from **completed** games only. Every match distributes exactly 6:
+
+| Result | Winner | Loser |
+| --- | --- | --- |
+| won without dropping a set | 3 + 3 bonus = **6** | **0** |
+| won having dropped one | 3 + 2 bonus = **5** | **1** |
+
+Order is: **1)** tournament points, **2)** overall point differential, **3)** head-to-head,
+**4)** alphabetical, which is a deterministic fallback rather than a rule.
+
+Tiebreak 2 counts **every set of every completed match**. It used to count only the sets
+of matches a team had *won*, which meant a team that had not won one sat at exactly 0 — a
+"no data" value competing on the same scale as measured ones, and placing above anyone
+whose wins were scrappy enough to total negative (a 25-23, 10-25, 15-13 win is −11). Every
+team now carries a figure that means something.
+
+Two consequences worth knowing:
+
+- A match **marked complete without a decisive result** — 1-1 in a best of three — awards
+  nobody a point, and deliberately does not move the differential either. Nothing in the
+  UI warns you that marking a game complete early scores it 0-0.
+- PD is a **sum, not a rate**. That is fine inside a pool where everyone plays the same
+  number of games, which is how the app builds them. If you ever compare *across* pools of
+  different sizes — "best third place", say — the bigger pool's teams have more games to
+  accumulate from.
+
+`winMatchPointDiff` is still computed and returned. It is a real "how convincingly did you
+win" statistic; it is just not the tiebreak.
+
 ## Players and rosters
 
 A club keeps one player list, at `clubs/{clubId}/players/{playerId}` — separate documents,

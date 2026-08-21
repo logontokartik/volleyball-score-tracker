@@ -701,7 +701,7 @@ export function setsNeededToWin(setsPerMatch) {
  *
  * Tiebreakers (seeding):
  *   1) Total tournament points
- *   2) Point differential in sets of matches the team WON
+ *   2) Overall point differential — every set of every completed match
  *   3) Head-to-head
  *
  * Only meaningful when match.completed — caller filters.
@@ -758,8 +758,17 @@ function analyzeMatchForPoints(match, needToWin) {
 }
 
 /**
- * Standings: tournament points from completed games, tiebreakers per sheet —
- * 1) total points, 2) point diff in sets of matches won, 3) head-to-head (series wins if multiple).
+ * Standings: tournament points from completed games, then
+ * 1) total points, 2) overall point differential, 3) head-to-head (series wins if multiple).
+ *
+ * Tiebreak 2 used to count only the sets of matches a team WON, which left every team
+ * that had not won one sitting at exactly 0 — a "no data" value competing on the same
+ * scale as measured ones, and ranking above anyone whose wins were scrappy enough to
+ * total negative. Counting every set of every completed match gives each team a figure
+ * that means something.
+ *
+ * `winMatchPointDiff` is still computed and returned: it is a genuine "how convincingly
+ * did you win" statistic, just not the tiebreak any more.
  */
 export function calculateLeaderboard(scores, teams, setsPerMatch = 3) {
   const need = setsNeededToWin(setsPerMatch);
@@ -792,13 +801,21 @@ export function calculateLeaderboard(scores, teams, setsPerMatch = 3) {
     if (a.winner === match.team1) stats[match.team1].matchesWon += 1;
     if (a.winner === match.team2) stats[match.team2].matchesWon += 1;
 
-    (match.sets || []).forEach((set) => {
-      const x = Number(set.team1) || 0;
-      const y = Number(set.team2) || 0;
-      if (x === 0 && y === 0) return;
-      stats[match.team1].overallPointDiff += x - y;
-      stats[match.team2].overallPointDiff += y - x;
-    });
+    // A match marked complete without a decisive result — 1-1 in a best of three, say —
+    // awards nobody a point, so it must not move the tiebreak either. It used to be
+    // harmless because overallPointDiff was not read by anything; now that it decides
+    // placings, an abandoned game with a lopsided set in it would hand out ranking a
+    // scoreline nobody was awarded points for.
+    if (a.winner) {
+      (match.sets || []).forEach((set) => {
+        const x = Number(set.team1) || 0;
+        const y = Number(set.team2) || 0;
+        // A padded, never-played set. Counting it would be a phantom 0-0.
+        if (x === 0 && y === 0) return;
+        stats[match.team1].overallPointDiff += x - y;
+        stats[match.team2].overallPointDiff += y - x;
+      });
+    }
   });
 
   const h2hSeries = {};
@@ -824,8 +841,8 @@ export function calculateLeaderboard(scores, teams, setsPerMatch = 3) {
     if (db.tournamentPoints !== da.tournamentPoints) {
       return db.tournamentPoints - da.tournamentPoints;
     }
-    if (db.winMatchPointDiff !== da.winMatchPointDiff) {
-      return db.winMatchPointDiff - da.winMatchPointDiff;
+    if (db.overallPointDiff !== da.overallPointDiff) {
+      return db.overallPointDiff - da.overallPointDiff;
     }
     const h2h = headToHeadCompare(a[0], b[0]);
     if (h2h !== 0) return h2h;
