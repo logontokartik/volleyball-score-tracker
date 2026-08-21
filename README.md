@@ -141,8 +141,19 @@ scrape, since nobody even has to sign in. `playerContacts` is readable by club m
 only. New fields go in one collection or the other on the same test: **would we print it
 on a scoreboard?** A jersey number goes in `players`; a phone number does not.
 
+Each team may have a **captain**, marked in the Teams tab by a bold name and a `C`. Bold
+alone carries the meaning only for someone who already knows the convention — and on a
+roster of one there is no unbolded name to compare against — so the letter is what makes
+it legible cold.
+
+Captaincy is stored on the roster entry, not on the player, because it is a property of a
+team in **one tournament**: the same player captains on Saturday and not next month, and
+two teams in the same draw each need their own. Tapping the current captain clears the
+role. Someone who is not on the team cannot be appointed, and removing the captain from a
+roster clears the captaincy rather than leaving an id pointing at nobody.
+
 Which players are on which team is stored per tournament, as a `rosters` array of
-`{ team, playerIds }` on the tournament document — that question has no answer without
+`{ team, playerIds, captainId }` on the tournament document — that question has no answer without
 naming a tournament. It is an array rather than a map keyed by team name because
 `setDoc(..., { merge: true })` merges nested maps key by key, so a removed team's key
 would linger forever, and team names are free text that can contain the `.` Firestore

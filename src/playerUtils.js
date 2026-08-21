@@ -17,7 +17,12 @@
 //     is even meaningful. "Which team is Priya on" has no answer without naming the
 //     tournament.
 //
-// Rosters are an ARRAY of `{ team, playerIds }`, not a map keyed by team name. A map
+// A roster entry also names the team's `captainId`. Captaincy sits here rather than on the
+// player document because it is a property of a team in ONE tournament, not of a person:
+// the same player captains on Saturday and does not next month, and two teams in the same
+// draw each need their own captain. A flag on the player could not express either.
+//
+// Rosters are an ARRAY of `{ team, playerIds, captainId }`, not a map keyed by team name. A map
 // looks tidier and is a trap: `setDoc(..., { merge: true })` merges nested maps key by
 // key, so removing a team would leave its key behind forever, and team names are free
 // text that can contain the '.' that Firestore reads as a field-path separator. An array
@@ -89,6 +94,51 @@ export function rosterPlayerIds(rosters, team) {
 }
 
 /**
+ * One roster entry, with `captainId` present only when there actually is a captain.
+ *
+ * Writing `captainId: ''` on every team would put a meaningless key on every roster in
+ * every tournament, and would make an "is there a captain" check depend on remembering
+ * that '' is falsy. Absent means absent.
+ */
+function rosterEntry(team, playerIds, captainId) {
+  const entry = { team, playerIds };
+  const id = text(captainId);
+  if (id && playerIds.includes(id)) entry.captainId = id;
+  return entry;
+}
+
+/**
+ * The captain's player id for one team, or '' — never undefined, and never an id that is
+ * not actually on the team. A captain who has been taken off the roster is not a captain,
+ * and reading it that way here means every caller does not have to remember to check.
+ */
+export function rosterCaptainId(rosters, team) {
+  const key = teamKey(team);
+  const entry = (rosters || []).find((r) => teamKey(r?.team) === key);
+  const id = text(entry?.captainId);
+  if (!id) return '';
+  return rosterPlayerIds(rosters, team).includes(id) ? id : '';
+}
+
+/**
+ * Name a team's captain, or clear it by passing the current captain's id again.
+ *
+ * Refuses to appoint someone who is not on the team: the alternative is a roster whose
+ * captain does not appear in its own player list, which renders as no captain at all and
+ * is invisible until someone wonders why the bold name went missing.
+ */
+export function withCaptainForTeam(rosters, team, playerId) {
+  const key = teamKey(team);
+  const ids = rosterPlayerIds(rosters, team);
+  const id = text(playerId);
+  if (id && !ids.includes(id)) return rosters || [];
+  const next = id === rosterCaptainId(rosters, team) ? '' : id;
+  return (rosters || []).map((r) =>
+    teamKey(r?.team) === key ? rosterEntry(r.team, rosterPlayerIds(rosters, r.team), next) : r
+  );
+}
+
+/**
  * A new rosters array with one team's list replaced.
  *
  * An emptied team drops out entirely rather than being stored as `playerIds: []` — the
@@ -111,7 +161,9 @@ export function withRosterForTeam(rosters, team, playerIds) {
 
   const rest = (rosters || []).filter((r) => teamKey(r?.team) !== key);
   if (!ids.length) return rest;
-  return [...rest, { team: name, playerIds: ids }];
+  // Carried across rather than reset, so editing a roster does not silently unappoint the
+  // captain — and dropped when that player is the one being removed.
+  return [...rest, rosterEntry(name, ids, rosterCaptainId(rosters, name))];
 }
 
 /**
@@ -131,21 +183,38 @@ export function remapRosters(rosters, renames, teamNames) {
   const follow = (name) => renames?.get(teamKey(name)) ?? text(name);
 
   const out = [];
-  (rosters || []).forEach((entry) => {
+  // Entries whose team name is UNCHANGED are processed first. That is what makes the
+  // merge rule below ("the team that was already here keeps its captain") actually true:
+  // processed in stored order, a renamed entry could arrive first and the winner would
+  // come down to array position rather than to anything anyone decided.
+  const ordered = [...(rosters || [])].sort((a, b) => {
+    const aRenamed = teamKey(follow(a?.team)) !== teamKey(a?.team);
+    const bRenamed = teamKey(follow(b?.team)) !== teamKey(b?.team);
+    return Number(aRenamed) - Number(bRenamed);
+  });
+
+  ordered.forEach((entry) => {
     const team = follow(entry?.team);
     if (!survives.has(teamKey(team))) return;
     const ids = (entry?.playerIds || []).map(text).filter(Boolean);
     if (!ids.length) return;
     // A rename can collide with a team that already exists ('Black' -> 'Yellow'), and
     // two entries for one team is a shape nothing downstream expects. Merge instead.
+    const captainId = text(entry?.captainId);
     const existing = out.find((r) => teamKey(r.team) === teamKey(team));
     if (existing) {
       ids.forEach((id) => {
         if (!existing.playerIds.includes(id)) existing.playerIds.push(id);
       });
+      // Two teams merged into one cannot have two captains. The team that was already
+      // here keeps its own — arbitrary, but a merge is already an unusual edit and
+      // silently promoting the incoming one would be the more surprising answer.
+      if (!existing.captainId && captainId && existing.playerIds.includes(captainId)) {
+        existing.captainId = captainId;
+      }
       return;
     }
-    out.push({ team, playerIds: [...new Set(ids)] });
+    out.push(rosterEntry(team, [...new Set(ids)], captainId));
   });
   return out;
 }
