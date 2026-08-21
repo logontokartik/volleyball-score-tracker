@@ -13,6 +13,8 @@ rules_version = '2';
 //   clubs/{clubId}/tournaments/{id}      teams, schedule, scores, rosters
 //   clubs/{clubId}/players/{playerId}    { name, position, … } — public
 //   clubs/{clubId}/playerContacts/{id}   { email, … } — club-private
+//   clubs/{clubId}/consentRequests/{tok} { playerId, status } — the emailed link
+//   clubs/{clubId}/consents/{tok}        signed waiver — club-private, immutable
 //   clubs/{clubId}/archive/snapshot      archived-season snapshot
 //   slugs/{slug}                         { clubId } — the public URL reservation
 //
@@ -201,6 +203,51 @@ service cloud.firestore {
       match /playerContacts/{playerId} {
         allow read: if isMember(clubId) || isSuper();
         allow write: if isClubAdmin(clubId);
+      }
+
+      // ---- Participation waivers ----
+      //
+      // Players mostly do not have accounts and never will, so a waiver has to be
+      // signable by someone who is not signed in. The authorisation is the LINK: the
+      // document id is 192 bits of CSPRNG (see newConsentToken), and holding it is what
+      // permits exactly one signature. That is the same security model as any emailed
+      // "confirm your booking" link, and it is why the id must never be derived from a
+      // player id or a name.
+      match /consentRequests/{token} {
+        // `get` only — deliberately NOT `read`, which would also grant `list`. With list
+        // the collection could be enumerated and every outstanding link harvested,
+        // which would defeat the entire scheme. An admin may list; the public may not.
+        allow get:  if true;
+        allow list: if isMember(clubId) || isSuper();
+        allow create, delete: if isClubAdmin(clubId);
+        // The signer flips status to 'signed' and touches nothing else. One-way: a
+        // request that has been used cannot be reset by whoever still holds the link,
+        // so a leaked link cannot overwrite a signature that already exists.
+        allow update: if isClubAdmin(clubId)
+          || (resource.data.status == 'pending'
+              && request.resource.data.diff(resource.data)
+                   .affectedKeys().hasOnly(['status', 'signedAt'])
+              && request.resource.data.status == 'signed');
+      }
+
+      // The signature itself. Created by an anonymous signer, then never readable by
+      // them again: it holds a date of birth and a guardian's contact details, which is
+      // the most sensitive data in this database. Club members only.
+      match /consents/{token} {
+        allow read: if isMember(clubId) || isSuper();
+        // Only against a request that exists and is still pending, so a signature cannot
+        // be manufactured without a link an admin issued.
+        allow create: if exists(/databases/$(database)/documents/clubs/$(clubId)/consentRequests/$(token))
+          && get(/databases/$(database)/documents/clubs/$(clubId)/consentRequests/$(token))
+               .data.status == 'pending'
+          && request.resource.data.token == token
+          && request.resource.data.waiverText is string
+          && request.resource.data.waiverVersion is string;
+        // A signed waiver is a record of what someone agreed to at a moment in time.
+        // Nobody edits it — not an admin, not a super admin. Withdrawing consent is a
+        // delete, which leaves no altered document to misread later.
+        allow update: if false;
+        allow delete: if isClubAdmin(clubId);
       }
 
       match /archive/{docId} {

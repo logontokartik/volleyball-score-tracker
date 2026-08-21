@@ -24,6 +24,15 @@ write `rosters` is the one that fails if `scorerFieldsOnly()` is ever widened.
 > identical value affects no keys and passes `hasOnly()` — a test that reused the same
 > value would report a pass without ever exercising the rule. It did, until it didn't.
 
+It also covers participation waivers, which are the only place an **anonymous** visitor
+may write: the consent link's token is the authorisation. The load-bearing cases are that
+the public can `get` a request but never `list` the collection (listing it would harvest
+every outstanding link), that a signature cannot be created without a matching *pending*
+request, that the signer cannot read their own signature back afterwards (it holds a date
+of birth and a guardian's address), and that **nobody — admin or super admin — can edit a
+signed consent**. The real signing writeBatch is tested as a batch, because batched writes
+evaluate against pre-batch state, and replaying it is refused.
+
 It also covers scoring-access requests: who may file one (yourself only, verified address
 only), who may read them (club admins and the requester — they are a list of email
 addresses), and approval. The load-bearing case is that **an admin cannot add a member who
@@ -47,7 +56,7 @@ cd firestore-tests && npm init -y && npm pkg set type=module \
 
 E=./firestore-tests/node_modules/.bin/firebase
 
-# Rules — 107 tests
+# Rules — 131 tests
 $E emulators:exec --only firestore --project demo-clubs \
   "RULES_FILE=$PWD/firestore.rules node firestore-tests/rules.test.mjs"
 
