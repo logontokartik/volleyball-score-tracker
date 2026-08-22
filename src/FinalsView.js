@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent } from './components/ui/card';
-import { getSetCap, getSetTarget, setsNeededToWin } from './tournamentUtils';
+import { setRules, setsNeededToWin, tournamentScoring } from './tournamentUtils';
 
 /** Returns the winning team name of a completed match, or null if no winner yet. */
 function getWinner(match) {
@@ -30,7 +30,7 @@ const ROUND_COLORS = {
   'finals':         'bg-amber-100 text-amber-800 border-amber-200',
 };
 
-function MatchScoreCard({ match, user, onUpdate, onDelta, onComplete }) {
+function MatchScoreCard({ match, user, onUpdate, onDelta, onComplete, scoring, setsInMatch }) {
   const locked = Boolean(match.completed);
   const phase = 'finals'; // finals bracket always uses finals scoring rules
   const winner = locked ? getWinner(match) : null;
@@ -103,8 +103,12 @@ function MatchScoreCard({ match, user, onUpdate, onDelta, onComplete }) {
 
         {/* Sets */}
         {match.sets.map((set, setIndex) => {
-          const setCap    = getSetCap(phase, setIndex);
-          const setTarget = getSetTarget(phase, setIndex);
+          const { cap: setCap, pointsToWin: setTarget } = setRules(
+            scoring,
+            phase,
+            setIndex,
+            setsInMatch
+          );
           return (
             <div key={setIndex} className="mb-4 last:mb-0">
               <h3 className="font-semibold text-sm text-gray-600 mb-2">
@@ -160,7 +164,17 @@ function MatchScoreCard({ match, user, onUpdate, onDelta, onComplete }) {
   );
 }
 
-export default function FinalsView({ teams, finalsMatches, setFinalsMatches, user, setsPerMatch }) {
+export default function FinalsView({
+  teams,
+  finalsMatches,
+  setFinalsMatches,
+  user,
+  setsPerMatch,
+  scoring: scoringProp,
+}) {
+  // Falls back to the defaults so this component still renders correctly if it is ever
+  // mounted without the prop — it used to have the numbers baked in and could not.
+  const scoring = scoringProp || tournamentScoring(undefined);
   const [round, setRound]   = useState('semi-finals');
   const [team1, setTeam1]   = useState('');
   const [team2, setTeam2]   = useState('');
@@ -194,19 +208,19 @@ export default function FinalsView({ teams, finalsMatches, setFinalsMatches, use
   const updateScore = useCallback((id, setIndex, teamKey, value) => {
     setFinalsMatches((prev) => prev.map((m) => {
       if (m.id !== id || m.completed) return m;
-      const cap = getSetCap('finals', setIndex);
+      const { cap } = setRules(scoring, 'finals', setIndex, m.sets.length);
       const num = Math.max(0, Math.min(cap, parseInt(value, 10) || 0));
       const sets = m.sets.map((s, si) =>
         si === setIndex ? { ...s, [teamKey]: num } : s
       );
       return { ...m, sets };
     }));
-  }, [setFinalsMatches]);
+  }, [setFinalsMatches, scoring]);
 
   const deltaScore = useCallback((id, setIndex, teamKey, delta) => {
     setFinalsMatches((prev) => prev.map((m) => {
       if (m.id !== id || m.completed) return m;
-      const cap = getSetCap('finals', setIndex);
+      const { cap } = setRules(scoring, 'finals', setIndex, m.sets.length);
       const cur = Math.max(0, Math.min(cap, parseInt(m.sets[setIndex][teamKey], 10) || 0));
       const next = Math.max(0, Math.min(cap, cur + delta));
       if (next === cur) return m;
@@ -215,7 +229,7 @@ export default function FinalsView({ teams, finalsMatches, setFinalsMatches, use
       );
       return { ...m, sets };
     }));
-  }, [setFinalsMatches]);
+  }, [setFinalsMatches, scoring]);
 
   const markComplete = useCallback((id) => {
     if (!window.confirm('Mark this finals game complete? It will be locked.')) return;
@@ -319,6 +333,8 @@ export default function FinalsView({ teams, finalsMatches, setFinalsMatches, use
                 <MatchScoreCard
                   match={match}
                   user={user}
+                  scoring={scoring}
+                  setsInMatch={match.sets?.length || numSets}
                   onUpdate={updateScore}
                   onDelta={deltaScore}
                   onComplete={markComplete}

@@ -19,11 +19,15 @@ import {
   poolsFromRows,
   previewGameCount,
   validatePoolAssignment,
+  describeScoring,
+  setsForPhase,
+  tournamentScoring,
 } from './tournamentUtils';
 import ScheduleEditor from './ScheduleEditor';
 import FixtureAIBuilder from './FixtureAIBuilder';
 import AdminMatchLocks from './AdminMatchLocks';
 import AdminTeamsEditor from './AdminTeamsEditor';
+import AdminScoringEditor from './AdminScoringEditor';
 import ConfirmDialog from './components/ConfirmDialog';
 import ClubMembersAdmin from './ClubMembersAdmin';
 
@@ -105,6 +109,7 @@ export default function AdminPage() {
   const [editingScheduleForId, setEditingScheduleForId] = useState(null);
   const [editingLocksForId, setEditingLocksForId] = useState(null);
   const [editingTeamsForId, setEditingTeamsForId] = useState(null);
+  const [editingScoringForId, setEditingScoringForId] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [bulkTeams, setBulkTeams] = useState('');
@@ -693,7 +698,8 @@ export default function AdminPage() {
                     <div className="font-medium">{t.name}</div>
                     <div className="text-xs text-gray-500">
                       {t.teams?.length ?? 0} teams · {t.setsPerMatch ?? '?'} sets/match ·{' '}
-                      {t.meetingsPerPair ?? 1}× round robin
+                      {t.meetingsPerPair ?? 1}× round robin ·{' '}
+                      {describeScoring(tournamentScoring(t), 'pool', setsForPhase(t, 'pool'))}
                       {t.id === activeTournamentId && (
                         <span className="ml-2 text-green-700 font-medium">Active</span>
                       )}
@@ -720,6 +726,14 @@ export default function AdminPage() {
                       className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-50"
                     >
                       {editingScheduleForId === t.id ? 'Close schedule' : 'Schedule'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingScoringForId((cur) => (cur === t.id ? null : t.id))}
+                      className="text-sm bg-white border px-3 py-2 rounded-lg min-h-[44px] hover:bg-gray-50"
+                      title="Sets per match, and the points a set is played to"
+                    >
+                      {editingScoringForId === t.id ? 'Close scoring' : 'Scoring'}
                     </button>
                     <button
                       type="button"
@@ -768,6 +782,13 @@ export default function AdminPage() {
                     tournament={t}
                     onClose={() => setEditingScheduleForId(null)}
                     onSaved={() => {}}
+                  />
+                )}
+                {editingScoringForId === t.id && (
+                  <AdminScoringEditor
+                    key={`scoring-${t.id}`}
+                    tournament={t}
+                    onClose={() => setEditingScoringForId(null)}
                   />
                 )}
                 {editingLocksForId === t.id && (

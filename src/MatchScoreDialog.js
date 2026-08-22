@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { formatMatchHeadingForScores, getSetCap, getSetTarget } from './tournamentUtils';
+import { describeScoring, formatMatchHeadingForScores, setOutcome, setRules } from './tournamentUtils';
 // The dialog is otherwise prop-driven, but this one child sources its own club and auth
 // from context — passing its state down would mean two copies of the same truth.
 import RequestScoringAccess from './RequestScoringAccess';
@@ -21,6 +21,9 @@ export default function MatchScoreDialog({
   onInput,
   onTogglePhase,
   onMarkComplete,
+  scoring,
+  setsInMatch,
+  onFinishSet,
 }) {
   const closeRef = useRef(null);
 
@@ -61,9 +64,7 @@ export default function MatchScoreDialog({
               {formatMatchHeadingForScores(match, scheduleSlots)}
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {phase === 'finals'
-                ? 'Finals: 25 pts (cap 28), 3rd set 15'
-                : 'Pool: 21 pts (cap 25), 3rd set 15 (cap 18)'}
+              {describeScoring(scoring, phase, setsInMatch)}
               {' · win by 2'}
             </p>
           </div>
@@ -132,8 +133,19 @@ export default function MatchScoreDialog({
           )}
 
           {match.sets.map((set, setIndex) => {
-            const setCap = getSetCap(phase, setIndex);
-            const setTarget = getSetTarget(phase, setIndex);
+            const { cap: setCap, pointsToWin: setTarget } = setRules(
+              scoring,
+              phase,
+              setIndex,
+              setsInMatch
+            );
+            // Whether the scoreboard says this set is over — the target reached with a
+            // two-point lead, or the cap reached with one. This is what the indicator
+            // keys off; it never finishes the set on its own, because a score is often
+            // mid-correction and deciding for the scorer is how a set gets closed on a
+            // number they were still fixing.
+            const outcome = setOutcome(set, { cap: setCap, pointsToWin: setTarget });
+            const finished = Boolean(set.done);
             return (
               <div key={setIndex} className="mb-4 last:mb-0">
                 <h3 className="font-semibold text-sm text-gray-600 mb-2">
@@ -141,6 +153,11 @@ export default function MatchScoreDialog({
                   <span className="font-normal text-xs text-gray-400 ml-2">
                     (to {setTarget}, cap {setCap})
                   </span>
+                  {finished && (
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                      Set complete
+                    </span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {['team1', 'team2'].map((teamKey) => (
@@ -155,7 +172,7 @@ export default function MatchScoreDialog({
                         <button
                           type="button"
                           aria-label={`Subtract one point for ${match[teamKey]}`}
-                          disabled={!canScore || locked || set[teamKey] <= 0}
+                          disabled={!canScore || locked || finished || set[teamKey] <= 0}
                           onClick={() => onAdjust(match.game, setIndex, teamKey, -1)}
                           className="flex items-center justify-center min-w-[52px] min-h-[52px] rounded-xl border-2 border-gray-300 bg-white text-2xl font-bold text-gray-800 shadow-sm active:bg-gray-100 disabled:opacity-40 disabled:active:bg-white"
                         >
@@ -168,13 +185,13 @@ export default function MatchScoreDialog({
                           max={setCap}
                           value={set[teamKey]}
                           onChange={(e) => onInput(match.game, setIndex, teamKey, e.target.value)}
-                          disabled={!canScore || locked}
+                          disabled={!canScore || locked || finished}
                           className="border border-gray-300 rounded-xl w-[4.5rem] sm:w-24 text-center text-xl font-semibold py-3 min-h-[52px] bg-white disabled:bg-gray-100 disabled:text-gray-700"
                         />
                         <button
                           type="button"
                           aria-label={`Add one point for ${match[teamKey]}`}
-                          disabled={!canScore || locked || set[teamKey] >= setCap}
+                          disabled={!canScore || locked || finished || set[teamKey] >= setCap}
                           onClick={() => onAdjust(match.game, setIndex, teamKey, 1)}
                           className="flex items-center justify-center min-w-[52px] min-h-[52px] rounded-xl border-2 border-gray-300 bg-white text-2xl font-bold text-gray-800 shadow-sm active:bg-gray-100 disabled:opacity-40 disabled:active:bg-white"
                         >
@@ -184,6 +201,34 @@ export default function MatchScoreDialog({
                     </div>
                   ))}
                 </div>
+
+                {/* The finish-the-set control.
+                    It appears only once the score says the set is over, so it is an
+                    answer to "is that it?" rather than a button sitting there inviting a
+                    set to be closed at 3-1. Finishing locks the set's inputs; reopening
+                    is one tap away, because the commonest reason to want it back is a
+                    point entered on the wrong team. */}
+                {canScore && !locked && (finished || outcome) && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onFinishSet(match.game, setIndex, !finished)}
+                      className={`inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                        finished
+                          ? 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                          : 'border-emerald-500 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <span aria-hidden="true">{finished ? '↩' : '✓'}</span>
+                      {finished ? 'Reopen set' : `Finish set ${setIndex + 1}`}
+                    </button>
+                    {!finished && outcome && (
+                      <span className="text-xs text-gray-600">
+                        {match[outcome.winner]} wins it {outcome.points}–{outcome.against}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

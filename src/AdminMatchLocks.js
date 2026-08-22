@@ -5,7 +5,9 @@ import { useClub } from './ClubContext';
 import {
   buildDefaultScheduleSlots,
   formatMatchHeadingForScores,
-  getSetCap,
+  setRules,
+  setsForPhase,
+  tournamentScoring,
 } from './tournamentUtils';
 
 function firestoreRulesHint(err) {
@@ -22,6 +24,9 @@ function firestoreRulesHint(err) {
 }
 
 export default function AdminMatchLocks({ tournament, onClose }) {
+  // The same rules the scoreboard clamps with, so an admin correcting a locked score
+  // cannot type a number the scorer would have been prevented from entering.
+  const scoring = tournamentScoring(tournament);
   const { clubId, isClubAdmin } = useClub();
   const scores = tournament.scores || [];
   const scheduleSlots = useMemo(() => {
@@ -200,7 +205,7 @@ export default function AdminMatchLocks({ tournament, onClose }) {
                 {/* Sets — read-only when locked, editable when not */}
                 <div className="space-y-1.5">
                   {displaySets.map((set, si) => {
-                    const cap = getSetCap(phase, si);
+                    const { cap } = setRules(scoring, phase, si, setsForPhase(tournament, phase));
                     return (
                       <div key={si} className="flex items-center gap-2 text-xs">
                         <span className="text-gray-400 w-9 shrink-0">Set {si + 1}</span>
