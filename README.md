@@ -146,6 +146,28 @@ A cap below the points needed to win would clamp every input below the winning s
 make the set impossible to finish. `normalizeScoring` raises it to the target instead, and
 the editor says so before you save.
 
+### Games that are not on the schedule
+
+The Scores tab can show tiles for games nobody is playing. They are real entries in the
+match list that sit on no schedule row, and `orderScoresBySchedule` appends exactly those
+after the scheduled ones.
+
+They appear when the two lists fall out of step. Switching a tournament from a nine-game
+format to a fifteen-game round robin grows the match list, while `remapScheduleSlots` only
+translates the rows that already exist — it never invents times for the new games.
+Deleting a schedule row does the same thing from the other end.
+
+**Admin → the tournament → Schedule** shows them at the top when there are any, with a
+button to remove the unplayed ones. Anything with a score entered, or marked complete at
+0-0 (a forfeit is a result somebody recorded), is listed but never offered for removal —
+losing a result is the Teams &amp; format editor's business, and it warns about the cost.
+
+Removal writes `scores` on its own and leaves `scheduleSlots` untouched, since nothing
+being removed is referenced by a row. It is also **not permanent**: saving Teams &amp;
+format rebuilds the match list from the schedule format, so a format that still generates
+those pairings will generate them again. The durable fix is a format that produces the
+number of games the schedule has room for.
+
 ### Finishing a set
 
 Once the score says a set is over — the target reached with a two-point lead, or the cap
