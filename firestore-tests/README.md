@@ -56,7 +56,7 @@ cd firestore-tests && npm init -y && npm pkg set type=module \
 
 E=./firestore-tests/node_modules/.bin/firebase
 
-# Rules — 131 tests
+# Rules — 138 tests
 $E emulators:exec --only firestore --project demo-clubs \
   "RULES_FILE=$PWD/firestore.rules node firestore-tests/rules.test.mjs"
 

@@ -663,23 +663,118 @@ export function matchSetSummary(match) {
 }
 
 /**
- * Scoring rules per match phase and set index.
- * Pool play: sets 1-2 → play to 21, win by 2, cap 25. Set 3 → play to 15, win by 2, cap 18.
- * Finals:    sets 1-2 → play to 25, win by 2, cap 28. Set 3 → play to 15 (no cap beyond 15).
+ * Scoring rules, per phase.
+ *
+ * These numbers used to be hardcoded in getSetCap/getSetTarget, which meant every club
+ * played to this league's format whether or not it was theirs. They are now the DEFAULTS
+ * — a tournament with no `scoring` field of its own scores exactly as it did before, and
+ * that equivalence is asserted in the tests rather than assumed.
+ *
+ * `decider` is the last set of the match when there is more than one: the short set that
+ * settles a tie. Note `finals.deciderCap === finals.deciderPointsToWin`, i.e. no extra
+ * room beyond 15, which is what the old code did.
  */
-export function getSetCap(phase, setIndex) {
-  if (phase === 'finals') {
-    return setIndex < 2 ? 28 : 15;
-  }
-  // pool (default)
-  return setIndex < 2 ? 25 : 18;
+export const DEFAULT_SCORING = {
+  pool: { pointsToWin: 21, cap: 25, deciderPointsToWin: 15, deciderCap: 18 },
+  finals: { pointsToWin: 25, cap: 28, deciderPointsToWin: 15, deciderCap: 15 },
+};
+
+export const SCORING_PHASES = ['pool', 'finals'];
+
+const posInt = (value, fallback) => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
+/**
+ * A stored `scoring` object cleaned into something safe to score with.
+ *
+ * A cap below the target is the failure worth naming: it would clamp every input below
+ * the score needed to win the set, so the set could never be finished and no amount of
+ * tapping + would fix it. Raised to the target rather than rejected, because refusing to
+ * render a tournament because of one bad number is worse.
+ */
+export function normalizeScoring(raw) {
+  const out = {};
+  SCORING_PHASES.forEach((phase) => {
+    const d = DEFAULT_SCORING[phase];
+    const r = raw?.[phase] || {};
+    const pointsToWin = posInt(r.pointsToWin, d.pointsToWin);
+    const deciderPointsToWin = posInt(r.deciderPointsToWin, d.deciderPointsToWin);
+    out[phase] = {
+      pointsToWin,
+      cap: Math.max(pointsToWin, posInt(r.cap, d.cap)),
+      deciderPointsToWin,
+      deciderCap: Math.max(deciderPointsToWin, posInt(r.deciderCap, d.deciderCap)),
+    };
+  });
+  return out;
 }
 
-export function getSetTarget(phase, setIndex) {
-  if (phase === 'finals') {
-    return setIndex < 2 ? 25 : 15;
-  }
-  return setIndex < 2 ? 21 : 15;
+/** The scoring a tournament actually uses — its own, or this league's originals. */
+export function tournamentScoring(tournament) {
+  return normalizeScoring(tournament?.scoring);
+}
+
+/**
+ * How many sets a match in this phase is played over.
+ *
+ * Knockout matches can be a different length from pool matches — a pool of one-set games
+ * feeding best-of-three semifinals is an ordinary shape — so finals have their own field,
+ * falling back to the pool length for every tournament created before it existed.
+ */
+export function setsForPhase(tournament, phase) {
+  const pool = posInt(tournament?.setsPerMatch, 3);
+  if (phase !== 'finals') return pool;
+  return posInt(tournament?.finalsSetsPerMatch, pool);
+}
+
+/**
+ * Target and cap for one set.
+ *
+ * The decider is the LAST set, not "set 3 onwards" — which is what the old code said, and
+ * is why a five-set match used to play sets 3, 4 and 5 all to 15. That was latent rather
+ * than harmless: nothing stopped an admin choosing five sets. With three sets, the two
+ * readings are the same, so no existing three-set tournament changes.
+ */
+export function setRules(scoring, phase, setIndex, setsInMatch) {
+  const p = scoring?.[phase] || scoring?.pool || DEFAULT_SCORING.pool;
+  const total = posInt(setsInMatch, 3);
+  const isDecider = total > 1 && setIndex === total - 1;
+  return isDecider
+    ? { pointsToWin: p.deciderPointsToWin, cap: p.deciderCap }
+    : { pointsToWin: p.pointsToWin, cap: p.cap };
+}
+
+/**
+ * Whether a set is over on the scoreboard, and who took it.
+ *
+ * Two ways to finish: reach the target with a two-point lead, or reach the cap, where a
+ * one-point lead is enough. `null` means play on — including a tie at cap, which cannot
+ * happen under the rules but can certainly be typed in.
+ */
+export function setOutcome(set, rules) {
+  const a = Math.max(0, parseInt(set?.team1, 10) || 0);
+  const b = Math.max(0, parseInt(set?.team2, 10) || 0);
+  if (a === b) return null;
+  const hi = Math.max(a, b);
+  const lo = Math.min(a, b);
+  const reached = hi >= rules.cap || (hi >= rules.pointsToWin && hi - lo >= 2);
+  if (!reached) return null;
+  return { winner: a > b ? 'team1' : 'team2', points: hi, against: lo };
+}
+
+/** One line describing a phase's format, for the scoreboard header and the admin form. */
+export function describeScoring(scoring, phase, setsInMatch) {
+  const p = scoring?.[phase] || DEFAULT_SCORING[phase];
+  const total = posInt(setsInMatch, 3);
+  const main = `${p.pointsToWin} pts (cap ${p.cap})`;
+  if (total <= 1) return main;
+  const decider =
+    p.deciderCap > p.deciderPointsToWin
+      ? `${p.deciderPointsToWin} (cap ${p.deciderCap})`
+      : `${p.deciderPointsToWin}`;
+  return `best of ${total}, ${main}, deciding set ${decider}`;
 }
 
 /** Sets needed to win a match (e.g. 3-set cap → 2, 5-set → 3). */

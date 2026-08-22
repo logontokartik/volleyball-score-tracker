@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { onSnapshot, setDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
@@ -14,10 +14,13 @@ import { isTournamentComplete } from './CompletedTournamentsView';
 import {
   buildDefaultScheduleSlots,
   calculateLeaderboard,
-  getSetCap,
   matchSetSummary,
   matchSlotInfo,
   orderScoresBySchedule,
+  setRules,
+  setsForPhase,
+  tournamentScoring,
+  describeScoring,
 } from './tournamentUtils';
 
 export default function TrackerView() {
@@ -118,12 +121,24 @@ export default function TrackerView() {
 
   const orderedScores = orderScoresBySchedule(scores, scheduleSlots);
 
+  // The scoring config, and a helper that resolves one set's rules from a match. Both
+  // clamps below and the dialog have to agree on the cap, so it is derived once here
+  // rather than recomputed from loose arguments at each call site.
+  const scoring = useMemo(() => tournamentScoring(tournament), [tournament]);
+  const rulesForMatchSet = useCallback(
+    (match, setIndex) => {
+      const phase = match?.phase || 'pool';
+      return setRules(scoring, phase, setIndex, setsForPhase(tournament, phase));
+    },
+    [scoring, tournament]
+  );
+
   const updateScoreInput = useCallback((game, setIndex, teamKey, value) => {
     setScores((prevScores) => {
       const matchIndex = prevScores.findIndex((m) => m.game === game);
       if (matchIndex < 0) return prevScores;
       if (prevScores[matchIndex]?.completed) return prevScores;
-      const cap = getSetCap(prevScores[matchIndex].phase || 'pool', setIndex);
+      const { cap } = rulesForMatchSet(prevScores[matchIndex], setIndex);
       const numericValue = Math.max(0, Math.min(cap, parseInt(value, 10) || 0));
       const updatedScores = [...prevScores];
       if (!updatedScores[matchIndex]?.sets?.[setIndex]) return prevScores;
@@ -137,14 +152,14 @@ export default function TrackerView() {
       };
       return updatedScores;
     });
-  }, []);
+  }, [rulesForMatchSet]);
 
   const adjustScoreDelta = useCallback((game, setIndex, teamKey, delta) => {
     setScores((prevScores) => {
       const matchIndex = prevScores.findIndex((m) => m.game === game);
       if (matchIndex < 0) return prevScores;
       if (prevScores[matchIndex]?.completed) return prevScores;
-      const cap = getSetCap(prevScores[matchIndex].phase || 'pool', setIndex);
+      const { cap } = rulesForMatchSet(prevScores[matchIndex], setIndex);
       const updatedScores = [...prevScores];
       if (!updatedScores[matchIndex]?.sets?.[setIndex]) return prevScores;
       const cur = updatedScores[matchIndex].sets[setIndex][teamKey];
@@ -161,7 +176,31 @@ export default function TrackerView() {
       };
       return updatedScores;
     });
-  }, []);
+  }, [rulesForMatchSet]);
+
+  /**
+   * Mark one set finished, or reopen it.
+   *
+   * Stored as a flag on the set rather than inferred from the score, because those are
+   * different questions: 21-16 says the set COULD be over, only the scorer knows that it
+   * is. Nothing about the standings reads this — set wins and points are still counted
+   * from the scores themselves — so a tournament scored without ever touching it comes
+   * out identical.
+   */
+  const setSetFinished = useCallback(
+    (game, setIndex, finished) => {
+      if (!canScore) return;
+      setScores((prev) =>
+        prev.map((m) => {
+          if (m.game !== game || m.completed) return m;
+          if (!m.sets?.[setIndex]) return m;
+          const sets = m.sets.map((s, i) => (i === setIndex ? { ...s, done: Boolean(finished) } : s));
+          return { ...m, sets };
+        })
+      );
+    },
+    [canScore]
+  );
 
   // Returns whether the game was actually marked, so the scoring dialog knows
   // whether to close or to stay open on a dismissed confirm.
@@ -328,8 +367,12 @@ export default function TrackerView() {
           <>
             <div className="text-center px-1">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.name}</h1>
+              {/* Was a hardcoded sentence describing this league's format to every club
+                  that used the app. It now describes the tournament actually on screen. */}
               <p className="text-sm text-gray-600 mt-1">
-                {teams.length} teams · Pool: 21 pts (cap 25), 3rd set 15 (cap 18) · Finals: 25 pts (cap 28), 3rd set 15
+                {teams.length} teams · Pool:{' '}
+                {describeScoring(scoring, 'pool', setsForPhase(tournament, 'pool'))} · Knockout:{' '}
+                {describeScoring(scoring, 'finals', setsForPhase(tournament, 'finals'))}
               </p>
             </div>
 
@@ -550,7 +593,8 @@ export default function TrackerView() {
                 finalsMatches={finalsMatches}
                 setFinalsMatches={setFinalsMatches}
                 user={canScore}
-                setsPerMatch={tournament?.setsPerMatch ?? 3}
+                scoring={scoring}
+                setsPerMatch={setsForPhase(tournament, 'finals')}
               />
             )}
 
@@ -655,6 +699,8 @@ export default function TrackerView() {
 
       {openMatch && (
         <MatchScoreDialog
+          scoring={scoring}
+          setsInMatch={setsForPhase(tournament, openMatch?.phase || 'pool')}
           match={openMatch}
           scheduleSlots={scheduleSlots}
           canScore={canScore}
@@ -664,6 +710,7 @@ export default function TrackerView() {
           onInput={updateScoreInput}
           onTogglePhase={toggleMatchPhase}
           onMarkComplete={markMatchComplete}
+          onFinishSet={setSetFinished}
         />
       )}
     </div>

@@ -272,6 +272,25 @@ await t('anyone reads tournament rosters',       ()=>assertSucceeds(getDoc(doc(a
 
 
 
+console.log('\n--- per-tournament scoring settings ---');
+const SCORING = { pool:{ pointsToWin:25, cap:27, deciderPointsToWin:15, deciderCap:17 },
+                  finals:{ pointsToWin:25, cap:28, deciderPointsToWin:15, deciderCap:15 } };
+// Format is admin territory: a scorer changing what a set is played to would rewrite the
+// standings of games already finished under the old numbers.
+await t('admin sets the scoring format',        ()=>assertSucceeds(updateDoc(doc(gAdmin,'clubs/gvbl/tournaments/t1'), { scoring:SCORING })));
+await t('admin sets knockout set count',        ()=>assertSucceeds(updateDoc(doc(gAdmin,'clubs/gvbl/tournaments/t1'), { finalsSetsPerMatch:5 })));
+await t('scorer CANNOT change the scoring format', ()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { scoring:{ ...SCORING, pool:{ ...SCORING.pool, pointsToWin:11 } } })));
+await t('scorer CANNOT change knockout set count',()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { finalsSetsPerMatch:3 })));
+// A DIFFERENT value on purpose. Passing SCORING here — the value the admin just wrote —
+// affects no keys and sails through hasOnly(), so the test would pass without ever
+// exercising the rule. That is the same trap the rosters tests document above; it caught
+// this one too.
+const SCORING2 = { ...SCORING, pool:{ ...SCORING.pool, pointsToWin:11, cap:13 } };
+await t('scorer CANNOT smuggle scoring with scores',()=>assertFails(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { scores:[{game:'G7'}], scoring:SCORING2 })));
+// But finishing a set IS scoring: the flag lives inside `scores`, which is theirs.
+await t('scorer CAN mark a set finished',       ()=>assertSucceeds(updateDoc(doc(gScore,'clubs/gvbl/tournaments/t1'), { scores:[{ game:'G1', sets:[{ team1:21, team2:16, done:true }] }] })));
+await t('anyone reads the scoring format',      ()=>assertSucceeds(getDoc(doc(anon,'clubs/gvbl/tournaments/t1'))));
+
 console.log('\n--- participation waivers: an anonymous signer, holding one link ---');
 const SIGNATURE = { token:'tokpend', playerId:'p1', participantName:'Priya',
   dateOfBirth:'2012-01-01', signedName:'Rosa', guardianEmail:'r@d.com',

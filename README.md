@@ -121,6 +121,44 @@ Two consequences worth knowing:
 `winMatchPointDiff` is still computed and returned. It is a real "how convincingly did you
 win" statistic; it is just not the tiebreak.
 
+## Scoring format
+
+Sets per match and the points a set is played to are **per tournament**, set under
+Admin → the tournament → **Scoring**. Pool play and knockout are configured separately,
+because a pool of one-set games feeding best-of-three semifinals is an ordinary shape.
+
+Each phase has four numbers: points to win a set, the hard cap (win by two until here,
+then one point is enough), and the same pair again for the **deciding set** — the last set
+of the match, which is usually shorter. Setting a phase's decider cap equal to its decider
+points means no cap at all, which is what the finals default to.
+
+These numbers were hardcoded until now, so every club that signed up played this league's
+format whether or not it was theirs. **The old constants are the defaults**: a tournament
+with no `scoring` field scores exactly as it did before, and `scoring.test.mjs` asserts
+that against a copy of the deleted implementation rather than assuming it.
+
+> **One behaviour did change.** The old code treated "set 3 onwards" as the deciding set,
+> so a five-set match played sets 3, 4 **and** 5 to 15. The decider is now the last set
+> only. Three-set tournaments — every one that exists — are unaffected, since set 3 is
+> both.
+
+A cap below the points needed to win would clamp every input below the winning score and
+make the set impossible to finish. `normalizeScoring` raises it to the target instead, and
+the editor says so before you save.
+
+### Finishing a set
+
+Once the score says a set is over — the target reached with a two-point lead, or the cap
+reached with one — a **Finish set** button appears with the result beside it. Tapping it
+locks that set's inputs; **Reopen set** is one tap away, because the usual reason to want
+it back is a point entered against the wrong team.
+
+The button appears only once the score justifies it, so it reads as an answer to "is that
+it?" rather than an invitation to close a set at 3–1. Nothing in the standings reads the
+flag: set wins and points are still counted from the scores themselves, so a tournament
+scored without ever touching it comes out identical. It lives inside the `scores` array,
+which is why a scorer can set it while the format itself stays admin-only.
+
 ## Players and rosters
 
 A club keeps one player list, at `clubs/{clubId}/players/{playerId}` — separate documents,
