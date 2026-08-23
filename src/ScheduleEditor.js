@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { setDoc } from 'firebase/firestore';
 import { tournamentDoc } from './clubPaths';
 import { useClub } from './ClubContext';
+import AdminUnscheduledGames from './AdminUnscheduledGames';
 import ScheduleAIBuilder from './ScheduleAIBuilder';
 import {
   MAX_COURT_COUNT,
@@ -191,6 +192,7 @@ export default function ScheduleEditor({ tournament, onClose, onSaved }) {
           />
         </div>
       </div>
+      <AdminUnscheduledGames tournament={tournament} slots={slots} />
       <p className="text-xs text-gray-600">
         Reorder rows with the arrows. Assign which game ({scores[0]?.game || 'G1'}…) plays on each
         court, and the umpiring team for each court — they can differ, or use “Same as court 1”.

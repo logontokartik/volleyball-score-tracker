@@ -614,6 +614,52 @@ export function orderScoresBySchedule(scores, scheduleSlots) {
   return [...primary, ...rest];
 }
 
+/**
+ * Game ids that some schedule row points at.
+ *
+ * Read through slotCourts so legacy two-court rows count the same as current ones — a
+ * game "scheduled" in the old shape must not look unscheduled just because the row was
+ * written before the court adapter existed.
+ */
+export function scheduledGameIds(scheduleSlots) {
+  const ids = new Set();
+  (scheduleSlots || []).forEach((slot) => {
+    slotCourts(slot).forEach((court) => {
+      if (court.game) ids.add(court.game);
+    });
+  });
+  return ids;
+}
+
+/**
+ * Matches that exist in the match list but sit on no schedule row.
+ *
+ * These are what `orderScoresBySchedule` appends after the scheduled ones, so they show
+ * up on the Scores tab as tiles nobody expects — games that are neither being played nor
+ * on the schedule. They appear when the two lists fall out of step: switching a
+ * tournament from a nine-game format to a fifteen-game round robin grows the match list,
+ * while `remapScheduleSlots` only translates the rows that already exist and never invents
+ * times for the new games. Deleting a schedule row does the same thing from the other end.
+ *
+ * Split by whether anything has been scored, because only one half is safe to delete.
+ * A tournament with NO schedule at all has none of these: every match is then displayed
+ * through buildDefaultScheduleSlots, and calling them unscheduled would offer to delete
+ * the whole draw.
+ */
+export function unscheduledMatches(scores, scheduleSlots) {
+  const empty = { removable: [], played: [] };
+  if (!scheduleSlots?.length) return empty;
+  const scheduled = scheduledGameIds(scheduleSlots);
+  return (scores || []).reduce((acc, match) => {
+    if (scheduled.has(match.game)) return acc;
+    // `completed` matters on its own: a game can legitimately be marked complete at 0-0
+    // — a forfeit — and that is a result somebody recorded, not an empty row.
+    if (matchHasResults(match) || match.completed) acc.played.push(match);
+    else acc.removable.push(match);
+    return acc;
+  }, empty);
+}
+
 export function formatMatchLabel(match) {
   if (!match) return '—';
   return `${match.team1} vs ${match.team2}`;
