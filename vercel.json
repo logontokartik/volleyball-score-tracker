@@ -4,5 +4,15 @@
     "api/*.js": {
       "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/ingest-events",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/discover-sources",
+      "schedule": "0 14 * * 1"
+    }
+  ]
 }

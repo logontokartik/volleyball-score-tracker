@@ -11,11 +11,22 @@
 // since SiteNav only hid the link.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getDocs } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { db } from './firebase';
 import { clubsCol, membersCol } from './clubPaths';
 import { useAuth } from './AuthContext';
 import { isSuperAdmin } from './roles';
+import { NE_STATES } from './profileUtils';
 import {
   DEFAULT_CLUB_ID,
   DEFAULT_CLUB_SLUG,
@@ -76,11 +87,447 @@ export default function SuperAdminPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6">
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10 grid gap-6 min-w-0 overflow-x-hidden">
       <h1 className="text-2xl sm:text-3xl font-black text-white">Super admin</h1>
       <ClubList />
+      <IngestCandidatesPanel />
+      <IngestSourcesPanel />
       <MigrationPanel user={user} />
     </div>
+  );
+}
+
+/**
+ * Weekly discovery results: approve → ingestSources, reject → stay out of the queue.
+ */
+function IngestCandidatesPanel() {
+  const { user } = useAuth();
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
+  const [discoverMsg, setDiscoverMsg] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'ingestCandidates'), where('status', '==', 'pending'))
+      );
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (b.volleyHits || 0) - (a.volleyHits || 0));
+      setRows(list);
+    } catch (err) {
+      console.error(err);
+      setError('Could not load discovery candidates.');
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const runDiscovery = async () => {
+    setBusy('discover');
+    setDiscoverMsg('');
+    setError('');
+    try {
+      // Force refresh so a stale token is not the failure mode after env changes.
+      const token = await user.getIdToken(true);
+      const resp = await fetch('/api/discover-sources', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const bits = [
+          data.error || `Discovery failed (${resp.status})`,
+          data.reason ? `(${data.reason})` : '',
+          data.hint || data.detail || '',
+          data.email ? `Signed in as ${data.email}.` : '',
+        ].filter(Boolean);
+        throw new Error(bits.join(' '));
+      }
+      setDiscoverMsg(
+        `Queued ${data.queued || 0} new feed(s)` +
+          (data.cseEnabled ? ' (search API on)' : ' (seed crawl only — optional Google CSE keys add more)') +
+          `. Skipped ${data.skipped || 0}.`
+      );
+      await load();
+    } catch (err) {
+      setError(err?.message || 'Discovery failed.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const approve = async (row) => {
+    setBusy(row.id);
+    setError('');
+    try {
+      await addDoc(collection(db, 'ingestSources'), {
+        name: row.suggestedName || 'Discovered calendar',
+        url: row.url,
+        state: row.state || 'MA',
+        type: 'ical',
+        enabled: true,
+        lastFetchedAt: null,
+        lastStatus: 'approved from discovery',
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'ingestCandidates', row.id), {
+        status: 'approved',
+        resolvedAt: serverTimestamp(),
+      });
+      await load();
+    } catch (err) {
+      setError(err?.message || 'Approve failed.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const reject = async (row) => {
+    setBusy(row.id);
+    try {
+      await updateDoc(doc(db, 'ingestCandidates', row.id), {
+        status: 'rejected',
+        resolvedAt: serverTimestamp(),
+      });
+      await load();
+    } catch (err) {
+      setError(err?.message || 'Reject failed.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <section className={cardClass}>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="text-lg font-bold text-white">Weekly feed discovery</h2>
+          <p className="text-sm text-slate-400 mt-1 max-w-xl">
+            Not a whole-internet crawl. Every Monday (and via this button) we scan a curated
+            New England seed list for public <span className="text-slate-200">.ics</span> links,
+            optionally Google Programmable Search, then you approve. Facebook / Meetup /
+            Active.com HTML are skipped on purpose.
+          </p>
+        </div>
+        <button
+          type="button"
+          className={primaryButtonClass}
+          disabled={Boolean(busy)}
+          onClick={runDiscovery}
+        >
+          {busy === 'discover' ? 'Discovering…' : 'Run discovery now'}
+        </button>
+      </div>
+      {discoverMsg && <p className="text-sm text-emerald-300 mb-3">{discoverMsg}</p>}
+      {error && <p className="text-sm text-red-300 mb-3">{error}</p>}
+      {loading ? (
+        <p className="text-sm text-slate-400">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          No pending candidates. Run discovery, or expand seeds in{' '}
+          <span className="font-mono text-amber-300/80">api/ne-discovery-seeds.js</span>.
+        </p>
+      ) : (
+        <ul className="grid gap-2 min-w-0">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 flex flex-wrap items-start gap-2 justify-between min-w-0 overflow-hidden"
+            >
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="font-semibold text-white truncate">{row.suggestedName}</p>
+                <p className="text-xs text-slate-500 break-all" title={row.url}>
+                  {row.url}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5 break-words">
+                  {row.state} · {row.reason}
+                  {row.volleyHits ? ` · ${row.volleyHits}× “volley” in feed` : ''}
+                  {row.foundOn ? ` · from ${row.foundOn}` : ''}
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  type="button"
+                  className={primaryButtonClass}
+                  disabled={Boolean(busy)}
+                  onClick={() => approve(row)}
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  className={secondaryButtonClass}
+                  disabled={Boolean(busy)}
+                  onClick={() => reject(row)}
+                >
+                  Reject
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Curated public calendar feeds for New England drop-in discovery.
+ * Cron hits /api/ingest-events; this panel only manages the source list.
+ */
+function IngestSourcesPanel() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const [state, setState] = useState('MA');
+  const [type, setType] = useState('ical');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const snap = await getDocs(collection(db, 'ingestSources'));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+      setRows(list);
+    } catch (err) {
+      console.error(err);
+      setError('Could not load ingest sources.');
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const add = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !url.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      let finalType = type;
+      let finalUrl = url.trim();
+      let u;
+      try {
+        u = new URL(finalUrl);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+          throw new Error('URL must be http(s).');
+        }
+        // Google Calendar embed/share with ?src= → public iCal address.
+        if (u.hostname.includes('calendar.google.com') && u.searchParams.get('src')) {
+          const src = u.searchParams.get('src');
+          finalUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(src)}/public/basic.ics`;
+          finalType = 'ical';
+          u = new URL(finalUrl);
+        }
+      } catch (err) {
+        setError(err?.message || 'Invalid URL.');
+        setBusy(false);
+        return;
+      }
+
+      // Shape checks only (browser CORS blocks probing most feeds from the client).
+      const host = u.hostname.replace(/^www\./, '');
+      const path = u.pathname.toLowerCase();
+      const blockedHosts = [
+        'active.com',
+        'facebook.com',
+        'meetup.com',
+        'instagram.com',
+        'myrec.com',
+      ];
+      if (blockedHosts.some((h) => host === h || host.endsWith(`.${h}`))) {
+        setError(
+          `${host} pages are HTML registration sites, not feeds. Post that session on /play/new (paste the Active.com link as the source URL there).`
+        );
+        setBusy(false);
+        return;
+      }
+      // "Add to Google Calendar" template links are not feeds.
+      if (
+        host.includes('calendar.google.com') &&
+        (path.includes('/render') ||
+          path.includes('/event') ||
+          u.searchParams.get('action') === 'TEMPLATE')
+      ) {
+        setError(
+          'That is an “Add to Calendar” link, not a feed. In Google Calendar → Settings → the calendar → Integrate calendar → copy “Secret address in iCal format” or “Public address in iCal format” (…/public/basic.ics). Or post the session on /play/new.'
+        );
+        setBusy(false);
+        return;
+      }
+      const looksIcal =
+        finalType === 'ical' &&
+        (path.endsWith('.ics') ||
+          path.includes('/ical/') ||
+          path.includes('/calendar/ical/'));
+      const looksRss =
+        finalType === 'rss' &&
+        (path.endsWith('.rss') ||
+          path.endsWith('.xml') ||
+          path.includes('/rss') ||
+          path.includes('/feed'));
+      if (finalType === 'ical' && !looksIcal) {
+        setError(
+          'That does not look like an iCal URL. Use a …/basic.ics / *.ics link (Google Calendar → Settings → Integrate calendar → Public address in iCal format), or post manually on /play/new.'
+        );
+        setBusy(false);
+        return;
+      }
+      if (finalType === 'rss' && !looksRss) {
+        setError('That does not look like an RSS/Atom URL. Prefer iCal (.ics) for now.');
+        setBusy(false);
+        return;
+      }
+
+      await addDoc(collection(db, 'ingestSources'), {
+        name: name.trim(),
+        url: finalUrl,
+        state,
+        type: finalType,
+        enabled: true,
+        lastFetchedAt: null,
+        lastStatus: 'validated on add',
+        createdAt: serverTimestamp(),
+      });
+      setName('');
+      setUrl('');
+      await load();
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || 'Could not add source.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = async (row) => {
+    try {
+      await updateDoc(doc(db, 'ingestSources', row.id), { enabled: !row.enabled });
+      await load();
+    } catch (err) {
+      setError(err?.message || 'Update failed.');
+    }
+  };
+
+  const remove = async (row) => {
+    if (!window.confirm(`Remove source “${row.name}”?`)) return;
+    try {
+      await deleteDoc(doc(db, 'ingestSources', row.id));
+      await load();
+    } catch (err) {
+      setError(err?.message || 'Delete failed.');
+    }
+  };
+
+  return (
+    <section className={`${cardClass} min-w-0 overflow-hidden`}>
+      <h2 className="text-lg font-bold text-white mb-1">Pickup ingest sources</h2>
+      <p className="text-sm text-slate-400 mb-4 break-words">
+        Needs a machine-readable feed — usually a{' '}
+        <span className="text-slate-200">.ics / Google Calendar public iCal URL</span>. HTML
+        pages (Active.com, MyRec program pages, club websites) will be rejected; post those
+        on <span className="font-mono text-amber-300/90">/play/new</span> instead. Cron:{' '}
+        <span className="font-mono text-amber-300/90">/api/ingest-events</span>.
+      </p>
+      {error && <p className="text-sm text-red-300 mb-3">{error}</p>}
+      {loading ? (
+        <p className="text-sm text-slate-400">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-400 mb-4">No sources yet.</p>
+      ) : (
+        <ul className="grid gap-2 mb-4 min-w-0">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 flex flex-wrap items-start gap-2 justify-between min-w-0 overflow-hidden"
+            >
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="font-semibold text-white truncate">
+                  {row.name}{' '}
+                  <span className="text-xs font-mono text-slate-400">
+                    {row.state} · {row.type}
+                  </span>
+                </p>
+                <p
+                  className="text-xs text-slate-500 break-all"
+                  title={row.url}
+                >
+                  {row.url}
+                </p>
+                {row.lastStatus && (
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">Last: {row.lastStatus}</p>
+                )}
+                {/calendar\.google\.com\/calendar\/render/i.test(row.url || '') && (
+                  <p className="text-xs text-amber-300 mt-1">
+                    Not a feed (Add-to-Calendar template). Remove and use a …/basic.ics URL, or
+                    post on /play/new.
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button type="button" className={secondaryButtonClass} onClick={() => toggle(row)}>
+                  {row.enabled ? 'Disable' : 'Enable'}
+                </button>
+                <button
+                  type="button"
+                  className={`${secondaryButtonClass} text-red-300`}
+                  onClick={() => remove(row)}
+                >
+                  Remove
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form onSubmit={add} className="grid gap-2 sm:grid-cols-2">
+        <input
+          className={inputClass}
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          className={inputClass}
+          placeholder="https://…/calendar.ics"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+        />
+        <select className={inputClass} value={state} onChange={(e) => setState(e.target.value)}>
+          {NE_STATES.map((s) => (
+            <option key={s.code} value={s.code}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        <select className={inputClass} value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="ical">iCal (.ics) — supported</option>
+          <option value="rss">RSS — listed only; ingest skips until implemented</option>
+        </select>
+        <button type="submit" className={`${primaryButtonClass} sm:col-span-2`} disabled={busy}>
+          {busy ? 'Adding…' : 'Add source'}
+        </button>
+      </form>
+    </section>
   );
 }
 

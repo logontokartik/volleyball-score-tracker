@@ -60,8 +60,8 @@ export function AuthProvider({ children }) {
 }
 
 /**
- * Record who signed in and when. This is best-effort: there are no Firestore rules
- * for `users/` yet, so this write is rejected today and must never block sign-in.
+ * Record who signed in and when. Best-effort: never block sign-in if the write fails.
+ * Public community fields live on `profiles/{uid}` (see ProfileContext), not here.
  */
 function touchUserProfile(u) {
   setDoc(
@@ -73,7 +73,7 @@ function touchUserProfile(u) {
       lastSeenAt: serverTimestamp(),
     },
     { merge: true }
-  ).catch((err) => console.error('users/ profile write failed (expected until rules land):', err));
+  ).catch((err) => console.error('users/ profile write failed:', err));
 }
 
 export function useAuth() {

@@ -79,6 +79,80 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
+    // ---- New England community layer ----
+    //
+    // Public player profiles and pickup events sit ABOVE clubs. They are not
+    // club-scoped: a player looking for Saturday drop-in in Boston is not asking
+    // for tournament admin rights. Email stays on users/; profiles never carry it.
+
+    function neState(s) {
+      return s in ['CT', 'MA', 'ME', 'NH', 'RI', 'VT'];
+    }
+    function skillOk(s) {
+      return s in ['beginner', 'intermediate', 'advanced', 'open', ''];
+    }
+    function formatOk(s) {
+      return s in ['indoor', 'outdoor', 'grass', 'beach'];
+    }
+
+    match /profiles/{uid} {
+      // Public cards are world-readable. Private profiles are owner/super only so
+      // someone can draft without appearing in search.
+      allow read: if resource.data.isPublic == true
+        || (signedIn() && request.auth.uid == uid)
+        || isSuper();
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 2
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.displayNameLower is string
+        && request.resource.data.isPublic is bool
+        && request.resource.data.lookingForPickup is bool
+        && (request.resource.data.state == '' || neState(request.resource.data.state))
+        && skillOk(request.resource.data.skillLevel)
+        && !('email' in request.resource.data);
+      allow delete: if (signedIn() && request.auth.uid == uid) || isSuper();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 2
+        && neState(request.resource.data.state)
+        && formatOk(request.resource.data.format)
+        && request.resource.data.status in ['scheduled', 'cancelled', 'ended']
+        && request.resource.data.source in ['user', 'club'];
+      allow update: if isSuper()
+        || (signedIn() && resource.data.hostUid == request.auth.uid);
+      allow delete: if isSuper()
+        || (signedIn() && resource.data.hostUid == request.auth.uid);
+
+      match /rsvps/{rsvpUid} {
+        allow read: if true;
+        allow create, update: if signedIn()
+          && request.auth.uid == rsvpUid
+          && request.resource.data.status in ['going', 'maybe', 'waitlist']
+          && request.resource.data.displayName is string;
+        allow delete: if (signedIn() && request.auth.uid == rsvpUid) || isSuper();
+      }
+    }
+
+    // Curated public-feed sources for the ingest cron. Super admin only — a normal
+    // host posts events as themselves; they do not point the crawler at arbitrary URLs.
+    match /ingestSources/{sourceId} {
+      allow read: if isSuper();
+      allow write: if isSuper();
+    }
+
+    // Weekly discovery queue: candidate .ics URLs awaiting approve/reject.
+    // Written by the discover-sources cron (Admin SDK); managed in the UI by supers.
+    match /ingestCandidates/{candidateId} {
+      allow read, write: if isSuper();
+    }
+
     // "Which clubs am I in / invited to" — collection-group queries. Scoped to your own
     // rows, so these cannot be turned into a directory of everyone's memberships.
     match /{path=**}/members/{memberId} {

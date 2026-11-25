@@ -162,6 +162,15 @@ export default function Login() {
             )}
           </div>
 
+          <Link to="/play" role="menuitem" className={menuItemClass}>
+            Find pickup
+          </Link>
+          <Link to="/players" role="menuitem" className={menuItemClass}>
+            Players
+          </Link>
+          <Link to="/me" role="menuitem" className={menuItemClass}>
+            My profile
+          </Link>
           <Link to="/" role="menuitem" className={menuItemClass}>
             All clubs
           </Link>

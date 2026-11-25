@@ -2,6 +2,38 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## New England community (pickup + profiles)
+
+Alongside club tournament scoring, the app has a community layer for **New England**
+(CT, MA, ME, NH, RI, VT):
+
+| Route | What it is |
+| --- | --- |
+| `/play` | Upcoming drop-ins / open play |
+| `/play/new` | Post a session (signed-in, profile required) |
+| `/play/:eventId` | Detail + RSVP + share |
+| `/players` | Search public player profiles |
+| `/players/:uid` | Public profile card |
+| `/me` | Edit your profile / privacy |
+
+Profiles live at `profiles/{uid}` (no email — that stays on `users/{uid}`). Events live
+at `events/{id}` with `events/{id}/rsvps/{uid}`.
+
+**Ingest + discovery:** Super admins manage feeds under `/super`. Vercel Cron:
+
+- `/api/ingest-events` every 6 hours — pull approved iCal sources into `events`
+- `/api/discover-sources` Mondays 14:00 UTC — scan NE seed pages (+ optional Google
+  CSE) for `.ics` links, queue them in `ingestCandidates` for one-click approve
+
+This is **not** a whole-internet crawl and does not scrape Facebook / Meetup /
+Active.com. Expand seeds in `api/ne-discovery-seeds.js`. Optional:
+`GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID`. Set `CRON_SECRET` and
+`FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel. Deploy rules and indexes:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
 ## Accounts and roles
 
 Sign-in is **Google only** — there is no password form and no account creation in the

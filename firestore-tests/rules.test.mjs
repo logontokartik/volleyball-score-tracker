@@ -353,6 +353,93 @@ await t('...and the same batch a second time is refused', async () => {
 await t('gvbl admin CANNOT read other club signatures',()=>assertFails(getDoc(doc(gAdmin,'clubs/other/consents/otok'))));
 await t('gvbl admin CANNOT issue a link in other club',()=>assertFails(setDoc(doc(gAdmin,'clubs/other/consentRequests/x'), { token:'x', playerId:'op1', status:'pending' })));
 
+console.log('\n--- community profiles/{uid} ---');
+const PUB_PROFILE = {
+  displayName: 'Alex Court',
+  displayNameLower: 'alex court',
+  photoURL: null,
+  bio: 'OH · Boston',
+  positions: ['Outside Hitter'],
+  skillLevel: 'intermediate',
+  city: 'Boston',
+  state: 'MA',
+  availability: 'Weeknights',
+  lookingForPickup: true,
+  isPublic: true,
+};
+const PRIV_PROFILE = { ...PUB_PROFILE, isPublic: false, displayName: 'Hidden', displayNameLower: 'hidden' };
+
+await t('signed-in user creates own public profile', () =>
+  assertSucceeds(setDoc(doc(outsid, 'profiles/out'), PUB_PROFILE)));
+await t('anon reads a public profile', () =>
+  assertSucceeds(getDoc(doc(anon, 'profiles/out'))));
+await t('user CANNOT write someone elses profile', () =>
+  assertFails(setDoc(doc(gAdmin, 'profiles/out'), PUB_PROFILE)));
+await t('profile with email field is refused', () =>
+  assertFails(setDoc(doc(gScore, 'profiles/gs'), { ...PUB_PROFILE, email: 'x@y.com' })));
+await t('profile with non-NE state is refused', () =>
+  assertFails(setDoc(doc(gScore, 'profiles/gs'), { ...PUB_PROFILE, state: 'CA' })));
+
+await env.withSecurityRulesDisabled(async (c) => {
+  await setDoc(doc(c.firestore(), 'profiles/ga'), PRIV_PROFILE);
+});
+await t('anon CANNOT read a private profile', () =>
+  assertFails(getDoc(doc(anon, 'profiles/ga'))));
+await t('owner CAN read their private profile', () =>
+  assertSucceeds(getDoc(doc(gAdmin, 'profiles/ga'))));
+
+console.log('\n--- community events + rsvps ---');
+const EVENT = {
+  title: 'Thursday open gym',
+  description: 'Bring water',
+  venueName: 'MIT Open Rec',
+  address: '',
+  city: 'Cambridge',
+  state: 'MA',
+  format: 'indoor',
+  skillLevel: 'open',
+  cost: 'Free',
+  capacity: 24,
+  source: 'user',
+  sourceUrl: null,
+  sourceKey: null,
+  hostUid: 'out',
+  hostName: 'Alex',
+  status: 'scheduled',
+  timezone: 'America/New_York',
+  startsAt: new Date('2030-06-01T23:00:00Z'),
+  endsAt: new Date('2030-06-02T01:00:00Z'),
+};
+
+await t('signed-in user creates an event they host', () =>
+  assertSucceeds(setDoc(doc(outsid, 'events/e1'), EVENT)));
+await t('anon reads events', () =>
+  assertSucceeds(getDoc(doc(anon, 'events/e1'))));
+await t('non-host CANNOT update event', () =>
+  assertFails(updateDoc(doc(gAdmin, 'events/e1'), { title: 'Hijack' })));
+await t('host updates their event', () =>
+  assertSucceeds(updateDoc(doc(outsid, 'events/e1'), { title: 'Thursday open gym+' })));
+await t('user RSVPs as themselves', () =>
+  assertSucceeds(setDoc(doc(gScore, 'events/e1/rsvps/gs'), {
+    status: 'going',
+    displayName: 'Scorer',
+  })));
+await t('user CANNOT RSVP as someone else', () =>
+  assertFails(setDoc(doc(gScore, 'events/e1/rsvps/ga'), {
+    status: 'going',
+    displayName: 'Nope',
+  })));
+await t('anon reads RSVPs', () =>
+  assertSucceeds(getDoc(doc(anon, 'events/e1/rsvps/gs'))));
+await t('outsider CANNOT write ingestSources', () =>
+  assertFails(setDoc(doc(outsid, 'ingestSources/s1'), {
+    name: 'x', url: 'https://example.com', type: 'ical', enabled: true, state: 'MA',
+  })));
+await t('super admin writes ingestSources', () =>
+  assertSucceeds(setDoc(doc(superA, 'ingestSources/s1'), {
+    name: 'x', url: 'https://example.com', type: 'ical', enabled: true, state: 'MA',
+  })));
+
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

@@ -249,9 +249,23 @@ export default function ClubsPage() {
           {/* The header hides this line on a phone to protect its fixed height,
               so it lives here too — where there is room for it. */}
           <p className="text-sm text-slate-300 mt-1">
-            Your one stop shop to manage clubs, schedule, scores
+            Club scoreboards — plus New England pickup and player profiles
           </p>
         </div>
+        <Link
+          to="/play"
+          className={`${cardClass} block hover:border-amber-500/40 transition-colors group`}
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-400/90">
+            New England
+          </p>
+          <p className="mt-1 font-bold text-white text-lg group-hover:text-amber-200 transition-colors">
+            Find open play near you →
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            Drop-ins, beach nights, and public profiles across CT · MA · ME · NH · RI · VT
+          </p>
+        </Link>
         {directorySection}
         <section className={cardClass}>
           <p className="text-sm text-slate-300">
@@ -276,7 +290,7 @@ export default function ClubsPage() {
           {/* The header hides this line on a phone to protect its fixed height,
               so it lives here too — where there is room for it. */}
           <p className="text-sm text-slate-300 mt-1">
-            Your one stop shop to manage clubs, schedule, scores
+            Club scoreboards — plus New England pickup and player profiles
           </p>
         </div>
         <button
@@ -287,6 +301,21 @@ export default function ClubsPage() {
           {creating ? 'Cancel' : 'Create a club'}
         </button>
       </div>
+
+      <Link
+        to="/play"
+        className={`${cardClass} block hover:border-amber-500/40 transition-colors group`}
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-400/90">
+          New England
+        </p>
+        <p className="mt-1 font-bold text-white text-lg group-hover:text-amber-200 transition-colors">
+          Find open play near you →
+        </p>
+        <p className="mt-1 text-sm text-slate-400">
+          Drop-ins, beach nights, and public profiles across CT · MA · ME · NH · RI · VT
+        </p>
+      </Link>
 
       {creating && (
         <CreateClubForm
