@@ -26,3 +26,7 @@ yarn-error.log*
 /firestore-tests/node_modules
 /firestore-tests/package.json
 /firestore-tests/package-lock.json
+.vercel
+
+# Local Firebase Admin credentials (never commit)
+service-account.local.json

@@ -8,9 +8,19 @@ import Login from './Login';
 import ClubsPage from './ClubsPage';
 import ConsentPage from './ConsentPage';
 import SuperAdminPage from './SuperAdminPage';
+import PlayPage from './PlayPage';
+import CreateEventPage from './CreateEventPage';
+import EventDetailPage from './EventDetailPage';
+import PlayersPage from './PlayersPage';
+import ProfilePublicPage from './ProfilePublicPage';
+import ProfileEditPage from './ProfileEditPage';
 import { AuthProvider } from './AuthContext';
+import { ProfileProvider } from './ProfileContext';
 import { ClubProvider, useClub, useClubOptional } from './ClubContext';
 import ClubSectionNav from './components/ClubSectionNav';
+import CommunityNav from './components/CommunityNav';
+import CommunityBottomNav from './components/CommunityBottomNav';
+import OnboardingModal from './components/OnboardingModal';
 
 /**
  * The club that the bare paths belong to. Before clubs existed this app served one
@@ -72,11 +82,13 @@ function SiteNav() {
                   at 390px would overflow it. ClubsPage carries the same line where it
                   has room, so a phone visitor still sees it. */}
               <span className="hidden sm:block text-xs font-medium text-slate-300 truncate">
-                Your one stop shop to manage clubs, schedule, scores
+                New England pickup · profiles · club scores
               </span>
             </>
           )}
         </span>
+        {/* Community links only outside a club — inside a club the section nav owns the row. */}
+        {!slug && <CommunityNav />}
         <ClubSectionNav variant="header" />
         {/* Reachable from every page, not just the tracker. Collapsed to an avatar so it
             cannot push this row to a second line on a 390px phone. */}
@@ -186,7 +198,10 @@ function PlainLayout() {
   return (
     <>
       <SiteNav />
-      <Outlet />
+      <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">
+        <Outlet />
+      </div>
+      <CommunityBottomNav />
     </>
   );
 }
@@ -209,53 +224,63 @@ const SITE_HEADER_H = '56px';
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <div className="min-h-screen bg-slate-950" style={{ '--site-header-h': SITE_HEADER_H }}>
-          <Routes>
-            {/* Legacy single-club paths. Outside any layout so no header paints for
-                the instant before the redirect lands. `/` is no longer among them: the
-                landing page is the club directory, so a visitor who does not already
-                know a club can find one. */}
-            <Route
-              path="/completed"
-              element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}/completed`} replace />}
-            />
-            <Route
-              path="/archive"
-              element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}/archive`} replace />}
-            />
-            {/* /clubs was the members-only page before the directory absorbed it. */}
-            <Route path="/clubs" element={<Navigate to="/" replace />} />
+      <ProfileProvider>
+        <BrowserRouter>
+          <div className="min-h-screen bg-slate-950" style={{ '--site-header-h': SITE_HEADER_H }}>
+            <Routes>
+              {/* Legacy single-club paths. Outside any layout so no header paints for
+                  the instant before the redirect lands. `/` is no longer among them: the
+                  landing page is the club directory, so a visitor who does not already
+                  know a club can find one. */}
+              <Route
+                path="/completed"
+                element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}/completed`} replace />}
+              />
+              <Route
+                path="/archive"
+                element={<Navigate to={`/c/${DEFAULT_CLUB_SLUG}/archive`} replace />}
+              />
+              {/* /clubs was the members-only page before the directory absorbed it. */}
+              <Route path="/clubs" element={<Navigate to="/" replace />} />
 
-            {/* Declared before the general club layout so the more specific path wins
-                regardless of how the router ranks them. The token is the authorisation:
-                anyone holding this URL may sign this one waiver without an account,
-                which is the only workable flow for players who will never sign in. */}
-            <Route path="/c/:slug/consent/:token" element={<ClubConsentLayout />}>
-              <Route index element={<ConsentPage />} />
-            </Route>
+              {/* Declared before the general club layout so the more specific path wins
+                  regardless of how the router ranks them. The token is the authorisation:
+                  anyone holding this URL may sign this one waiver without an account,
+                  which is the only workable flow for players who will never sign in. */}
+              <Route path="/c/:slug/consent/:token" element={<ClubConsentLayout />}>
+                <Route index element={<ConsentPage />} />
+              </Route>
 
-            <Route path="/c/:slug" element={<ClubLayout />}>
-              <Route index element={<TrackerView />} />
-              <Route path="completed" element={<CompletedTournamentsView />} />
-              <Route path="archive" element={<ArchiveHub />} />
-              <Route path="admin" element={<ClubAdminRoute />} />
-            </Route>
+              <Route path="/c/:slug" element={<ClubLayout />}>
+                <Route index element={<TrackerView />} />
+                <Route path="completed" element={<CompletedTournamentsView />} />
+                <Route path="archive" element={<ArchiveHub />} />
+                <Route path="admin" element={<ClubAdminRoute />} />
+              </Route>
 
-            <Route element={<PlainLayout />}>
-              {/* The directory is public — the club documents it lists are world-readable,
-                  the same permission that makes a scoreboard shareable. */}
-              <Route path="/" element={<ClubsPage />} />
-              {/* SuperAdminPage gates itself on the signed-in account: SiteNav hides its
-                  link, but a hidden link is not a gate and the URL is guessable. That is
-                  not security either — firestore.rules is, and it rejects the reads and
-                  writes behind the page no matter what React decides to render. */}
-              <Route path="/super" element={<SuperAdminPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </div>
-      </BrowserRouter>
+              <Route element={<PlainLayout />}>
+                {/* Default landing is pickup discovery — clubs remain at / and in nav. */}
+                <Route path="/play" element={<PlayPage />} />
+                <Route path="/play/new" element={<CreateEventPage />} />
+                <Route path="/play/:eventId" element={<EventDetailPage />} />
+                <Route path="/players" element={<PlayersPage />} />
+                <Route path="/players/:uid" element={<ProfilePublicPage />} />
+                <Route path="/me" element={<ProfileEditPage />} />
+                {/* The directory is public — the club documents it lists are world-readable,
+                    the same permission that makes a scoreboard shareable. */}
+                <Route path="/" element={<ClubsPage />} />
+                {/* SuperAdminPage gates itself on the signed-in account: SiteNav hides its
+                    link, but a hidden link is not a gate and the URL is guessable. That is
+                    not security either — firestore.rules is, and it rejects the reads and
+                    writes behind the page no matter what React decides to render. */}
+                <Route path="/super" element={<SuperAdminPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+            <OnboardingModal />
+          </div>
+        </BrowserRouter>
+      </ProfileProvider>
     </AuthProvider>
   );
 }
